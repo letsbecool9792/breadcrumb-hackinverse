@@ -274,9 +274,12 @@ class BulkImporter(
 
                 // Level 2: Stream content to a staging file while calculating SHA-256 in one pass
                 val stagingId = UUID.randomUUID().toString()
-                val extension = candidate.displayName.substringAfterLast('.', "").ifBlank {
-                    if (candidate.type == MemoryType.PDF) "pdf" else "jpg"
-                }
+                // The display name comes from another app's provider and could hold
+                // path segments, so only a short run of letters and digits counts.
+                val extension = candidate.displayName.substringAfterLast('.', "")
+                    .takeIf { it.length in 1..5 && it.all(Char::isLetterOrDigit) }
+                    ?.lowercase(Locale.ROOT)
+                    ?: if (candidate.type == MemoryType.PDF) "pdf" else "jpg"
                 val stagingFile = File(context.cacheDir, "import_stage_$stagingId.$extension")
 
                 val sha256 = try {
@@ -329,14 +332,12 @@ class BulkImporter(
 
                 // Not a duplicate: store original and create Memory row
                 val memoryId = UUID.randomUUID().toString()
-                val targetDir = File(context.filesDir, "originals").apply { mkdirs() }
-                val storedFile = File(targetDir, "$memoryId.$extension")
-
-                if (!stagingFile.renameTo(storedFile)) {
-                    stagingFile.inputStream().use { src ->
-                        storedFile.outputStream().use { dst -> src.copyTo(dst) }
-                    }
+                val storedFile = try {
+                    originals.moveIn(stagingFile, memoryId, extension)
+                } catch (_: Exception) {
                     stagingFile.delete()
+                    skippedCount++
+                    continue
                 }
 
                 // Determine final contentCreatedAt timestamp (check EXIF on file if unresolved)
