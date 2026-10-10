@@ -61,10 +61,7 @@ class MediaReceiverActivity : ComponentActivity() {
                     onNote = { note ->
                         val saved = (stateFlow.value as? CaptureState.Saved)?.memories ?: return@CaptureSheet
                         app.applicationScope.launch {
-                            saved.forEach { mem ->
-                                val updated = mem.copy(note = note, updatedAt = System.currentTimeMillis())
-                                app.database.memoryDao().update(updated)
-                            }
+                            app.database.captureDao().setNote(saved.map { it.id }, note)
                         }
                     }
                 )
