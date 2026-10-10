@@ -85,8 +85,8 @@ the server from the terminal, sync against the server.
   meets that today.
 - **No process without a reason.** Every tool, config file or check needs a concrete reason tied
   to this project; anything that cannot be justified does not go in.
-- **Scaffolding is done by hand.** Agents do not run project generators (`npm create`, Android
-  Studio wizards); a person does, and commits the result.
+- **Scaffolding is done by hand.** Agents do not run project generators (`npm create`,
+  `android create`); a person does, and commits the result.
 - On Windows, **write commit messages to a file and commit with `git commit -F <file>`**:
   PowerShell 5.1 strips double quotes from arguments to native programs, so `git commit -m` with a
   `"` in it splits into pathspecs.
@@ -105,9 +105,10 @@ it whenever a change needs a manual check, and tick items off when done.
       sample memories; **Delete** and **Clear** remove them.
 - [ ] **Create the GitHub repo** `breadcrumb-hackinverse`, push `main`, and give AM2004legend,
       aeryxii and DhrubaIsha2006 write access.
-- [ ] **Confirm the owners** in the table above, and that each person is set up: Android Studio
-      and an Android phone with USB debugging for Aritra and Dhruba; for Ayushi, Node 22.18+, a
-      free Atlas M0 cluster and a free Gemini key (see the server brief).
+- [ ] **Confirm the owners** in the table above, and that each person is set up: JDK 21, the
+      Android SDK from the command line (see "Android"; no Android Studio) and an Android phone
+      with USB debugging for Aritra and Dhruba; for Ayushi, Node 22.18+, a free Atlas M0 cluster
+      and a free Gemini key (see the server brief).
 - [ ] **Plan the seeding.** Search only impresses with a real corpus: put 500+ real items on the
       demo phone with the importer (reading R5) the day before the demo. Ingest costs one Flash
       Lite request per ten memories (500 a day), and embeddings take arrays (1,000 requests a
@@ -271,9 +272,24 @@ indexes per cluster**; one vector index plus one text index fits.
 - **The applicationId is `com.lbc.breadcrumb.hackinverse`; the code's namespace is
   `com.lbc.breadcrumb`.** adb commands, the test runner and launcher shortcuts use the
   applicationId.
-- **Open `android/` in Android Studio**, not the repo root, which confuses Gradle sync. Live Edit
-  and `@Preview` need Android Studio; `server/` belongs in VS Code. Running both at once costs a
-  lot of RAM: run Android Studio only while working on Android.
+- **No Android Studio.** The app is built, installed and tested from the command line (`gradlew`
+  in `android/`, and adb), and edited in any editor. Live Edit and `@Preview` are not used.
+- **Setting up a machine** (once; checked on Windows by building against a fresh SDK):
+  - JDK 21, which Gradle's daemon asks for (`gradle/gradle-daemon-jvm.properties`):
+    `winget install --id EclipseAdoptium.Temurin.21.JDK -e`. `gradlew` prefers `JAVA_HOME`, so
+    one left pointing at an older Java has to be moved.
+  - The SDK's command-line tools, version 23.0
+    ([`commandlinetools-win-16111833_latest.zip`](https://dl.google.com/android/repository/commandlinetools-win-16111833_latest.zip);
+    other platforms' zips are on developer.android.com/studio), unzipped so that
+    `C:\Android\Sdk\cmdline-tools\latest\bin` exists. `ANDROID_HOME` set to `C:\Android\Sdk`,
+    and its `platform-tools` and `cmdline-tools\latest\bin` on `PATH`.
+  - In a new terminal: `android sdk install platform-tools "platforms;android-36.1"`. The first
+    build downloads the build-tools it needs.
+- **Install SDK packages with `android sdk install`, not `sdkmanager`.** From command-line tools
+  23.0, `sdkmanager` is deprecated and hands over to the new `android` CLI. Its `--licenses` no
+  longer writes a licence; `android sdk install` does, and the build needs one to download
+  build-tools. From PowerShell, `sdkmanager.bat "platforms;android-36.1"` also fails: the batch
+  file splits the package name at the `;`.
 - **Testing is on a physical phone over USB or wireless debugging.** No emulator.
 - **compileSdk is 36.1.** Some libraries' newest versions need compileSdk 37 (lifecycle 2.11, OkHttp
   5.5): read `minCompileSdk` from the AAR's `aar-metadata.properties`, and prefer pinning the
@@ -367,7 +383,7 @@ ingest path; only search is latency-sensitive.
 
 ```
 breadcrumb-hackinverse/
-  android/      Gradle project: open THIS in Android Studio
+  android/      Gradle project: run ./gradlew from here
   server/       Express + TypeScript, its own package.json
   docs/         api.md, workstreams/
   tools/        generate_icons.py
