@@ -46,4 +46,57 @@ interface ReadingDao {
         extractedText: String,
         updatedAt: Long = System.currentTimeMillis(),
     ): Int
+
+    /**
+     * Raw FTS4 search query matching against [MemoryFts].
+     *
+     * Callers must always pass input through [FtsQuery.matchExpression]
+     * rather than invoking this query with arbitrary user input directly.
+     * Ordered newest first ([Memory.capturedAt] DESC) with limit.
+     */
+    @Query("""
+        SELECT memories.* FROM memories
+        JOIN memories_fts ON memories.rowid = memories_fts.docid
+        WHERE memories_fts MATCH :matchQuery
+        ORDER BY memories.capturedAt DESC
+        LIMIT :limit
+    """)
+    fun searchByMatch(matchQuery: String, limit: Int = 50): Flow<List<Memory>>
+
+    @Query("""
+        SELECT memories.* FROM memories
+        JOIN memories_fts ON memories.rowid = memories_fts.docid
+        WHERE memories_fts MATCH :matchQuery
+        ORDER BY memories.capturedAt DESC
+        LIMIT :limit
+    """)
+    suspend fun searchByMatchOnce(matchQuery: String, limit: Int = 50): List<Memory>
+
+    /**
+     * Live word search over [MemoryFts].
+     *
+     * Input always goes through [FtsQuery.matchExpression] before reaching MATCH.
+     * If the query has no searchable words, emits an empty list.
+     * Ordered newest first.
+     */
+    fun observeSearch(query: String, limit: Int = 50): Flow<List<Memory>> {
+        val matchExpr = FtsQuery.matchExpression(query)
+        return if (matchExpr != null) {
+            searchByMatch(matchExpr, limit)
+        } else {
+            kotlinx.coroutines.flow.flowOf(emptyList())
+        }
+    }
+
+    /**
+     * One-shot suspend word search over [MemoryFts].
+     *
+     * Input always goes through [FtsQuery.matchExpression] before reaching MATCH.
+     * If the query has no searchable words, returns an empty list.
+     * Ordered newest first.
+     */
+    suspend fun search(query: String, limit: Int = 50): List<Memory> {
+        val matchExpr = FtsQuery.matchExpression(query) ?: return emptyList()
+        return searchByMatchOnce(matchExpr, limit)
+    }
 }
