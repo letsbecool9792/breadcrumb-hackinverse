@@ -140,6 +140,8 @@ workstream sends.
 
 ## Rules and pitfalls
 
+- **Flash Lite refuses `thinkingConfig`:** never send one, no thinking budget and no level, to
+  the Flash Lite models; the request is refused outright.
 - **No build step.** Node 22.18+ runs `.ts` itself by stripping types; `tsc` only checks. So
   `erasableSyntaxOnly` is on: no enums, namespaces or parameter properties, and relative imports
   carry the `.ts` extension.

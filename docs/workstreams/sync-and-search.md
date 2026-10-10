@@ -31,9 +31,15 @@ app. Also: reviewing everyone's PRs on the phone.
     (the forward is set but the server is not running); another server on the port.
   - Tests with `mockwebserver3`: reachable, another server, refused, accepted-then-closed,
     timeout.
+  - **The upload calls' read timeout is at least 90 s.** The server holds a paced request up to
+    a minute while it waits for a free model slot; OkHttp's 10 s default turns every held
+    request into a timeout and a backoff. `/health` keeps a short one.
 - [ ] **U2. The upload queue**
   - Unique WorkManager work, with a network constraint, scheduled after every save and every
     read (`UploadWorker.schedule(context)`, which capture and reading call).
+  - `BreadcrumbApp.onCreate` sets `uploadScheduler` (capture's and reading's hook, a no-op until
+    now) to `UploadWorker.schedule` **before the OCR queue starts**: a read landing first would
+    call the no-op, and nothing would be scheduled. Uploads use the 90 s read timeout (U1).
   - Each pass: pending deletes first; then reading's link step; then memories, **oldest first,
     ten per request**; then pictures; then enrichment.
   - States: PENDING → UPLOADING → SYNCED. A 503 or a network failure goes back to PENDING (with
@@ -56,7 +62,9 @@ app. Also: reviewing everyone's PRs on the phone.
 - [ ] **U3. Home: the mosaic**
   - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
     picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
-    the serif at the head, handing over to a slim strip as it scrolls away.
+    the serif at the head, handing over to a slim strip as it scrolls away. Tapping the slim
+    strip goes back to the top.
+  - A drag on the mosaic puts the keyboard away.
   - An empty mosaic says what to do: share something to Breadcrumb, tap the tile, or bring in
     what is already on the phone.
   - The debug list moves behind a long press on the wordmark, **in debug builds only**: pass the
@@ -68,6 +76,7 @@ app. Also: reviewing everyone's PRs on the phone.
     deleted before their delete synced).
   - The server out of reach → the word matches stand, marked "offline · words only".
   - A result row: title (sans), a fragment with the matched word lit, chips, age, source app.
+  - A drag on the results puts the keyboard away, as on the mosaic.
 - [ ] **U5. The detail of a memory, and the way back to the original**
   - A sheet: the artifact (the picture, the PDF's first page, a link card), where it came from
     and when (saved, from, taken), the text found, what the model saw, the person's note
@@ -75,6 +84,13 @@ app. Also: reviewing everyone's PRs on the phone.
   - Originals are app-private (architecture rule 1), so another app can only open one through a
     `FileProvider` content URI with a one-off read grant (`res/xml/originals_paths.xml` exposing
     `filesDir/originals/` and nothing else; authority `${applicationId}.originals`).
+  - A status line in the detail while there is one: still reading (OCR, or a link's page, not
+    done yet); page not read (the link's page could not be read); not sent yet, found by
+    words only (PENDING, so the server has not read it); refused (FAILED: the server refused
+    it with a 400).
+  - Share onward: the file (through the originals `FileProvider`), the URL, or a note's words,
+    with the person's note alongside; Breadcrumb left out of the chooser
+    (`Intent.EXTRA_EXCLUDE_COMPONENTS`), so a memory is not shared back into itself.
   - Delete with five seconds of Undo instead of a confirmation (`deleteEverywhere`, `restore`).
   - *Check:* a screenshot opens in the gallery, a PDF in a PDF viewer, a link in the browser,
     a note's text copies.
@@ -82,8 +98,10 @@ app. Also: reviewing everyone's PRs on the phone.
   - An amber "+" beside the search field opens a sheet for keeping something from inside the
     app: one box to write in, and a photo (system photo picker, no permission) or a PDF to go
     with it. Text alone is the memory; with files, each file is a memory and the text is their
-    note. A draft survives the sheet being dismissed. A launcher shortcut, "Keep something",
-    opens it from the app icon.
+    note. A draft survives the sheet being dismissed and the app closing, picked files
+    included: each file is held by a persistable read grant (`takePersistableUriPermission`),
+    released once the file is kept or removed from the draft, since an app may hold only 512.
+    A launcher shortcut, "Keep something", opens it from the app icon.
   - The import's way in (reading's R5) lives in this sheet, as a quiet line.
   - Motion: the mosaic rising in on launch, results staggering in, a new save dropping in, the
     picture travelling from its tile into the detail and back. Haptics on results landing and on

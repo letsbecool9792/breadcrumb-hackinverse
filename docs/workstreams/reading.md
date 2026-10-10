@@ -103,8 +103,11 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     it has got.
   - While OCR works through a big import, `readingOriginals` stays true, so the uploader holds
     the unread pictures back.
+  - The debug list's Clear forgets `imported_sources` too: otherwise an import after a Clear
+    skips everything as already seen and brings nothing back.
   - *Check:* import a screenshots folder → rows appear, get read, and (once sync exists) sync;
-    import it again → nothing new; delete one and import again → it does not come back.
+    import it again → nothing new; delete one and import again → it does not come back;
+    Clear, then import again → everything comes back.
 
 ## Rules and pitfalls
 
