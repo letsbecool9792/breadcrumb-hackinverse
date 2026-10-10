@@ -55,6 +55,7 @@
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.Breadcrumb.Capture"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -80,6 +81,7 @@
             android:noHistory="true"
             android:taskAffinity=""
             android:theme="@style/Theme.Breadcrumb.Capture"
+            android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
@@ -106,13 +108,17 @@
             </intent-filter>
         </service>
 
+        <!-- Not exported: only the tile opens it. Exported, any app could make
+             Breadcrumb save whatever is on the clipboard. -->
         <activity
             android:name=".capture.ClipboardCaptureActivity"
             android:theme="@style/Theme.Breadcrumb.Capture"
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
-            android:exported="true" />
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
     </application>
 
 </manifest>
