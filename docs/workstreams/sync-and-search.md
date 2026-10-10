@@ -23,7 +23,7 @@ app. Also: reviewing everyone's PRs on the phone.
 
 ## Steps
 
-- [ ] **U1. The server client, and seeing it from the phone**
+- [x] **U1. The server client, and seeing it from the phone**
   - OkHttp (5.4.0; 5.5 needs compileSdk 37) and kotlinx.serialization. `GET /health` and check
     `service == "breadcrumb"`.
   - A status line on the debug list that tells the four states apart, and rechecks on tap:
@@ -34,6 +34,13 @@ app. Also: reviewing everyone's PRs on the phone.
   - **The upload calls' read timeout is at least 90 s.** The server holds a paced request up to
     a minute while it waits for a free model slot; OkHttp's 10 s default turns every held
     request into a timeout and a backoff. `/health` keeps a short one.
+  - Built as `net/ServerClient` (`BreadcrumbApp.server`): `/health` waits 5 s and never retries,
+    so a check says what happened; uploads use `uploadClient`, read 100 s, call 130 s. Two more
+    states beside the four: *no answer in time*, and *unreachable* with its reason (a cleartext
+    refusal, say).
+  - *Check:* the line says *reachable* with `npm run dev` and `npm run reverse`; *connection
+    closed without a reply* with the server stopped; *connection refused* after
+    `adb reverse --remove-all`. A tap checks again.
 - [ ] **U2. The upload queue**
   - Unique WorkManager work, with a network constraint, scheduled after every save and every
     read (`UploadWorker.schedule(context)`, which capture and reading call).
