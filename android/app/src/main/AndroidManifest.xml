@@ -38,7 +38,7 @@
         </activity>
 
         <!-- Capture workstream: receive shares and text selection -->
-        <activity
+            <activity
             android:name=".capture.ShareReceiverActivity"
             android:label="@string/app_name"
             android:icon="@mipmap/ic_launcher"
@@ -46,7 +46,6 @@
             android:exported="true"
             android:excludeFromRecents="true"
             android:noHistory="true"
-            android:taskAffinity=""
             android:theme="@style/Theme.Breadcrumb.Capture"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode">
             <intent-filter>
