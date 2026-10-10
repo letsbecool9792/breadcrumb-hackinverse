@@ -22,6 +22,10 @@ free.** One tap, no questions, done before the user's thumb leaves the screen.
   milliseconds, and the insert would be cancelled with it.
 - **Copy files in** with `OriginalStore.copyIn` (`BreadcrumbApp.originals`), named by the memory id.
 - **Undo** with `MemoryDao.deleteEverywhere` plus `OriginalStore.delete`.
+- **A note** with `CaptureDao.setNote`: a targeted UPDATE that writes only a changed note and
+  then puts the memory back in the upload queue (PENDING), since the server embeds the note.
+  Never write the saved row back: the OCR queue may have read the picture meanwhile, and the
+  old row would wipe its text.
 - **What you hand on:** rows with `type`, `hasLink`, `title`, `rawText`, `localUri`,
   `contentCreatedAt`, `sourceApp`, `sourceAppLabel` (and `note`, if you build the note). Leave
   `extractedText` **null**: the reading workstream finds its work by that null, and reads every

@@ -25,6 +25,11 @@ its words seconds after it is saved, before the network has done anything.
   to null queues it to be read again.
 - **Write through `@Upsert` or a targeted `UPDATE`**, never `@Insert(onConflict = REPLACE)`: the
   word index is kept in step by triggers, and REPLACE deletes without firing them.
+- **A read with text puts the memory back in the upload queue:** `updateExtractedText` sets
+  `syncState` to PENDING when the text is non-empty, whatever the state (the server has not
+  read those words). An empty read leaves it alone: it changes nothing the server reads, and a
+  re-send would cost a model call for no new words. Any write of yours that changes what the
+  server reads does the same.
 - **You hand on** to the sync workstream:
   - a way to tell it there is something new to send. After every read, including one that
     found nothing, call its schedule function (`UploadWorker.schedule(context)`; until it
