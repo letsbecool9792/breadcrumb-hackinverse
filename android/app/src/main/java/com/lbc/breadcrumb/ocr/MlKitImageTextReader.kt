@@ -24,9 +24,9 @@ import kotlin.coroutines.resumeWithException
  * play-services one: works completely offline from the first save without
  * waiting for a model download.
  *
- * Downsamples big images first to avoid out-of-memory crashes on high-res
- * camera photos and screenshots, and honours EXIF orientation so rotated photos
- * are read right-side up.
+ * Downsamples big camera photos first to avoid out-of-memory crashes, without
+ * shrinking a screenshot's text (see [sampleSizeFor]), and honours EXIF
+ * orientation so rotated photos are read right-side up.
  */
 class MlKitImageTextReader(
     private val context: Context,
@@ -67,15 +67,9 @@ class MlKitImageTextReader(
             return@withContext ""
         }
 
-        // 3. Downsample big images to fit within MAX_DIMENSION (avoids OOM on 48MP+ photos)
-        var sampleSize = 1
-        val maxDimension = maxOf(origWidth, origHeight)
-        while ((maxDimension / sampleSize) > MAX_DIMENSION) {
-            sampleSize *= 2
-        }
-
+        // 3. Downsample big photos (avoids OOM on 48MP+), never a screenshot's text
         val decodeOptions = BitmapFactory.Options().apply {
-            inSampleSize = sampleSize
+            inSampleSize = sampleSizeFor(origWidth, origHeight)
         }
         val bitmap = try {
             BitmapFactory.decodeFile(file.absolutePath, decodeOptions)
@@ -101,14 +95,6 @@ class MlKitImageTextReader(
 
     override fun close() {
         recognizer.close()
-    }
-
-    companion object {
-        /**
-         * Longest dimension in pixels before downsampling.
-         * 2048 preserves sharp text in high-res screenshots while bounding memory.
-         */
-        private const val MAX_DIMENSION = 2048
     }
 }
 
