@@ -1,289 +1,306 @@
-import { type Request, type Response } from "express";
-import { type Db, type Document } from "mongodb";
-import { memories, type MemoryDoc } from "./memories.ts";
-import { GoogleGenAI } from "@google/genai";
-import { defaultSearchParser, getSourceLabels, type SearchInterpretation, type SearchParser } from "./search_parser.ts";
+import type { Request, Response } from "express";
+import type { Db, Document } from "mongodb";
+import {
+  DEFAULT_SEARCH_LIMIT,
+  MAX_QUERY_CHARS,
+  MAX_SEARCH_LIMIT,
+  type Interpretation,
+  type Ranks,
+  type SearchAnswer,
+  type SearchHit,
+} from "./api.ts";
+import { localDay, startOfDay, startOfNextDay } from "./days.ts";
+import { embedQuery, modelFailure } from "./gemini.ts";
+import { TEXT_INDEX, VECTOR_INDEX, memories, type MemoryDoc, type MemoryType } from "./memories.ts";
+import { defaultSearchParser, sourceNames, type SearchParser } from "./search_parser.ts";
 
-function l2Normalize(vector: number[]): number[] {
-  const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
-  return norm === 0 ? vector : vector.map(val => val / norm);
+/** Embeds a search phrase. */
+export type QueryEmbedder = (phrase: string) => Promise<number[]>;
+
+/** Reciprocal rank fusion's constant, the one $rankFusion uses. */
+const RRF_K = 60;
+const TEXT_PATHS = ["title", "note", "enrichment.summary", "rawText", "extractedText", "enrichment.readText"];
+
+/** A search that could not be read: the embedding model refused it (502), or may answer later (503). */
+export class SearchFailure extends Error {
+  readonly status: 502 | 503;
+  constructor(status: 502 | 503, message: string) {
+    super(message);
+    this.status = status;
+  }
 }
 
-export type QueryEmbedder = (query: string) => Promise<number[]>;
+export interface SearchOptions {
+  limit: number;
+  embedder: QueryEmbedder;
+  parser: SearchParser;
+  now?: Date;
+  /** Tests only: narrows both halves to these ids, so tests can borrow the real indexes. */
+  onlyIds?: string[];
+}
 
-export async function defaultQueryEmbedder(query: string): Promise<number[]> {
-  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-  const response = await ai.models.embedContent({
-    model: "gemini-embedding-001",
-    contents: query,
-    config: {
-      taskType: "RETRIEVAL_QUERY" as any,
-      outputDimensionality: 768
-    }
+/** What a search narrows by, after the parse. */
+export interface Filters {
+  types: MemoryType[];
+  from: Date | null;
+  /** Exclusive: midnight after the last day asked for. */
+  until: Date | null;
+  source: string | null;
+}
+
+export function filtersOf(interpretation: Interpretation | null): Filters {
+  return {
+    types: interpretation?.types ?? [],
+    from: interpretation?.from ? startOfDay(interpretation.from) : null,
+    until: interpretation?.to ? startOfNextDay(interpretation.to) : null,
+    source: interpretation?.sourceApp ?? null,
+  };
+}
+
+function hasFilters(filters: Filters): boolean {
+  return filters.types.length > 0 || filters.from !== null || filters.until !== null || filters.source !== null;
+}
+
+/**
+ * The filters as MQL, for $vectorSearch and for an all-filter listing. Each
+ * filter narrows on its own: a link from WhatsApp is a link AND from WhatsApp.
+ * A link filter matches anything carrying a link, not only type LINK: a
+ * captioned photo or PDF can carry one. A source is an app or a site.
+ */
+export function mqlFilter(filters: Filters, onlyIds?: string[]): Document | undefined {
+  const parts: Document[] = [];
+  if (filters.types.length > 0) {
+    parts.push(
+      filters.types.includes("LINK")
+        ? { $or: [{ type: { $in: filters.types } }, { hasLink: true }] }
+        : { type: { $in: filters.types } },
+    );
+  }
+  if (filters.from || filters.until) {
+    parts.push({ datedAt: { ...(filters.from ? { $gte: filters.from } : {}), ...(filters.until ? { $lt: filters.until } : {}) } });
+  }
+  if (filters.source) parts.push({ $or: [{ sourceAppLabel: filters.source }, { linkSites: filters.source }] });
+  if (onlyIds) parts.push({ _id: { $in: onlyIds } });
+  return parts.length === 0 ? undefined : parts.length === 1 ? parts[0] : { $and: parts };
+}
+
+/**
+ * The same filters as $search clauses, so they narrow the words half too:
+ * narrow only one half and the other brings back what was filtered out.
+ * Token fields take `in` and `equals`, never `text`.
+ */
+export function searchFilters(filters: Filters, onlyIds?: string[]): Document[] {
+  const clauses: Document[] = [];
+  if (filters.types.length > 0) {
+    const ofType = { in: { path: "type", value: filters.types } };
+    clauses.push(
+      filters.types.includes("LINK")
+        ? { compound: { should: [ofType, { equals: { path: "hasLink", value: true } }], minimumShouldMatch: 1 } }
+        : ofType,
+    );
+  }
+  if (filters.from || filters.until) {
+    clauses.push({ range: { path: "datedAt", ...(filters.from ? { gte: filters.from } : {}), ...(filters.until ? { lt: filters.until } : {}) } });
+  }
+  if (filters.source) {
+    clauses.push({
+      compound: {
+        should: [
+          { equals: { path: "sourceAppLabel", value: filters.source } },
+          { equals: { path: "linkSites", value: filters.source } },
+        ],
+        minimumShouldMatch: 1,
+      },
+    });
+  }
+  if (onlyIds) clauses.push({ in: { path: "_id", value: onlyIds } });
+  return clauses;
+}
+
+/**
+ * Reciprocal rank fusion, equal weights: a memory placed modestly by both
+ * halves can rise above one placed first by only one. Ranks are 1-based, null
+ * where a half did not place it.
+ */
+export function fuse(byMeaning: string[], byWords: string[], limit: number): { id: string; score: number; ranks: Ranks }[] {
+  const fused = new Map<string, { score: number; ranks: Ranks }>();
+  const add = (ids: string[], half: keyof Ranks) =>
+    ids.forEach((id, index) => {
+      const entry = fused.get(id) ?? { score: 0, ranks: { vector: null, text: null } };
+      entry.score += 1 / (RRF_K + index + 1);
+      entry.ranks[half] = index + 1;
+      fused.set(id, entry);
+    });
+  add(byMeaning, "vector");
+  add(byWords, "text");
+  return [...fused.entries()]
+    .map(([id, entry]) => ({ id, ...entry }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+/** A result: an allow-list, so a field added to the document stays in the cloud until listed here. */
+function hit(doc: MemoryDoc, score: number | null, ranks: Ranks): SearchHit {
+  return {
+    id: doc._id,
+    score,
+    ranks,
+    type: doc.type,
+    hasLink: doc.hasLink,
+    capturedAt: doc.capturedAt,
+    datedAt: doc.datedAt,
+    sourceAppLabel: doc.sourceAppLabel ?? null,
+    title: doc.title ?? null,
+    rawText: doc.rawText ?? null,
+    extractedText: doc.extractedText ?? null,
+    note: doc.note ?? null,
+    readText: doc.enrichment?.readText ?? null,
+    summary: doc.enrichment?.summary ?? null,
+    kind: doc.enrichment?.kind ?? null,
+  };
+}
+
+let parsedDay = "";
+const parses = new Map<string, Interpretation>();
+
+/** A phrase is parsed once a day: the same phrase, against the same sources, on the same day. */
+async function parse(phrase: string, now: Date, sources: string[], parser: SearchParser): Promise<Interpretation> {
+  const day = localDay(now);
+  if (day !== parsedDay) {
+    parses.clear();
+    parsedDay = day;
+  }
+  const key = `${sources.join("\u0000")}\u0001${phrase.toLowerCase()}`;
+  const known = parses.get(key);
+  if (known) return known;
+  const interpretation = await parser(phrase, now, sources);
+  parses.set(key, interpretation);
+  return interpretation;
+}
+
+/**
+ * A ranked list of memories for [phrase], never an answer. The phrase is
+ * parsed into words and filters; a parse that fails costs only the filters.
+ * An all-filter phrase ("screenshots from April") lists its matches newest
+ * first, with no embedding. Otherwise the words are searched by meaning and
+ * by words, both halves filtered alike, and fused by rank.
+ */
+export async function search(database: Db, phrase: string, options: SearchOptions): Promise<SearchAnswer> {
+  const { limit, embedder, parser, now = new Date(), onlyIds } = options;
+  const collection = memories(database);
+
+  // The raw phrase is embedded while it is parsed, and reused when the parse
+  // leaves its words unchanged: a new phrase would otherwise wait for both.
+  const rawEmbedding = embedder(phrase).then(
+    (vector) => ({ vector }),
+    (error: unknown) => ({ error }),
+  );
+
+  let interpretation: Interpretation | null = null;
+  let interpretationError: string | undefined;
+  try {
+    interpretation = await parse(phrase, now, await sourceNames(database), parser);
+  } catch (error) {
+    interpretationError = modelFailure(error).reason;
+  }
+  const filters = filtersOf(interpretation);
+
+  if (interpretation && interpretation.query === "" && hasFilters(filters)) {
+    const docs = await collection
+      .find(mqlFilter(filters, onlyIds) ?? {}, { projection: { embedding: 0 } })
+      .sort({ datedAt: -1 })
+      .limit(limit)
+      .toArray();
+    return answer(phrase, interpretation, interpretationError, docs.map((doc) => hit(doc, null, { vector: null, text: null })));
+  }
+
+  const words = interpretation?.query || phrase;
+  const embedded = words === phrase ? await rawEmbedding : await embedder(words).then((vector) => ({ vector }), (error: unknown) => ({ error }));
+  if ("error" in embedded) {
+    const { reason, retryable } = modelFailure(embedded.error);
+    throw new SearchFailure(retryable ? 503 : 502, reason);
+  }
+
+  // Each half offers the fusion more than the final list.
+  const candidates = Math.min(Math.max(limit * 2, 20), 100);
+  const mql = mqlFilter(filters, onlyIds);
+  const clauses = searchFilters(filters, onlyIds);
+  const [byMeaning, byWords] = await Promise.all([
+    collection
+      .aggregate<{ _id: string }>([
+        {
+          $vectorSearch: {
+            index: VECTOR_INDEX.name,
+            path: "embedding",
+            queryVector: embedded.vector,
+            // Exact nearest neighbours: under ~10,000 memories they cost little and miss nothing.
+            exact: true,
+            limit: candidates,
+            ...(mql ? { filter: mql } : {}),
+          },
+        },
+        { $project: { _id: 1 } },
+      ])
+      .toArray(),
+    collection
+      .aggregate<{ _id: string }>([
+        {
+          $search: {
+            index: TEXT_INDEX.name,
+            compound: {
+              must: [{ text: { query: words, path: TEXT_PATHS } }],
+              ...(clauses.length > 0 ? { filter: clauses } : {}),
+            },
+          },
+        },
+        { $limit: candidates },
+        { $project: { _id: 1 } },
+      ])
+      .toArray(),
+  ]);
+
+  const ranked = fuse(byMeaning.map((doc) => doc._id), byWords.map((doc) => doc._id), limit);
+  const docs = new Map(
+    (await collection.find({ _id: { $in: ranked.map((entry) => entry.id) } }, { projection: { embedding: 0 } }).toArray()).map((doc) => [doc._id, doc]),
+  );
+  const results = ranked.flatMap((entry) => {
+    const doc = docs.get(entry.id);
+    return doc ? [hit(doc, entry.score, entry.ranks)] : [];
   });
-  if (!response.embeddings || !response.embeddings[0] || !response.embeddings[0].values) {
-    throw new Error("Model returned no embeddings");
-  }
-  return l2Normalize(response.embeddings[0].values);
+  return answer(phrase, interpretation, interpretationError, results);
 }
 
-const parseCache = new Map<string, { interpretation: SearchInterpretation; at: string }>();
-
-function buildFilters(interp: SearchInterpretation): any {
-  const filters: any = {};
-  if (interp.types.length > 0) {
-    if (interp.types.includes("LINK")) {
-      const otherTypes = interp.types.filter(t => t !== "LINK");
-      if (otherTypes.length > 0) {
-         filters.$or = [
-           { type: { $in: otherTypes } },
-           { type: "LINK" },
-           { hasLink: true }
-         ];
-      } else {
-         filters.$or = [
-           { type: "LINK" },
-           { hasLink: true }
-         ];
-      }
-    } else {
-      filters.type = { $in: interp.types };
-    }
-  }
-
-  if (interp.from || interp.to) {
-    filters.datedAt = {};
-    if (interp.from) filters.datedAt.$gte = new Date(interp.from);
-    if (interp.to) filters.datedAt.$lte = new Date(interp.to + "T23:59:59.999Z");
-  }
-
-  if (interp.sourceApp) {
-    if (!filters.$or) filters.$or = [];
-    filters.$or.push({ sourceAppLabel: interp.sourceApp });
-    filters.$or.push({ linkSites: interp.sourceApp });
-  }
-  
-  return filters;
+function answer(phrase: string, interpretation: Interpretation | null, interpretationError: string | undefined, results: SearchHit[]): SearchAnswer {
+  return { query: phrase, interpretation, ...(interpretationError ? { interpretationError } : {}), results };
 }
 
-function convertToSearchCompound(filters: any): any[] {
-  const compound: any[] = [];
-  if (filters.type && filters.type.$in) {
-    compound.push({ text: { path: "type", query: filters.type.$in } });
-  }
-  if (filters.$or) {
-    const shoulds = filters.$or.map((o: any) => {
-      if (o.type && o.type.$in) return { text: { path: "type", query: o.type.$in } };
-      if (o.type === "LINK") return { text: { path: "type", query: "LINK" } };
-      if (o.hasLink === true) return { equals: { path: "hasLink", value: true } };
-      if (o.sourceAppLabel) return { text: { path: "sourceAppLabel", query: o.sourceAppLabel } };
-      if (o.linkSites) return { text: { path: "linkSites", query: o.linkSites } };
-      return null;
-    }).filter(Boolean);
-    if (shoulds.length > 0) {
-       compound.push({ compound: { should: shoulds, minimumShouldMatch: 1 } });
-    }
-  }
-  if (filters.datedAt) {
-    const range: any = { path: "datedAt" };
-    if (filters.datedAt.$gte) range.gte = filters.datedAt.$gte;
-    if (filters.datedAt.$lte) range.lte = filters.datedAt.$lte;
-    compound.push({ range });
-  }
-  return compound;
-}
-
-export function makeSearchHandler(database: Db, embedder: QueryEmbedder = defaultQueryEmbedder, parser: SearchParser = defaultSearchParser) {
+export function makeSearchHandler(database: Db, embedder: QueryEmbedder = embedQuery, parser: SearchParser = defaultSearchParser) {
   return async (req: Request, res: Response) => {
+    const phrase = typeof req.query.q === "string" ? req.query.q.trim() : "";
+    if (!phrase || phrase.length > MAX_QUERY_CHARS) {
+      res.status(400).json({ error: `q: 1 to ${MAX_QUERY_CHARS} characters` });
+      return;
+    }
+    let limit = DEFAULT_SEARCH_LIMIT;
+    if (req.query.limit !== undefined) {
+      limit = Number(req.query.limit);
+      if (!Number.isInteger(limit) || limit < 1 || limit > MAX_SEARCH_LIMIT) {
+        res.status(400).json({ error: `limit: 1 to ${MAX_SEARCH_LIMIT}` });
+        return;
+      }
+    }
+
     try {
-      const q = req.query.q as string;
-      if (!q || typeof q !== "string") {
-        res.status(400).json({ error: "missing q parameter" });
+      res.json(await search(database, phrase, { limit, embedder, parser }));
+    } catch (error) {
+      if (error instanceof SearchFailure && error.status === 502) {
+        res.status(502).json({ error: "the embedding model refused the search", reason: error.message });
         return;
       }
-      if (q.length > 500) {
-        res.status(400).json({ error: "q is too long" });
-        return;
-      }
-      let limit = 20;
-      if (req.query.limit !== undefined) {
-        limit = Number(req.query.limit);
-        if (Number.isNaN(limit) || limit < 1 || limit > 50) {
-          res.status(400).json({ error: "invalid limit parameter" });
-          return;
-        }
-      }
-
-      const collection = memories(database);
-      const now = new Date();
-      const todayStr = now.toISOString().split("T")[0]!;
-
-      // Parse and embed raw concurrently
-      const rawEmbedPromise = embedder(q).catch(() => null);
-      
-      const sourceLabels = await getSourceLabels(database);
-      const cacheKey = `${q}::${sourceLabels.join(",")}::${todayStr}`;
-      
-      let interp: SearchInterpretation | null = null;
-      let interpError: string | null = null;
-
-      if (parseCache.has(cacheKey) && parseCache.get(cacheKey)!.at === todayStr) {
-        interp = parseCache.get(cacheKey)!.interpretation;
-      } else {
-        try {
-          interp = await parser(q, now, sourceLabels);
-          parseCache.set(cacheKey, { interpretation: interp, at: todayStr });
-        } catch (e: any) {
-          interpError = e.message || "parse failed";
-        }
-      }
-
-      const filters = interp ? buildFilters(interp) : {};
-      const filterKeys = Object.keys(filters);
-      
-      const actualQuery = interp?.query?.trim() || q;
-      const isAllFilter = interp && actualQuery === "" && filterKeys.length > 0;
-
-      const results: any[] = [];
-
-      if (isAllFilter) {
-        const docs = await collection.find(filters).sort({ datedAt: -1 }).limit(limit).toArray();
-        docs.forEach((doc, i) => {
-          results.push({
-            id: doc._id,
-            score: null,
-            ranks: { vector: undefined, text: undefined },
-            type: doc.type,
-            hasLink: doc.hasLink,
-            capturedAt: doc.capturedAt,
-            datedAt: doc.datedAt,
-            sourceAppLabel: doc.sourceAppLabel || null,
-            title: doc.title || null,
-            rawText: doc.rawText || null,
-            extractedText: doc.extractedText || null,
-            note: doc.note || null,
-            readText: doc.enrichment?.readText || null,
-            summary: doc.enrichment?.summary || null,
-            kind: doc.enrichment?.kind || null
-          });
-        });
-      } else {
-        let queryVector = await rawEmbedPromise;
-        if (actualQuery !== q) {
-          try {
-            queryVector = await embedder(actualQuery);
-          } catch (e: any) {
-             // Fall back
-          }
-        }
-        
-        if (!queryVector) {
-           res.status(503).json({ error: "could not read the search", retryable: true });
-           return;
-        }
-
-        const fusionLimit = Math.max(limit * 2, 20);
-
-        // 1. Vector Search
-        const vectorStage: any = {
-          index: "memories_vector",
-          path: "embedding",
-          queryVector,
-          numCandidates: Math.max(limit * 10, 100),
-          limit: fusionLimit,
-        };
-        if (filterKeys.length > 0) {
-           vectorStage.filter = filters;
-        }
-
-        const vectorResults = await collection.aggregate([
-          { $vectorSearch: vectorStage },
-          { $project: { _id: 1, _score: { $meta: "vectorSearchScore" } } }
-        ]).toArray();
-
-        // 2. Text Search
-        const textFilters = convertToSearchCompound(filters);
-        const textStage: any = {
-          index: "memories_text",
-          compound: {
-             must: [
-               {
-                 text: {
-                   query: actualQuery,
-                   path: ["title", "note", "enrichment.summary", "rawText", "extractedText", "enrichment.readText"]
-                 }
-               }
-             ]
-          }
-        };
-        if (textFilters.length > 0) {
-           textStage.compound.filter = textFilters;
-        }
-
-        const textResults = await collection.aggregate([
-          { $search: textStage },
-          { $limit: fusionLimit },
-          { $project: { _id: 1, _score: { $meta: "searchScore" } } }
-        ]).toArray();
-
-        const combined = new Map<string, { doc: MemoryDoc | null, ranks: { vector?: number; text?: number }, score: number }>();
-
-        vectorResults.forEach((res, i) => {
-          const id = res._id.toString();
-          if (!combined.has(id)) combined.set(id, { doc: null, ranks: {}, score: 0 });
-          const entry = combined.get(id)!;
-          entry.ranks.vector = i + 1;
-          entry.score += 1 / (60 + (i + 1));
-        });
-
-        textResults.forEach((res, i) => {
-          const id = res._id.toString();
-          if (!combined.has(id)) combined.set(id, { doc: null, ranks: {}, score: 0 });
-          const entry = combined.get(id)!;
-          entry.ranks.text = i + 1;
-          entry.score += 1 / (60 + (i + 1));
-        });
-
-        const sortedIds = Array.from(combined.entries())
-          .sort((a, b) => b[1].score - a[1].score)
-          .slice(0, limit);
-
-        const docs = await collection.find({ _id: { $in: sortedIds.map(e => e[0]) } as any }).toArray();
-        const docMap = new Map(docs.map(d => [d._id, d]));
-
-        sortedIds.forEach(([id, info]) => {
-          const doc = docMap.get(id);
-          if (!doc) return;
-          results.push({
-            id: doc._id,
-            score: info.score,
-            ranks: info.ranks,
-            type: doc.type,
-            hasLink: doc.hasLink,
-            capturedAt: doc.capturedAt,
-            datedAt: doc.datedAt,
-            sourceAppLabel: doc.sourceAppLabel || null,
-            title: doc.title || null,
-            rawText: doc.rawText || null,
-            extractedText: doc.extractedText || null,
-            note: doc.note || null,
-            readText: doc.enrichment?.readText || null,
-            summary: doc.enrichment?.summary || null,
-            kind: doc.enrichment?.kind || null
-          });
-        });
-      }
-
-      res.status(200).json({
-        query: actualQuery,
-        interpretation: interp,
-        interpretationError: interpError,
-        results
-      });
-
-    } catch (e: any) {
-      console.error(e);
-      res.status(500).json({ error: "internal" });
+      // Never the phrase: the server does not log what people search for.
+      const what = error instanceof SearchFailure ? error.message : `the database did not answer (${(error as Error)?.name ?? "error"})`;
+      if (!(error instanceof SearchFailure)) console.error(`search failed: ${what}`);
+      res.status(503).json({ error: "could not read the search", reason: what, retryable: true });
     }
   };
 }
