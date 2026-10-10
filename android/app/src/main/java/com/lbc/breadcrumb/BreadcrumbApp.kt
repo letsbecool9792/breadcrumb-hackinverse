@@ -4,6 +4,7 @@ import android.app.Application
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.imports.BulkImporter
+import com.lbc.breadcrumb.net.ServerClient
 import com.lbc.breadcrumb.ocr.OcrQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,9 @@ class BreadcrumbApp : Application() {
 
     /** Where the originals of saved pictures and PDFs live (architecture rule 1). */
     val originals: OriginalStore by lazy { OriginalStore(this) }
+
+    /** The server's API (docs/api.md), shared so its connection pool is too. */
+    val server: ServerClient by lazy { ServerClient() }
 
     /** Bulk importer for bringing in content already on the phone (reading R5). */
     val importer: BulkImporter by lazy { BulkImporter(this) }
