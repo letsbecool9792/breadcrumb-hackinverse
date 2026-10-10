@@ -32,7 +32,7 @@ class ShareReceiverActivity : ComponentActivity() {
         
         if (text.isNullOrBlank()) {
             setContent {
-                BreadcrumbTheme {
+                BreadcrumbTheme(darkTheme = true) {
                     CaptureSheet(
                         state = CaptureState.Failed(getString(com.lbc.breadcrumb.R.string.capture_nothing_to_save)),
                         onUndo = {},
@@ -65,7 +65,7 @@ class ShareReceiverActivity : ComponentActivity() {
 
         setContent {
             val state by stateFlow.collectAsState()
-            BreadcrumbTheme {
+            BreadcrumbTheme(darkTheme = true) {
                 CaptureSheet(
                     state = state,
                     onUndo = {
