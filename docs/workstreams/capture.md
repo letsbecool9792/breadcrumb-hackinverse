@@ -76,9 +76,13 @@ what Suparno runs when he reviews.
     unlock, then saves; an empty clipboard → a clear message, nothing saved.
 - [x] **C5. The capture sheet** (replaces the toast)
   - A sheet over the app the share came from, on the transparent `Theme.Breadcrumb.Capture`:
-    a preview (one photo large, following its shape; several images as a row of square tiles
-    with "+N" on the third; a link card with site, title and URL; the text itself; a PDF card
-    with title, type and size), then "Saved" / "Saved 3", **Undo** and **Done**.
+    a preview (one photo following its shape, capped in height and cropped from the top;
+    several as square tiles sharing the row's width, "+N" on the last; a link card with the
+    host of the first URL anywhere in the text, the page title as headline when there is one,
+    and the URL beneath; the text itself; a PDF card with title, type and size), then "Saved"
+    / "Saved 3" / "Saved 2 of 3", a lowercase mono line of kind and source under it ("image ·
+    from whatsapp", the source only when every item agrees), **Undo** and **Done**. "Saving…"
+    is said in words, and every word comes from `strings.xml`.
   - It **stays until dismissed**: Done, swipe down, tap outside, Back. Only Undo closes it by
     itself, after showing "Removed".
   - The scrim and the sheet leave together: nothing slides away a beat after the sheet (see the
@@ -128,6 +132,17 @@ what Suparno runs when he reviews.
   `FLAG_NOT_TOUCHABLE`, make the decor view `INVISIBLE`, wait two frames for the window manager
   to hide the surface, then `finish()`; and post a ~150 ms fallback `finish()`, since a hidden
   window may stop receiving frames and the two-frame wait would never end.
+- **One transition drives the scrim and the sheet, both ways:** the dim fades in as the sheet
+  rises, and both leave together. The activity finishes only after the exit has played and
+  one clear frame has drawn; finishing when the exit starts hides the window in that frame,
+  and the exit is never seen. Read the transition and the drag while laying out and drawing,
+  never in composition.
+- **The scrim is the sheet's sibling, behind it, not its parent:** a parent's clickable also
+  hears every tap inside the sheet, so a tap on the preview would close it.
+- **Edge to edge:** targetSdk 36 is edge to edge on Android 15+, where `adjustResize` no
+  longer lifts Compose content. The sheet pads `navigationBarsPadding()` then `imePadding()`,
+  in that order, and the capture activities call `enableEdgeToEdge` on older versions too, so
+  every version behaves alike.
 - **One base class runs every capture** (`CaptureActivity`): the sheet's state, the upload
   hold, the note, Undo and closing. An activity only captures, through `saveText`,
   `saveFiles` or `fail`.
