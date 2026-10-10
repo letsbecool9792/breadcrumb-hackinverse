@@ -2,8 +2,6 @@ package com.lbc.breadcrumb.ui.capture
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.test.hasProgressBarRangeInfo
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -93,10 +91,29 @@ class CaptureSheetTest {
     }
 
     @Test
+    fun theLineUnderSavedSaysTheKindAndWhereFrom() {
+        show(
+            CaptureState.Saved(
+                listOf(Memory(type = MemoryType.TEXT, rawText = "Try the brewery burger", sourceAppLabel = "WhatsApp")),
+            ),
+        )
+
+        compose.onNodeWithText("text · from whatsapp").assertExists()
+    }
+
+    @Test
+    fun savingSomeOfMoreSaysSo() {
+        show(CaptureState.Saved(saved.memories, total = 3))
+
+        compose.onNodeWithText("Saved 1 of 3").assertExists()
+    }
+
+    @Test
     fun theSheetCannotBeSwipedAwayWhileSaving() {
         show(CaptureState.Saving)
 
-        compose.onNode(hasProgressBarRangeInfo(ProgressBarRangeInfo.Indeterminate)).performTouchInput {
+        // In words, where a spinner used to be.
+        compose.onNodeWithText("Saving…").performTouchInput {
             swipe(center, center + Offset(0f, 1000f), durationMillis = 300)
         }
         compose.waitForIdle()

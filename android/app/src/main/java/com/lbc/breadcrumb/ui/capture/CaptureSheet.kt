@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
+import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.theme.*
@@ -202,10 +204,14 @@ fun CaptureSheet(
                             .padding(vertical = 32.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(
-                            color = AmberBright,
-                            strokeWidth = 2.dp,
-                            modifier = Modifier.size(24.dp)
+                        Text(
+                            stringResource(R.string.capture_saving),
+                            style = TextStyle(
+                                fontFamily = Serif,
+                                fontWeight = FontWeight.Normal,
+                                fontSize = 22.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
                         )
                     }
                 }
@@ -219,15 +225,27 @@ fun CaptureSheet(
                     // Title: "Saved", "Saved 3", or "Saved 2 of 3" when some could not be kept
                     Text(
                         text = when {
-                            state.count < state.total -> "Saved ${state.count} of ${state.total}"
-                            state.count == 1 -> "Saved"
-                            else -> "Saved ${state.count}"
+                            state.count < state.total -> stringResource(R.string.capture_saved_some, state.count, state.total)
+                            state.count == 1 -> stringResource(R.string.capture_saved)
+                            else -> stringResource(R.string.capture_saved_many, state.count)
                         },
                         style = TextStyle(
                             fontFamily = Serif,
                             fontWeight = FontWeight.Normal,
                             fontSize = 22.sp,
                             color = MaterialTheme.colorScheme.onSurface
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(2.dp))
+
+                    // What was saved, and where from when every item agrees
+                    Text(
+                        text = SheetText.kindLine(state.memories),
+                        style = TextStyle(
+                            fontFamily = Mono,
+                            fontSize = 12.sp,
+                            color = BoneDim
                         )
                     )
 
@@ -257,7 +275,7 @@ fun CaptureSheet(
                                 decorationBox = { innerTextField ->
                                     if (note.isEmpty()) {
                                         Text(
-                                            "Add a note…",
+                                            stringResource(R.string.capture_note_hint),
                                             style = TextStyle(
                                                 fontFamily = Sans,
                                                 fontSize = 14.sp,
@@ -274,7 +292,7 @@ fun CaptureSheet(
 
                     if (!showNoteField) {
                         Text(
-                            text = "add a note",
+                            text = stringResource(R.string.capture_add_note),
                             style = TextStyle(
                                 fontFamily = Mono,
                                 fontSize = 12.sp,
@@ -300,7 +318,7 @@ fun CaptureSheet(
                             )
                         ) {
                             Text(
-                                "Undo",
+                                stringResource(R.string.capture_undo),
                                 style = TextStyle(
                                     fontFamily = Sans,
                                     fontWeight = FontWeight.Medium,
@@ -317,7 +335,7 @@ fun CaptureSheet(
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                "Done",
+                                stringResource(R.string.capture_done),
                                 style = TextStyle(
                                     fontFamily = Sans,
                                     fontWeight = FontWeight.SemiBold,
@@ -336,7 +354,7 @@ fun CaptureSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "Removed",
+                            stringResource(R.string.capture_removed),
                             style = TextStyle(
                                 fontFamily = Serif,
                                 fontWeight = FontWeight.Normal,
@@ -377,7 +395,7 @@ fun CaptureSheet(
                                 shape = RoundedCornerShape(8.dp)
                             ) {
                                 Text(
-                                    "Close",
+                                    stringResource(R.string.capture_close),
                                     style = TextStyle(
                                         fontFamily = Sans,
                                         fontWeight = FontWeight.Medium,
@@ -423,7 +441,7 @@ private fun SinglePhoto(memory: Memory) {
             model = ImageRequest.Builder(LocalContext.current)
                 .data(Uri.parse(uri))
                 .build(),
-            contentDescription = "Saved picture",
+            contentDescription = stringResource(R.string.capture_picture),
             contentScale = ContentScale.Crop,
             alignment = Alignment.TopCenter,
             onSuccess = { success ->
@@ -469,7 +487,7 @@ private fun TileRow(memories: List<Memory>) {
                     )
                 } else {
                     Text(
-                        "PDF",
+                        stringResource(R.string.capture_pdf),
                         style = TextStyle(
                             fontFamily = Mono,
                             fontWeight = FontWeight.Medium,
@@ -579,7 +597,7 @@ private fun PdfCard(memory: Memory) {
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "PDF",
+                stringResource(R.string.capture_pdf),
                 style = TextStyle(
                     fontFamily = Mono,
                     fontWeight = FontWeight.Medium,
@@ -591,7 +609,7 @@ private fun PdfCard(memory: Memory) {
         Spacer(modifier = Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = memory.title ?: "Document",
+                text = memory.title ?: stringResource(R.string.capture_document),
                 style = TextStyle(
                     fontFamily = Sans,
                     fontWeight = FontWeight.Medium,
@@ -602,7 +620,7 @@ private fun PdfCard(memory: Memory) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = listOfNotNull("PDF", size?.let { Formatter.formatShortFileSize(context, it) })
+                text = listOfNotNull(stringResource(R.string.capture_pdf), size?.let { Formatter.formatShortFileSize(context, it) })
                     .joinToString(" · "),
                 style = TextStyle(
                     fontFamily = Mono,
