@@ -41,7 +41,7 @@ its words seconds after it is saved, before the network has done anything.
 One PR each, checked on a phone. The debug list shows each row's reading state ("not read",
 "read · N chars", "no text found").
 
-- [ ] **R1. OCR of saved pictures**
+- [x] **R1. OCR of saved pictures**
   - ML Kit Text Recognition with the **bundled** model (`com.google.mlkit:text-recognition`,
     already a dependency), not `play-services-mlkit-text-recognition`, which downloads its model
     on first use and so is not offline from the first save.
