@@ -1,6 +1,10 @@
 package com.lbc.breadcrumb.ui.debug
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +23,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import java.io.File
+import java.util.UUID
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -84,7 +91,7 @@ fun MemoryListScreen() {
                 }
             }) { Text(stringResource(R.string.debug_clear), style = chrome) }
             TextButton(onClick = {
-                val sample = SAMPLES[nextSample % SAMPLES.size]()
+                val sample = SAMPLES[nextSample % SAMPLES.size](app)
                 nextSample += 1
                 app.applicationScope.launch { dao.upsert(sample) }
             }) { Text("+", style = chrome.copy(fontSize = 18.sp)) }
@@ -116,9 +123,11 @@ fun MemoryListScreen() {
 
 @Composable
 private fun MemoryRow(memory: Memory, onDelete: () -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
     Row(
         Modifier
             .fillMaxWidth()
+            .clickable { expanded = !expanded }
             .padding(start = 16.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
         verticalAlignment = Alignment.Top,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -139,9 +148,17 @@ private fun MemoryRow(memory: Memory, onDelete: () -> Unit) {
                 headline(memory),
                 style = body,
                 color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 2,
+                maxLines = if (expanded) Int.MAX_VALUE else 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            if (expanded && !memory.extractedText.isNullOrBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "read: ${memory.extractedText}",
+                    style = chrome,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             memory.note?.let {
                 Text("note: $it", style = body, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2)
             }
@@ -164,7 +181,10 @@ private fun readingState(memory: Memory): String? {
     return when {
         text == null -> if (memory.type == MemoryType.IMAGE || memory.type == MemoryType.PDF) "not read" else null
         text.isEmpty() -> "no text found"
-        else -> "read · ${text.length} chars"
+        else -> {
+            val lines = text.lineSequence().filter { it.isNotBlank() }.count()
+            "read · $lines lines · ${text.length} chars"
+        }
     }
 }
 
@@ -183,14 +203,14 @@ private val TIME = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
  * any capture surface exists. Built fresh each time, so each gets its own id
  * and timestamp.
  */
-private val SAMPLES: List<() -> Memory> = listOf(
-    {
+private val SAMPLES: List<(BreadcrumbApp) -> Memory> = listOf(
+    { _ ->
         Memory(
             type = MemoryType.TEXT,
             rawText = "Try the brewery burger at that place in Indiranagar, Priya said it's the best in town",
         )
     },
-    {
+    { _ ->
         Memory(
             type = MemoryType.LINK,
             hasLink = true,
@@ -198,11 +218,52 @@ private val SAMPLES: List<() -> Memory> = listOf(
             rawText = "https://www.linkedin.com/jobs/view/4120938817",
         )
     },
-    {
+    { _ ->
         Memory(
             type = MemoryType.TEXT,
             rawText = "Arjun from the hackathon, works on modem firmware at Qualcomm, +91 98450 12345",
             note = "met at the demo table",
         )
     },
+    { app ->
+        createSampleImageMemory(app, withText = true)
+    },
+    { app ->
+        createSampleImageMemory(app, withText = false)
+    },
 )
+
+private fun createSampleImageMemory(app: BreadcrumbApp, withText: Boolean): Memory {
+    val id = UUID.randomUUID().toString()
+    val width = 600
+    val height = 300
+    val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+    val canvas = Canvas(bitmap)
+    val paint = Paint().apply { isAntiAlias = true }
+
+    if (withText) {
+        canvas.drawColor(android.graphics.Color.WHITE)
+        paint.color = android.graphics.Color.BLACK
+        paint.textSize = 28f
+        canvas.drawText("Software Engineering Intern, Qualcomm", 20f, 60f, paint)
+        canvas.drawText("Apply by April 30. Bengaluru.", 20f, 110f, paint)
+        canvas.drawText("Priya says apply early via career portal", 20f, 160f, paint)
+        canvas.drawText("Requirements: Kotlin, C++, algorithms", 20f, 210f, paint)
+    } else {
+        canvas.drawColor(android.graphics.Color.DKGRAY)
+    }
+
+    val dir = File(app.filesDir, "originals").apply { mkdirs() }
+    val file = File(dir, "$id.jpg")
+    file.outputStream().use { out ->
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+    }
+    bitmap.recycle()
+
+    return Memory(
+        id = id,
+        type = MemoryType.IMAGE,
+        localUri = app.originals.uriFor(file),
+        sourceAppLabel = if (withText) "Screenshots" else "Camera",
+    )
+}
