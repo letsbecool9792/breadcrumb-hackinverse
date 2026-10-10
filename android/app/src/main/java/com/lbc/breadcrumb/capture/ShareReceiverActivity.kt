@@ -3,13 +3,21 @@ package com.lbc.breadcrumb.capture
 import android.content.Intent
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.ui.capture.CaptureSheet
+import com.lbc.breadcrumb.ui.capture.CaptureState
+import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
 class ShareReceiverActivity : ComponentActivity() {
+
+    private val heldIds = mutableSetOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -23,8 +31,15 @@ class ShareReceiverActivity : ComponentActivity() {
         }
         
         if (text.isNullOrBlank()) {
-            Toast.makeText(this, getString(com.lbc.breadcrumb.R.string.capture_nothing_to_save), Toast.LENGTH_SHORT).show()
-            closeCleanly()
+            setContent {
+                BreadcrumbTheme {
+                    CaptureSheet(
+                        state = CaptureState.Failed(getString(com.lbc.breadcrumb.R.string.capture_nothing_to_save)),
+                        onUndo = {},
+                        onDismiss = { closeCleanly() }
+                    )
+                }
+            }
             return
         }
 
@@ -42,11 +57,59 @@ class ShareReceiverActivity : ComponentActivity() {
             sourceAppLabel = sourceAppLabel
         )
 
-        app.applicationScope.launch {
-            app.database.memoryDao().upsert(memory)
+        // Hold back from upload while the sheet is open
+        heldIds.add(memory.id)
+        app.uploadHolds.addAll(heldIds)
+
+        val stateFlow = MutableStateFlow<CaptureState>(CaptureState.Saving)
+
+        setContent {
+            val state by stateFlow.collectAsState()
+            BreadcrumbTheme {
+                CaptureSheet(
+                    state = state,
+                    onUndo = {
+                        app.applicationScope.launch {
+                            app.database.memoryDao().deleteEverywhere(memory, System.currentTimeMillis())
+                        }
+                        stateFlow.value = CaptureState.Removed
+                    },
+                    onDismiss = { releaseAndClose(app) },
+                    onNote = { note ->
+                        app.applicationScope.launch {
+                            val updated = memory.copy(note = note, updatedAt = System.currentTimeMillis())
+                            app.database.memoryDao().update(updated)
+                        }
+                    }
+                )
+            }
         }
 
-        Toast.makeText(this, getString(com.lbc.breadcrumb.R.string.capture_saved), Toast.LENGTH_SHORT).show()
+        app.applicationScope.launch {
+            app.database.memoryDao().upsert(memory)
+            stateFlow.value = CaptureState.Saved(1, listOf(memory))
+        }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        releaseHolds()
+    }
+
+    override fun onDestroy() {
+        releaseHolds()
+        super.onDestroy()
+    }
+
+    private fun releaseHolds() {
+        val app = application as BreadcrumbApp
+        app.uploadHolds.removeAll(heldIds)
+        heldIds.clear()
+    }
+
+    private fun releaseAndClose(app: BreadcrumbApp) {
+        app.uploadHolds.removeAll(heldIds)
+        heldIds.clear()
         closeCleanly()
     }
 

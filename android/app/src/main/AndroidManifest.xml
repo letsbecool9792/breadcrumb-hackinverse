@@ -112,7 +112,7 @@
             android:excludeFromRecents="true"
             android:noHistory="true"
             android:taskAffinity=""
-            android:exported="false" />
+            android:exported="true" />
     </application>
 
 </manifest>

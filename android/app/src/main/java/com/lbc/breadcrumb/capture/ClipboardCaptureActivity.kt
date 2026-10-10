@@ -4,16 +4,25 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
+import com.lbc.breadcrumb.ui.capture.CaptureSheet
+import com.lbc.breadcrumb.ui.capture.CaptureState
+import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
@@ -22,15 +31,50 @@ class ClipboardCaptureActivity : ComponentActivity() {
 
     private var timeoutJob: Job? = null
     private var hasReadClipboard = false
+    private val stateFlow = MutableStateFlow<CaptureState>(CaptureState.Saving)
+    private val heldIds = mutableSetOf<String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        val app = application as BreadcrumbApp
+        setContent {
+            val state by stateFlow.collectAsState()
+
+            BreadcrumbTheme {
+                CaptureSheet(
+                    state = state,
+                    onUndo = {
+                        if (state is CaptureState.Saved) {
+                            val savedMemories = (state as CaptureState.Saved).memories
+                            app.applicationScope.launch {
+                                savedMemories.forEach { mem ->
+                                    app.database.memoryDao().deleteEverywhere(mem, System.currentTimeMillis())
+                                    app.originals.delete(mem)
+                                }
+                            }
+                            stateFlow.value = CaptureState.Removed
+                        }
+                    },
+                    onDismiss = { releaseAndClose(app) },
+                    onNote = { note ->
+                        val saved = (stateFlow.value as? CaptureState.Saved)?.memories ?: return@CaptureSheet
+                        app.applicationScope.launch {
+                            saved.forEach { mem ->
+                                val updated = mem.copy(note = note, updatedAt = System.currentTimeMillis())
+                                app.database.memoryDao().update(updated)
+                            }
+                        }
+                    }
+                )
+            }
+        }
+
         // Give it a 2s timeout so a window that never gains focus cannot sit invisibly
         timeoutJob = lifecycleScope.launch {
             delay(2000)
             if (!hasReadClipboard) {
-                closeCleanly()
+                releaseAndClose(app)
             }
         }
     }
@@ -49,15 +93,13 @@ class ClipboardCaptureActivity : ComponentActivity() {
         val clip = clipboard.primaryClip
 
         if (clip == null || clip.itemCount == 0) {
-            Toast.makeText(this, R.string.capture_nothing_to_save, Toast.LENGTH_SHORT).show()
-            closeCleanly()
+            stateFlow.value = CaptureState.Failed(getString(R.string.capture_nothing_to_save))
             return
         }
 
         val isSensitive = clip.description?.extras?.getBoolean("android.content.extra.IS_SENSITIVE") ?: false
         if (isSensitive) {
-            Toast.makeText(this, R.string.capture_nothing_to_save, Toast.LENGTH_SHORT).show()
-            closeCleanly()
+            stateFlow.value = CaptureState.Failed(getString(R.string.capture_nothing_to_save))
             return
         }
 
@@ -90,15 +132,17 @@ class ClipboardCaptureActivity : ComponentActivity() {
                         localUri = app.originals.uriFor(file)
                     )
 
+                    heldIds.add(memory.id)
+                    app.uploadHolds.addAll(heldIds)
+
                     app.applicationScope.launch {
                         app.database.memoryDao().upsert(memory)
                     }
-                    Toast.makeText(this@ClipboardCaptureActivity, R.string.capture_saved, Toast.LENGTH_SHORT).show()
+                    stateFlow.value = CaptureState.Saved(1, listOf(memory))
                 } catch (e: Exception) {
                     e.printStackTrace()
-                    Toast.makeText(this@ClipboardCaptureActivity, R.string.capture_nothing_to_save, Toast.LENGTH_SHORT).show()
+                    stateFlow.value = CaptureState.Failed(getString(R.string.capture_nothing_to_save))
                 }
-                closeCleanly()
             }
         } else if (!text.isNullOrBlank()) {
             val (type, hasLink) = TextRules.parseText(text)
@@ -108,15 +152,38 @@ class ClipboardCaptureActivity : ComponentActivity() {
                 rawText = text
             )
 
+            heldIds.add(memory.id)
+            app.uploadHolds.addAll(heldIds)
+
             app.applicationScope.launch {
                 app.database.memoryDao().upsert(memory)
             }
-            Toast.makeText(this, R.string.capture_saved, Toast.LENGTH_SHORT).show()
-            closeCleanly()
+            stateFlow.value = CaptureState.Saved(1, listOf(memory))
         } else {
-            Toast.makeText(this, R.string.capture_nothing_to_save, Toast.LENGTH_SHORT).show()
-            closeCleanly()
+            stateFlow.value = CaptureState.Failed(getString(R.string.capture_nothing_to_save))
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        releaseHolds()
+    }
+
+    override fun onDestroy() {
+        releaseHolds()
+        super.onDestroy()
+    }
+
+    private fun releaseHolds() {
+        val app = application as BreadcrumbApp
+        app.uploadHolds.removeAll(heldIds)
+        heldIds.clear()
+    }
+
+    private fun releaseAndClose(app: BreadcrumbApp) {
+        app.uploadHolds.removeAll(heldIds)
+        heldIds.clear()
+        closeCleanly()
     }
 
     private fun closeCleanly() {

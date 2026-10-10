@@ -36,6 +36,14 @@ class BreadcrumbApp : Application() {
      */
     val readingOriginals = MutableStateFlow(true)
 
+    /**
+     * Capture workstream: memory ids that must not be uploaded yet. The capture
+     * sheet adds its ids here while the note field is open; the sync
+     * workstream's queue skips them. Released on dismiss, on leaving for
+     * another app, and in onDestroy.
+     */
+    val uploadHolds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+
     override fun onCreate() {
         super.onCreate()
         // Work that runs in every process starts here, inside applicationScope
