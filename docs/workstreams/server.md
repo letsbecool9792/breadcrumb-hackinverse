@@ -117,7 +117,7 @@ workstream sends.
   - *Check:* "screenshot from April" filters by both type and month; "that link from WhatsApp"
     also finds photos whose caption carried a link; "ig link" finds an Instagram link that was
     sent on WhatsApp.
-- [ ] **S7. Keeping the phone in step**: `POST /memories/enrichment` and `POST /memories/delete`,
+- [x] **S7. Keeping the phone in step**: `POST /memories/enrichment` and `POST /memories/delete`,
   as in the contract. A delete removes the text, the enrichment and the vector; idempotent.
 
 ## Testing rules
