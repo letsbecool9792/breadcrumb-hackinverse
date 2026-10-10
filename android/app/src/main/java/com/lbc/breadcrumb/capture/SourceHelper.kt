@@ -4,22 +4,22 @@ import android.app.Activity
 import android.content.pm.PackageManager
 
 object SourceHelper {
+
+    /**
+     * The app that shared to [activity], as (package, name), resolved now: an
+     * app uninstalled later has no name to read. [Sources] decides what counts.
+     */
     fun getSource(activity: Activity): Pair<String?, String?> {
         val referrer = activity.referrer ?: return Pair(null, null)
         if (referrer.scheme != "android-app") return Pair(null, null)
-        
         val packageName = referrer.host ?: return Pair(null, null)
-        if (packageName == "com.android.systemui") return Pair(null, null)
 
-        var label: String? = null
-        try {
+        val label = try {
             val pm = activity.packageManager
-            val appInfo = pm.getApplicationInfo(packageName, 0)
-            label = pm.getApplicationLabel(appInfo).toString()
+            pm.getApplicationLabel(pm.getApplicationInfo(packageName, 0)).toString()
         } catch (e: PackageManager.NameNotFoundException) {
-            // ignore
+            null
         }
-
-        return Pair(packageName, label)
+        return Sources.of(packageName, label, activity.packageName)
     }
 }

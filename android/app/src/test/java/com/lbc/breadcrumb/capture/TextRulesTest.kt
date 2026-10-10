@@ -27,18 +27,26 @@ class TextRulesTest {
     }
 
     @Test
-    fun cleanSubject_withNull_returnsNull() {
-        assertEquals(null, TextRules.cleanSubject(null))
+    fun `no subject is no title`() {
+        assertEquals(null, TextRules.titleFor(null, "some text"))
+        assertEquals(null, TextRules.titleFor("   ", "some text"))
     }
 
     @Test
-    fun cleanSubject_withGenericWhatsAppSubject_returnsNull() {
-        assertEquals(null, TextRules.cleanSubject("Photo from Aritra"))
-        assertEquals(null, TextRules.cleanSubject("Video from John Doe"))
+    fun `a chat app's generic subject is no title`() {
+        assertEquals(null, TextRules.titleFor("Photo from Aritra", "some text"))
+        assertEquals(null, TextRules.titleFor("Video from John Doe", "some text"))
+        assertEquals(null, TextRules.titleFor("Document from Priya", "some text"))
+        assertEquals(null, TextRules.titleFor("file from priya", "some text"))
     }
 
     @Test
-    fun cleanSubject_withValidSubject_returnsTrimmedSubject() {
-        assertEquals("Valid Title", TextRules.cleanSubject("  Valid Title  "))
+    fun `a subject that repeats the text is no title`() {
+        assertEquals(null, TextRules.titleFor("https://example.com/a", " https://example.com/a "))
+    }
+
+    @Test
+    fun `a real subject is the title, trimmed`() {
+        assertEquals("Software Engineering Intern, Qualcomm", TextRules.titleFor("  Software Engineering Intern, Qualcomm ", "https://www.linkedin.com/jobs/view/1"))
     }
 }
