@@ -42,15 +42,7 @@ class OcrQueue(
                         readingOriginals.value = false
                     } else {
                         readingOriginals.value = true
-                        // One picture at a time, always the newest unread, looking
-                        // again after each: a screenshot shared during a long
-                        // import is read next, not after every picture before it.
-                        val tried = mutableSetOf<String>()
-                        while (true) {
-                            val next = readingDao.getNewestUnreadImage() ?: break
-                            if (!tried.add(next.id)) break // still unread after a try: never spin
-                            processMemory(next)
-                        }
+                        readNewestFirst()
                         val remaining = readingDao.countUnreadImages()
                         readingOriginals.value = remaining > 0
                     }
@@ -62,6 +54,34 @@ class OcrQueue(
             // Error in queue loop must not crash the process; finally sets readingOriginals false
         } finally {
             readingOriginals.value = false
+        }
+    }
+
+    /**
+     * Reads the newest unread pictures [BATCH] at a time, asking Room again
+     * after each batch rather than working through one snapshot: a picture
+     * saved during a large import is read after at most one batch, not after
+     * all of it. A failure is caught per memory and that picture set aside for
+     * this pass, so one bad row neither ends the queue for the process nor
+     * comes round again. (A read that returns has left its row read, or found
+     * it gone, so it never comes back either.)
+     */
+    private suspend fun readNewestFirst() {
+        val failed = mutableSetOf<String>()
+        while (true) {
+            val batch = readingDao.getNewestUnreadImages(BATCH + failed.size)
+                .filterNot { it.id in failed }
+                .take(BATCH)
+            if (batch.isEmpty()) return
+            for (memory in batch) {
+                try {
+                    processMemory(memory)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Throwable) {
+                    failed += memory.id
+                }
+            }
         }
     }
 
@@ -88,6 +108,31 @@ class OcrQueue(
         val rowsUpdated = readingDao.updateExtractedText(current.id, text)
         if (rowsUpdated > 0) {
             scheduleUpload(context)
+        }
+    }
+
+    companion object {
+        /** Pictures read between two looks for the newest unread. */
+        internal const val BATCH = 10
+
+        /**
+         * Builds the queue with [build] and starts it, in [scope]. If building
+         * it throws (the database cannot open, say), [readingOriginals] still
+         * goes false: stuck true, it would hold every unread picture back from
+         * upload for the rest of the process.
+         */
+        fun launchIn(
+            scope: CoroutineScope,
+            readingOriginals: MutableStateFlow<Boolean>,
+            build: () -> OcrQueue,
+        ): Job = scope.launch {
+            try {
+                build().start()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Throwable) {
+                readingOriginals.value = false
+            }
         }
     }
 }
