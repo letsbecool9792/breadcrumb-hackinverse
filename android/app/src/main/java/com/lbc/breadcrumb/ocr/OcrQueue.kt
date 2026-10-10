@@ -42,8 +42,14 @@ class OcrQueue(
                         readingOriginals.value = false
                     } else {
                         readingOriginals.value = true
-                        for (memory in unread) {
-                            processMemory(memory)
+                        // One picture at a time, always the newest unread, looking
+                        // again after each: a screenshot shared during a long
+                        // import is read next, not after every picture before it.
+                        val tried = mutableSetOf<String>()
+                        while (true) {
+                            val next = readingDao.getNewestUnreadImage() ?: break
+                            if (!tried.add(next.id)) break // still unread after a try: never spin
+                            processMemory(next)
                         }
                         val remaining = readingDao.countUnreadImages()
                         readingOriginals.value = remaining > 0

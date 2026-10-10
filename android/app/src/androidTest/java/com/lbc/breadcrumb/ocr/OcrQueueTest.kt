@@ -17,6 +17,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.After
@@ -122,6 +123,10 @@ class OcrQueueTest {
             }
         }
 
+        // The queue calls the upload hook and says it is done just after the
+        // write waited for above: wait for that too, or the asserts race it.
+        withTimeout(3000) { readingOriginals.first { !it } }
+
         val updated = readingDao.getById("img1")
         assertEquals("Recognized OCR Words", updated?.extractedText)
         assertEquals(1, uploadCalls)
@@ -159,6 +164,7 @@ class OcrQueueTest {
                 delay(20)
             }
         }
+        withTimeout(3000) { readingOriginals.first { !it } }
 
         assertEquals("", readingDao.getById("img_broken")?.extractedText)
         assertEquals("Good text", readingDao.getById("img_good")?.extractedText)
@@ -196,6 +202,43 @@ class OcrQueueTest {
         assertNull(readingDao.getById("to_delete"))
         assertNull(memoryDao.getById("to_delete"))
         assertEquals(1, memoryDao.pendingDeleteCount())
+    }
+
+    @Test
+    fun aPictureSavedWhileOthersAreReadIsReadNext() = runBlocking {
+        val order = mutableListOf<String>()
+        memoryDao.upsertAll((1..3).map { image("old$it", capturedAt = it * 1000L) })
+
+        val fakeReader = FakeReader { file ->
+            val id = file.nameWithoutExtension
+            synchronized(order) { order += id }
+            // A screenshot is shared while the queue reads the newest old picture.
+            if (id == "old3") memoryDao.upsert(image("new", capturedAt = 9000L))
+            "text"
+        }
+
+        queueJob = OcrQueue(
+            context = context,
+            readingDao = readingDao,
+            originals = originalStore,
+            scope = scope,
+            readingOriginals = readingOriginals,
+            reader = fakeReader,
+            scheduleUpload = {},
+        ).start()
+
+        withTimeout(3000) {
+            while (synchronized(order) { order.size } < 4) {
+                delay(20)
+            }
+        }
+
+        assertEquals(listOf("old3", "new", "old2", "old1"), synchronized(order) { order.toList() })
+    }
+
+    private fun image(id: String, capturedAt: Long): Memory {
+        val file = File(originalsDir, "$id.png").apply { writeText("picture $id") }
+        return Memory(id = id, type = MemoryType.IMAGE, localUri = Uri.fromFile(file).toString(), capturedAt = capturedAt)
     }
 
     private class FakeReader(
