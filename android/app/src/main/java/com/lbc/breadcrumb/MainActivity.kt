@@ -6,14 +6,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.lbc.breadcrumb.ui.debug.MemoryListScreen
 import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
 
 class MainActivity : ComponentActivity() {
@@ -31,18 +25,10 @@ class MainActivity : ComponentActivity() {
             // Dark always: the app is mostly a frame around other people's
             // screenshots, and a loud ground competes with its own content.
             BreadcrumbTheme(darkTheme = true) {
-                Box(
-                    Modifier
-                        .fillMaxSize()
-                        .background(MaterialTheme.colorScheme.background),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        "breadcrumb",
-                        style = MaterialTheme.typography.displaySmall,
-                        color = MaterialTheme.colorScheme.onBackground,
-                    )
-                }
+                // Until the search screens exist, the debug list is the app.
+                // They replace it here; it then moves behind a long press on
+                // the wordmark, in debug builds only.
+                MemoryListScreen()
             }
         }
     }
