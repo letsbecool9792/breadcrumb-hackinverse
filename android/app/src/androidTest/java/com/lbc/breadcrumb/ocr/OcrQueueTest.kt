@@ -49,7 +49,9 @@ class OcrQueueTest {
         memoryDao = db.memoryDao()
         readingDao = db.readingDao()
 
-        originalsDir = File(context.filesDir, "originals").apply { mkdirs() }
+        // Never filesDir/originals: the tests run in the app's own process, so that
+        // is the phone's real originals, and tearDown deletes this folder.
+        originalsDir = File(context.cacheDir, "ocr_queue_test_${System.currentTimeMillis()}").apply { mkdirs() }
         originalStore = OriginalStore(context, originalsDir)
         scope = CoroutineScope(Dispatchers.IO)
     }
@@ -90,7 +92,6 @@ class OcrQueueTest {
     @Test
     fun queueReadsUnreadImageWritesExtractedTextAndCallsUploadScheduler() = runBlocking {
         var uploadCalls = 0
-        uploadScheduler = { uploadCalls++ }
 
         val imageFile = File(originalsDir, "img1.png").apply { writeText("fake image content") }
         val memory = Memory(
@@ -110,6 +111,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = fakeReader,
+            scheduleUpload = { uploadCalls++ },
         )
 
         queueJob = queue.start()
@@ -129,7 +131,6 @@ class OcrQueueTest {
     @Test
     fun missingOrUnreadableImageFileIsMarkedEmptyAndDoesNotBlockTheQueue() = runBlocking {
         var uploadCalls = 0
-        uploadScheduler = { uploadCalls++ }
 
         val goodFile = File(originalsDir, "img_good.png").apply { writeText("good content") }
         memoryDao.upsertAll(
@@ -148,6 +149,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = fakeReader,
+            scheduleUpload = { uploadCalls++ },
         )
 
         queueJob = queue.start()
