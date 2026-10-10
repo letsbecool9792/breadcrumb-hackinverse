@@ -138,6 +138,28 @@ class BulkImporterTest {
     }
 
     @Test
+    fun twoImportsOfTheSameBookmarksAtOnceAddThemOnce() = runBlocking {
+        val links = (1..40).joinToString("\n") {
+            """<DT><A HREF="https://example.com/$it" ADD_DATE="${1_700_000_000 + it}">Page $it</A>"""
+        }
+        val bookmarkFile = File(context.cacheDir, "bookmarks_${UUID.randomUUID()}.html").apply {
+            writeText("<DL><p>\n$links\n</DL><p>")
+        }
+
+        try {
+            // Started together, before either has recorded anything.
+            val first = importer.importBookmarks(Uri.fromFile(bookmarkFile))
+            val second = importer.importBookmarks(Uri.fromFile(bookmarkFile))
+            first.join()
+            second.join()
+
+            assertEquals(40, memoryDao.count())
+        } finally {
+            bookmarkFile.delete()
+        }
+    }
+
+    @Test
     fun deletedBookmarkIsNotRecreatedOnReimport() = runBlocking {
         val htmlContent = """
             <!DOCTYPE NETSCAPE-Bookmark-file-1>

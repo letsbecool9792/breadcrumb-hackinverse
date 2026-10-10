@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.ArrayDeque
@@ -42,6 +44,7 @@ sealed interface ImportProgress {
         val imported: Int,
         val skipped: Int,
     ) : ImportProgress
+    data class Failed(val reason: String) : ImportProgress
 }
 
 /**
@@ -77,6 +80,16 @@ class BulkImporter(
     private val _progress = MutableStateFlow<ImportProgress?>(null)
     val progress: StateFlow<ImportProgress?> = _progress.asStateFlow()
 
+    private val importMutex = Mutex()
+
+    /**
+     * Imports run one at a time, in the order they were asked for: two at once
+     * would share one progress line, and could both import the same file
+     * before either had recorded it.
+     */
+    private fun launchImport(block: suspend CoroutineScope.() -> Unit): Job =
+        scope.launch(Dispatchers.IO) { importMutex.withLock { block() } }
+
     data class Candidate(
         val uri: Uri,
         val displayName: String,
@@ -90,7 +103,7 @@ class BulkImporter(
      * Imports an entire directory tree picked via ACTION_OPEN_DOCUMENT_TREE.
      * Takes persistable read grant and releases it in a finally block at completion.
      */
-    fun importFolder(treeUri: Uri): Job = scope.launch(Dispatchers.IO) {
+    fun importFolder(treeUri: Uri): Job = launchImport {
         val takeFlags = Intent.FLAG_GRANT_READ_URI_PERMISSION
         val contentResolver = context.contentResolver
         var grantTaken = false
@@ -110,7 +123,7 @@ class BulkImporter(
             val candidates = scanTree(treeUri)
             if (candidates.isEmpty()) {
                 _progress.value = ImportProgress.Done(0, 0, 0)
-                return@launch
+                return@launchImport
             }
 
             // Oldest content first
@@ -118,8 +131,8 @@ class BulkImporter(
             processCandidates(sorted, defaultSourceLabel)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Throwable) {
-            _progress.value = null
+        } catch (e: Throwable) {
+            _progress.value = ImportProgress.Failed(e.message ?: e.javaClass.simpleName)
         } finally {
             if (grantTaken) {
                 try {
@@ -134,8 +147,8 @@ class BulkImporter(
     /**
      * Imports images picked via the Android photo picker.
      */
-    fun importVisualMedia(uris: List<Uri>): Job = scope.launch(Dispatchers.IO) {
-        if (uris.isEmpty()) return@launch
+    fun importVisualMedia(uris: List<Uri>): Job = launchImport {
+        if (uris.isEmpty()) return@launchImport
         _progress.value = ImportProgress.Scanning("Reading selected photos...")
 
         try {
@@ -146,16 +159,16 @@ class BulkImporter(
             processCandidates(sorted, defaultSourceLabel = "Photos")
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Throwable) {
-            _progress.value = null
+        } catch (e: Throwable) {
+            _progress.value = ImportProgress.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 
     /**
      * Imports PDFs picked via the document file picker.
      */
-    fun importPdfs(uris: List<Uri>): Job = scope.launch(Dispatchers.IO) {
-        if (uris.isEmpty()) return@launch
+    fun importPdfs(uris: List<Uri>): Job = launchImport {
+        if (uris.isEmpty()) return@launchImport
         _progress.value = ImportProgress.Scanning("Reading selected PDFs...")
 
         try {
@@ -166,27 +179,27 @@ class BulkImporter(
             processCandidates(sorted, defaultSourceLabel = "Files")
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Throwable) {
-            _progress.value = null
+        } catch (e: Throwable) {
+            _progress.value = ImportProgress.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 
     /**
      * Imports bookmarks from a Netscape HTML bookmark export file.
      */
-    fun importBookmarks(uri: Uri): Job = scope.launch(Dispatchers.IO) {
+    fun importBookmarks(uri: Uri): Job = launchImport {
         _progress.value = ImportProgress.Scanning("Reading bookmarks...")
         try {
             val bookmarks = context.contentResolver.openInputStream(uri)?.use { stream ->
                 BookmarkParser.parse(stream)
             } ?: run {
                 _progress.value = ImportProgress.Done(0, 0, 0)
-                return@launch
+                return@launchImport
             }
 
             if (bookmarks.isEmpty()) {
                 _progress.value = ImportProgress.Done(0, 0, 0)
-                return@launch
+                return@launchImport
             }
 
             val total = bookmarks.size
@@ -232,8 +245,8 @@ class BulkImporter(
             _progress.value = ImportProgress.Done(total, importedCount, skippedCount)
         } catch (e: CancellationException) {
             throw e
-        } catch (_: Throwable) {
-            _progress.value = null
+        } catch (e: Throwable) {
+            _progress.value = ImportProgress.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 
