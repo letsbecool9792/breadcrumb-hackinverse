@@ -31,12 +31,15 @@ class ShareReceiverActivity : ComponentActivity() {
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
         val cleanTitle = TextRules.cleanSubject(subject)
         val (type, hasLink) = TextRules.parseText(text)
+        val (sourceApp, sourceAppLabel) = SourceHelper.getSource(this)
         
         val memory = Memory(
             type = type,
             hasLink = hasLink,
             rawText = text,
-            title = cleanTitle
+            title = cleanTitle,
+            sourceApp = sourceApp,
+            sourceAppLabel = sourceAppLabel
         )
 
         app.applicationScope.launch {
