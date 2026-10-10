@@ -1,6 +1,8 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import type { Db } from "mongodb";
 
+import { makeIngestHandler, type Enricher } from "./ingest.ts";
+
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
   log?: boolean;
@@ -10,6 +12,7 @@ export interface AppOptions {
    * injected functions, so tests can run every endpoint without a model.
    */
   database?: Db;
+  enricher?: Enricher;
 }
 
 /**
@@ -18,11 +21,13 @@ export interface AppOptions {
  * what the model made of a memory, and deletes. Each route is a few lines over
  * a function tested on its own. docs/api.md is the contract.
  */
-export function createApp({ log = true }: AppOptions = {}) {
+export function createApp({ log = true, database, enricher }: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
 
   if (log) app.use(logRequest);
+
+  app.use(express.json({ limit: "50mb" }));
 
   // Unauthenticated on purpose: it reveals nothing, and it is what the app
   // pings to tell "server down" from "server up". `service` lets the app tell
@@ -33,7 +38,11 @@ export function createApp({ log = true }: AppOptions = {}) {
 
   // The server workstream builds these (docs/workstreams/server.md). Until
   // then they answer 501, which the phone treats as "try again later".
-  app.post("/memories", notBuilt);
+  if (database) {
+    app.post("/memories", makeIngestHandler(database, enricher));
+  } else {
+    app.post("/memories", notBuilt);
+  }
   app.post("/memories/images", notBuilt);
   app.post("/memories/enrichment", notBuilt);
   app.post("/memories/delete", notBuilt);
