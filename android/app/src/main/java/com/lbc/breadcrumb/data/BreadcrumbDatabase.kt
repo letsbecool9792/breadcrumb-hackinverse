@@ -26,6 +26,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
 
     abstract fun memoryDao(): MemoryDao
 
+    // Reading workstream: unread image queries and targeted text updates
+    abstract fun readingDao(): ReadingDao
+
     companion object {
         private const val DB_NAME = "breadcrumb.db"
 
