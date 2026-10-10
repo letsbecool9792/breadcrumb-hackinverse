@@ -43,8 +43,21 @@ interface ReadingDao {
      *
      * Fires Room's FTS BEFORE_UPDATE and AFTER_UPDATE triggers to keep [MemoryFts]
      * in step.
+     *
+     * Text puts the memory back in the upload queue (syncState PENDING), whatever
+     * state it was in: the server has not read it. An empty read does not: it
+     * changes nothing the server reads, and sending the memory again would cost a
+     * model call for no new words.
      */
-    @Query("UPDATE memories SET extractedText = :extractedText, updatedAt = :updatedAt WHERE id = :id AND extractedText IS NULL")
+    @Query(
+        """
+        UPDATE memories
+        SET extractedText = :extractedText,
+            updatedAt = :updatedAt,
+            syncState = CASE WHEN :extractedText != '' THEN 'PENDING' ELSE syncState END
+        WHERE id = :id AND extractedText IS NULL
+        """,
+    )
     suspend fun updateExtractedText(
         id: String,
         extractedText: String,

@@ -213,6 +213,26 @@ class ReadingDaoTest {
         assertEquals(listOf("item10", "item9", "item8"), results.map { it.id })
     }
 
+    @Test
+    fun aSyncedPictureReadWithTextGoesBackToPending() = runBlocking {
+        memoryDao.upsert(Memory(id = "p1", type = MemoryType.IMAGE, syncState = SyncState.SYNCED))
+
+        readingDao.updateExtractedText("p1", "Qualcomm internship, apply by April 30")
+
+        assertEquals(SyncState.PENDING, memoryDao.getById("p1")?.syncState)
+    }
+
+    @Test
+    fun anEmptyReadLeavesASyncedPictureAlone() = runBlocking {
+        memoryDao.upsert(Memory(id = "p2", type = MemoryType.IMAGE, syncState = SyncState.SYNCED))
+
+        readingDao.updateExtractedText("p2", "")
+
+        val after = memoryDao.getById("p2")
+        assertEquals("", after?.extractedText)
+        assertEquals(SyncState.SYNCED, after?.syncState)
+    }
+
     private fun matchesFts(word: String): Int =
         db.openHelper.readableDatabase
             .query("SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?", arrayOf<Any?>("\"$word*\""))
