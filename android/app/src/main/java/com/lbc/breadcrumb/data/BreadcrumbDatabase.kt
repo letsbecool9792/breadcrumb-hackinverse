@@ -29,6 +29,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
     // Reading workstream: unread image queries and targeted text updates
     abstract fun readingDao(): ReadingDao
 
+    // Capture workstream: the capture sheet's note, written by id
+    abstract fun captureDao(): CaptureDao
+
     companion object {
         private const val DB_NAME = "breadcrumb.db"
 

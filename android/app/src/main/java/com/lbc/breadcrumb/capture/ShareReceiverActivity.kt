@@ -77,8 +77,7 @@ class ShareReceiverActivity : ComponentActivity() {
                     onDismiss = { releaseAndClose(app) },
                     onNote = { note ->
                         app.applicationScope.launch {
-                            val updated = memory.copy(note = note, updatedAt = System.currentTimeMillis())
-                            app.database.memoryDao().update(updated)
+                            app.database.captureDao().setNote(listOf(memory.id), note)
                         }
                     }
                 )
