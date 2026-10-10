@@ -86,7 +86,7 @@ proper nouns: "Qualcomm" needs keyword matching while the rest of the sentence n
 |---|---|
 | **Mobile** | Native Android: Kotlin, Jetpack Compose, Room, WorkManager |
 | **Backend** | Node + Express + TypeScript |
-| **Database** | MongoDB Atlas + Atlas Vector Search (`$rankFusion` hybrid) |
+| **Database** | MongoDB Atlas + Atlas Vector Search (hybrid: meaning and words, fused by reciprocal rank) |
 | **AI** | Gemini Flash Lite (ingest and query parsing), `gemini-embedding-001` |
 | **On-device** | ML Kit Text Recognition |
 
