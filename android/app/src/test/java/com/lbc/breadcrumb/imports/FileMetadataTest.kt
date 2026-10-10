@@ -74,6 +74,13 @@ class FileMetadataTest {
     }
 
     @Test
+    fun `a zeroed or impossible exif date is no date`() {
+        assertNull(FileMetadata.parseExifDateString("0000:00:00 00:00:00"))
+        assertNull(FileMetadata.parseExifDateString("2024:13:45 10:30:45"))
+        assertNull(FileMetadata.parseExifDateString("    :  :     :  :  "))
+    }
+
+    @Test
     fun `respects timestamp resolution priority exif then filename then provider`() {
         val exifTime = 1000L
         val filename = "Screenshot_20240315-103045.png"
