@@ -11,11 +11,15 @@ import java.util.regex.Pattern
 
 object FileMetadata {
 
+    // Not lenient: leniently, the zeros a camera writes when its clock was never
+    // set ("0000:00:00 00:00:00") read as a date in 2 BC rather than no date.
     private val EXIF_DATE_FORMAT = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getDefault()
+        isLenient = false
     }
     private val EXIF_ALT_FORMAT = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).apply {
         timeZone = TimeZone.getDefault()
+        isLenient = false
     }
 
     // Matches year, month, day, separator, hour, min, sec:

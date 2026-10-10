@@ -1,6 +1,8 @@
 package com.lbc.breadcrumb.imports
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.media.ExifInterface
 import android.net.Uri
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -210,6 +212,28 @@ class BulkImporterTest {
             assertTrue(importDao.exists("sha256:$expectedHash"))
         } finally {
             candidateFile.delete()
+        }
+    }
+
+    @Test
+    fun anExifDateComesBeforeTheFileNameDate() = runBlocking {
+        // Named for 1 January 2020, but the camera says 1 June 2023.
+        val photo = File(context.cacheDir, "IMG_20200101_000000.jpg")
+        val bitmap = Bitmap.createBitmap(8, 8, Bitmap.Config.ARGB_8888)
+        photo.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+        bitmap.recycle()
+        ExifInterface(photo.absolutePath).apply {
+            setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, "2023:06:01 12:00:00")
+            saveAttributes()
+        }
+
+        try {
+            importer.importVisualMedia(listOf(Uri.fromFile(photo))).join()
+
+            val imported = memoryDao.getAll().single()
+            assertEquals(FileMetadata.parseExifDateString("2023:06:01 12:00:00"), imported.contentCreatedAt)
+        } finally {
+            photo.delete()
         }
     }
 

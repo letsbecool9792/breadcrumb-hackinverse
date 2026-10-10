@@ -340,11 +340,12 @@ class BulkImporter(
                     continue
                 }
 
-                // Determine final contentCreatedAt timestamp (check EXIF on file if unresolved)
-                val finalCreatedAt = if (candidate.type == MemoryType.IMAGE && candidate.contentCreatedAt == null) {
-                    FileMetadata.readExifDate(storedFile)
-                        ?: FileMetadata.parseFilenameDate(candidate.displayName)
-                        ?: candidate.lastModified
+                // EXIF, else the name, else the provider. The candidate's date is
+                // only the name's or the provider's: EXIF can be read once the file
+                // is ours, and it must come first, since a copied or renamed photo
+                // keeps its EXIF but not its name or modified time.
+                val finalCreatedAt = if (candidate.type == MemoryType.IMAGE) {
+                    FileMetadata.readExifDate(storedFile) ?: candidate.contentCreatedAt
                 } else {
                     candidate.contentCreatedAt
                 }
