@@ -4,9 +4,13 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animate
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -19,11 +23,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -34,6 +42,7 @@ import com.lbc.breadcrumb.ui.theme.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.math.roundToInt
 
 sealed class CaptureState {
     object Saving : CaptureState()
@@ -88,6 +97,26 @@ fun CaptureSheet(
         }
     }
 
+    // Swipe down to close: the sheet follows the finger and the scrim fades
+    // with it; past a third of the sheet, or on a downward fling, it goes the
+    // way Done does, note and all, and otherwise it springs back. The offset
+    // is read only while laying out and drawing, never in composition, so a
+    // drag does not recompose the sheet every frame. Not while saving: a
+    // shared content:// URI is readable only while the activity lives.
+    var dragOffset by remember { mutableFloatStateOf(0f) }
+    var sheetHeight by remember { mutableIntStateOf(0) }
+    val flingVelocity = with(LocalDensity.current) { FLING_VELOCITY.toPx() }
+
+    suspend fun settleDrag(velocity: Float) {
+        val goes = sheetHeight > 0 && (
+            velocity > flingVelocity ||
+                (velocity >= -flingVelocity && dragOffset > sheetHeight / 3f)
+            )
+        val target = if (goes) sheetHeight.toFloat() else 0f
+        animate(dragOffset, target, initialVelocity = velocity) { value, _ -> dragOffset = value }
+        if (goes) handleDismiss()
+    }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
@@ -98,6 +127,9 @@ fun CaptureSheet(
         Box(
             modifier = Modifier
                 .matchParentSize()
+                .graphicsLayer {
+                    alpha = if (sheetHeight > 0) 1f - (dragOffset / sheetHeight).coerceIn(0f, 1f) else 1f
+                }
                 .background(CaptureScrim.copy(alpha = 0.7f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
@@ -111,7 +143,20 @@ fun CaptureSheet(
             exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
         ) {
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                // draggable sits outside offset, so the gesture is measured in
+                // a frame that does not move with the sheet it is moving.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onSizeChanged { sheetHeight = it.height }
+                    .draggable(
+                        orientation = Orientation.Vertical,
+                        enabled = canDismiss && !isDismissing,
+                        state = rememberDraggableState { delta ->
+                            dragOffset = (dragOffset + delta).coerceAtLeast(0f)
+                        },
+                        onDragStopped = { velocity -> settleDrag(velocity) },
+                    )
+                    .offset { IntOffset(0, dragOffset.roundToInt()) },
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {
@@ -576,3 +621,6 @@ private fun TextPreview(memory: Memory) {
         )
     }
 }
+
+/** A downward fling this fast closes the sheet from anywhere, as Material's sheets do. */
+private val FLING_VELOCITY = 125.dp
