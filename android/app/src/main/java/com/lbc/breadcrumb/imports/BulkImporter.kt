@@ -471,6 +471,18 @@ class BulkImporter(
             // Use defaults if provider query fails
         }
 
+        // A plain file has no provider to ask, and some providers leave out the
+        // size: name it by its path and size it by its descriptor, so the
+        // name-and-size check still applies before anything is copied.
+        if (name == null && uri.scheme == "file") name = uri.lastPathSegment
+        if (size <= 0L) {
+            size = try {
+                context.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: 0L
+            } catch (_: Exception) {
+                0L
+            }.coerceAtLeast(0L)
+        }
+
         val ext = if (defaultType == MemoryType.PDF) "pdf" else "jpg"
         val displayName = name ?: "$defaultPrefix.$ext"
         val contentCreatedAt = FileMetadata.resolveContentCreatedAt(
