@@ -103,7 +103,10 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     picked as a folder on Android 11+, which is why PDFs come as files.
   - A bookmarks export (Netscape HTML, which every browser writes) becomes one memory per
     bookmark: dated by `ADD_DATE`, titled as the browser had it, `sourceAppLabel = "Bookmarks"`,
-    so "that link I bookmarked" is a source filter like any app.
+    so "that link I bookmarked" is a source filter like any app. A bookmark whose page a memory
+    already holds (a page shared from Chrome and also bookmarked) is skipped and recorded:
+    pages compare by `UrlKey`, which ignores the scheme, "www.", a trailing slash and the
+    #fragment, and lowercases the host.
   - It writes rows and nothing else: R1, R3 and R4 read them. Dated by the file
     (`contentCreatedAt`: EXIF, else the name, else the provider), saved as of now
     (`capturedAt`), oldest content first.
