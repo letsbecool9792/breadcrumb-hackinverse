@@ -32,7 +32,8 @@ its words seconds after it is saved, before the network has done anything.
   - `readingOriginals: MutableStateFlow<Boolean>` on `BreadcrumbApp`: true while the OCR queue
     is working through unread pictures and PDFs, so the uploader holds them back rather than
     send them unread. **Presume true until the queue has looked**, and set false in a `finally`
-    when the queue stops or never starts: a stuck true strands memories off the server.
+    when the queue stops or never starts, building it throwing included
+    (`OcrQueue.launchIn`): a stuck true strands memories off the server.
   - the link-reading step (R4), which the upload queue runs first on each pass.
   - local word search (R2), which the search screens use for instant results.
 
@@ -52,6 +53,10 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     calling anything. Newest first. A picture that cannot be read is marked read and empty, so
     it never blocks the rest. A memory deleted mid-read stays deleted: write only if the row
     still exists.
+  - **Re-query the newest unread about ten at a time**, not one snapshot worked through to its
+    end: a fresh save is then read next, even during a large import.
+  - **Catch failures per memory:** one bad row must not end the queue for the process. Set it
+    aside for the pass, so it doesn't come round again either.
   - *Check:* share a text-heavy screenshot → "read · N lines/chars", its words visible on tap; a
     photo with no text → "no text found"; pictures saved before installing the build are read on
     the next launch.
