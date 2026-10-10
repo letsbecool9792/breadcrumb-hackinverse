@@ -1,6 +1,7 @@
 package com.lbc.breadcrumb.ui.capture
 
 import android.net.Uri
+import android.text.format.Formatter
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -18,8 +19,6 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
@@ -402,78 +401,64 @@ fun CaptureSheet(
 
 @Composable
 private fun SavedPreview(memories: List<Memory>) {
-    if (memories.isEmpty()) return
-    val first = memories.first()
-
+    val first = memories.firstOrNull() ?: return
     when {
-        // Single image — large, follows its shape
-        memories.size == 1 && first.type == MemoryType.IMAGE -> {
-            SingleImagePreview(first)
-        }
-        // Multiple images — row of square tiles, +N on the third
-        memories.size > 1 && memories.all { it.type == MemoryType.IMAGE } -> {
-            MultiImagePreview(memories)
-        }
-        // Single PDF
-        first.type == MemoryType.PDF -> {
-            PdfCardPreview(first)
-        }
-        // Link
-        first.type == MemoryType.LINK -> {
-            LinkCardPreview(first)
-        }
-        // Text
-        first.type == MemoryType.TEXT -> {
-            TextPreview(first)
-        }
-        // Fallback for mixed types
-        else -> {
-            memories.firstOrNull { it.type == MemoryType.IMAGE }?.let {
-                SingleImagePreview(it)
-            } ?: memories.firstOrNull()?.let {
-                TextPreview(it)
-            }
-        }
+        memories.size > 1 -> TileRow(memories)
+        first.type == MemoryType.IMAGE -> SinglePhoto(first)
+        first.type == MemoryType.PDF -> PdfCard(first)
+        first.type == MemoryType.LINK -> LinkCard(first)
+        else -> TextPreview(first)
     }
 }
 
+/** One photo: its own shape, capped in height, cropped from the top. */
 @Composable
-private fun SingleImagePreview(memory: Memory) {
-    val uri = memory.localUri
-    if (uri != null) {
+private fun SinglePhoto(memory: Memory) {
+    val uri = memory.localUri ?: return
+    // Known once the picture has loaded; Coil reports it with EXIF rotation applied.
+    var ratio by remember(uri) { mutableStateOf<Float?>(null) }
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val height = ratio?.let { minOf(maxWidth / it, MAX_PHOTO_HEIGHT) } ?: PHOTO_LOADING_HEIGHT
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
                 .data(Uri.parse(uri))
                 .build(),
-            contentDescription = "Saved image",
+            contentDescription = "Saved picture",
             contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
+            onSuccess = { success ->
+                val size = success.painter.intrinsicSize
+                if (size.width > 0f && size.height > 0f) ratio = size.width / size.height
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 160.dp, max = 280.dp)
+                .height(height)
                 .clip(RoundedCornerShape(12.dp))
                 .background(InkMedia)
         )
     }
 }
 
+/** Several: square tiles sharing the row's width, "+N" on the last for the rest. */
 @Composable
-private fun MultiImagePreview(memories: List<Memory>) {
-    val visible = memories.take(3)
-    val overflow = memories.size - 3
-
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth()
+private fun TileRow(memories: List<Memory>) {
+    val tiles = memories.take(MAX_TILES)
+    val more = memories.size - tiles.size
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        itemsIndexed(visible) { index, memory ->
+        tiles.forEachIndexed { index, memory ->
             Box(
                 modifier = Modifier
-                    .size(100.dp)
+                    .weight(1f)
+                    .aspectRatio(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .background(InkMedia)
+                    .background(InkMedia),
+                contentAlignment = Alignment.Center
             ) {
                 val uri = memory.localUri
-                if (uri != null) {
+                if (memory.type == MemoryType.IMAGE && uri != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(Uri.parse(uri))
@@ -482,9 +467,18 @@ private fun MultiImagePreview(memories: List<Memory>) {
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
+                } else {
+                    Text(
+                        "PDF",
+                        style = TextStyle(
+                            fontFamily = Mono,
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 12.sp,
+                            color = AmberBright
+                        )
+                    )
                 }
-                // "+N" overlay on the third tile
-                if (index == 2 && overflow > 0) {
+                if (index == tiles.lastIndex && more > 0) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -492,7 +486,7 @@ private fun MultiImagePreview(memories: List<Memory>) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "+$overflow",
+                            "+$more",
                             style = TextStyle(
                                 fontFamily = Sans,
                                 fontWeight = FontWeight.SemiBold,
@@ -507,13 +501,17 @@ private fun MultiImagePreview(memories: List<Memory>) {
     }
 }
 
+/**
+ * A link: the host of the first URL anywhere in the text, the page's title as
+ * headline when there is one, and the URL beneath.
+ */
 @Composable
-private fun LinkCardPreview(memory: Memory) {
-    val url = memory.rawText ?: ""
-    val host = try {
-        Uri.parse(url.trim().lines().firstOrNull { it.startsWith("http") } ?: url).host ?: ""
-    } catch (_: Exception) { "" }
-
+private fun LinkCard(memory: Memory) {
+    val card = SheetText.linkCard(memory.rawText, memory.title)
+    if (card == null) {
+        TextPreview(memory)
+        return
+    }
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -521,23 +519,19 @@ private fun LinkCardPreview(memory: Memory) {
             .background(InkElevated)
             .padding(16.dp)
     ) {
-        // Site
-        if (host.isNotBlank()) {
+        Text(
+            text = card.host,
+            style = TextStyle(
+                fontFamily = Mono,
+                fontSize = 11.sp,
+                color = InkLabel
+            ),
+            maxLines = 1
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        if (card.headline != null) {
             Text(
-                text = host.removePrefix("www."),
-                style = TextStyle(
-                    fontFamily = Mono,
-                    fontSize = 11.sp,
-                    color = InkLabel
-                ),
-                maxLines = 1
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-        }
-        // Title
-        if (!memory.title.isNullOrBlank()) {
-            Text(
-                text = memory.title,
+                text = card.headline,
                 style = TextStyle(
                     fontFamily = Sans,
                     fontWeight = FontWeight.Medium,
@@ -549,9 +543,8 @@ private fun LinkCardPreview(memory: Memory) {
             )
             Spacer(modifier = Modifier.height(4.dp))
         }
-        // URL
         Text(
-            text = url.take(120),
+            text = card.url,
             style = TextStyle(
                 fontFamily = Mono,
                 fontSize = 11.sp,
@@ -563,8 +556,13 @@ private fun LinkCardPreview(memory: Memory) {
     }
 }
 
+/** A PDF: its title, then its type and size. */
 @Composable
-private fun PdfCardPreview(memory: Memory) {
+private fun PdfCard(memory: Memory) {
+    val context = LocalContext.current
+    val size = remember(memory.localUri) {
+        memory.localUri?.let { Uri.parse(it).path }?.let { File(it).length() }?.takeIf { it > 0 }
+    }
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -573,7 +571,6 @@ private fun PdfCardPreview(memory: Memory) {
             .padding(16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // PDF icon area
         Box(
             modifier = Modifier
                 .size(44.dp)
@@ -605,7 +602,8 @@ private fun PdfCardPreview(memory: Memory) {
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "PDF",
+                text = listOfNotNull("PDF", size?.let { Formatter.formatShortFileSize(context, it) })
+                    .joinToString(" · "),
                 style = TextStyle(
                     fontFamily = Mono,
                     fontSize = 11.sp,
@@ -648,3 +646,12 @@ private const val SHEET_MILLIS = 280
 
 /** The scrim's dim when the sheet is fully up. */
 private const val SCRIM_ALPHA = 0.7f
+
+/** One photo is as tall as its shape asks, up to this. */
+private val MAX_PHOTO_HEIGHT = 320.dp
+
+/** A photo's height until it has loaded and its shape is known. */
+private val PHOTO_LOADING_HEIGHT = 200.dp
+
+/** Several files show this many tiles at most, "+N" on the last for the rest. */
+private const val MAX_TILES = 3
