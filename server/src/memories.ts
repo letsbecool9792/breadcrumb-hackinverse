@@ -81,6 +81,81 @@ export function memories(database: Db): Collection<MemoryDoc> {
 export async function ensureIndexes(database: Db): Promise<void> {
   await memories(database).createIndex({ capturedAt: -1 }, { name: "capturedAt_desc" });
   await memories(database).createIndex({ datedAt: -1 }, { name: "datedAt_desc" });
+
+  const coll = memories(database);
+
+  // Search Indexes
+  const vectorDef = {
+    mappings: {
+      dynamic: false,
+      fields: {
+        embedding: { type: "knnVector", dimensions: 768, similarity: "cosine" },
+        type: { type: "token" },
+        hasLink: { type: "boolean" },
+        capturedAt: { type: "date" },
+        sourceAppLabel: { type: "token" },
+        datedAt: { type: "date" },
+        linkSites: { type: "token" },
+        _id: { type: "token" }
+      }
+    }
+  };
+
+  const textDef = {
+    mappings: {
+      dynamic: false,
+      fields: {
+        title: { type: "string", analyzer: "lucene.english" },
+        note: { type: "string", analyzer: "lucene.english" },
+        "enrichment.summary": { type: "string", analyzer: "lucene.english" },
+        rawText: { type: "string", analyzer: "lucene.english" },
+        extractedText: { type: "string", analyzer: "lucene.english" },
+        "enrichment.readText": { type: "string", analyzer: "lucene.english" },
+        type: { type: "token" },
+        hasLink: { type: "boolean" },
+        capturedAt: { type: "date" },
+        sourceAppLabel: { type: "token" },
+        datedAt: { type: "date" },
+        linkSites: { type: "token" },
+        _id: { type: "token" }
+      }
+    }
+  };
+
+  async function syncSearchIndex(name: string, definition: any) {
+    try {
+      // Use listSearchIndexes instead of hardcoding array length
+      let existing: any = null;
+      try {
+        const indexes = await coll.listSearchIndexes().toArray();
+        existing = indexes.find((idx: any) => idx.name === name);
+      } catch (e: any) {
+        // Ignored if listSearchIndexes fails (e.g. Atlas not available or wrong tier)
+        console.warn(`Could not list search indexes, skipping ${name}:`, e.message);
+        return;
+      }
+
+      if (!existing) {
+        console.log(`Creating search index: ${name}`);
+        await coll.createSearchIndex({ name, definition });
+      } else {
+        // Compare only declared fields. If missing a declared field in existing mapping, update it.
+        const expectedFields = Object.keys(definition.mappings.fields);
+        const actualFields = Object.keys(existing.latestDefinition?.mappings?.fields || existing.definition?.mappings?.fields || {});
+        
+        const isMissingField = expectedFields.some(f => !actualFields.includes(f));
+        if (isMissingField) {
+          console.log(`Updating search index: ${name}`);
+          await coll.updateSearchIndex(name, definition);
+        }
+      }
+    } catch (e: any) {
+      console.warn(`Could not sync search index ${name} (if refused for role, create in Atlas UI):`, e.message);
+    }
+  }
+
+  await syncSearchIndex("memories_vector", vectorDef);
+  await syncSearchIndex("memories_text", textDef);
 }
 
 /** When a memory is dated: when its picture was taken, else when it was saved. */

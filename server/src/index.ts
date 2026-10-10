@@ -13,11 +13,14 @@ const port = Number(process.env.PORT ?? 3000);
 // the first save. The client reconnects by itself after this. The server
 // workstream adds the Gemini key check and the search indexes here.
 try {
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not set in the environment.");
+  }
   await connectMongo();
   await ensureIndexes(db());
   console.log(`mongodb connected, database "${databaseName()}"`);
 } catch (error) {
-  console.error(`could not reach MongoDB: ${describeMongoError(error)}`);
+  console.error(`could not reach MongoDB or start up: ${describeMongoError(error)}`);
   process.exit(1);
 }
 
