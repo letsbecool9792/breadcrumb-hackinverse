@@ -97,7 +97,7 @@ between saving feeling free and saving feeling like a wait.
 ## Layout
 
 ```
-android/    Android app (open this folder in Android Studio)
+android/    Android app (build it with ./gradlew from this folder)
 server/     Express API
 docs/       the API contract, and one brief per workstream
 tools/      generate_icons.py, which draws the launcher and splash icons
