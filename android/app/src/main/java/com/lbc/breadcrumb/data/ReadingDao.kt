@@ -31,6 +31,34 @@ interface ReadingDao {
     @Query("SELECT COUNT(*) FROM memories WHERE type = 'IMAGE' AND extractedText IS NULL")
     suspend fun countUnreadImages(): Int
 
+    /**
+     * Unread images and PDFs, newest first, for [com.lbc.breadcrumb.ocr.OcrQueue].
+     *
+     * Watches Room so any newly inserted IMAGE or PDF row gets read without
+     * calling anything directly.
+     */
+    @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC")
+    fun observeUnreadMedia(): Flow<List<Memory>>
+
+    /** The one picture or PDF the queue reads next: the newest still unread. */
+    @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT 1")
+    suspend fun getNewestUnreadMedia(): Memory?
+
+    @Query("SELECT COUNT(*) FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL")
+    suspend fun countUnreadMedia(): Int
+
+    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC")
+    fun observeUnreadPdfs(): Flow<List<Memory>>
+
+    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC")
+    suspend fun getUnreadPdfs(): List<Memory>
+
+    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT 1")
+    suspend fun getNewestUnreadPdf(): Memory?
+
+    @Query("SELECT COUNT(*) FROM memories WHERE type = 'PDF' AND extractedText IS NULL")
+    suspend fun countUnreadPdfs(): Int
+
     @Query("SELECT * FROM memories WHERE id = :id")
     suspend fun getById(id: String): Memory?
 

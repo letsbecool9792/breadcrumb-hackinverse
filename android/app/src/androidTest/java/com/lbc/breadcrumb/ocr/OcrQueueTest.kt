@@ -134,6 +134,50 @@ class OcrQueueTest {
     }
 
     @Test
+    fun queueReadsUnreadPdfWritesExtractedTextAndCallsUploadScheduler() = runBlocking {
+        var uploadCalls = 0
+
+        val pdfFile = File(originalsDir, "doc1.pdf").apply { writeText("fake pdf content") }
+        val memory = Memory(
+            id = "doc1",
+            type = MemoryType.PDF,
+            localUri = Uri.fromFile(pdfFile).toString(),
+            extractedText = null,
+        )
+        memoryDao.upsert(memory)
+
+        val fakeImageReader = FakeReader { "" }
+        val fakePdfReader = object : PdfTextReader {
+            override suspend fun readText(file: File): String = "Extracted PDF Contract Text"
+        }
+
+        val queue = OcrQueue(
+            context = context,
+            readingDao = readingDao,
+            originals = originalStore,
+            scope = scope,
+            readingOriginals = readingOriginals,
+            reader = fakeImageReader,
+            pdfReader = fakePdfReader,
+            scheduleUpload = { uploadCalls++ },
+        )
+
+        queueJob = queue.start()
+
+        withTimeout(3000) {
+            while (readingDao.getById("doc1")?.extractedText == null) {
+                delay(20)
+            }
+        }
+        withTimeout(3000) { readingOriginals.first { !it } }
+
+        val updated = readingDao.getById("doc1")
+        assertEquals("Extracted PDF Contract Text", updated?.extractedText)
+        assertEquals(1, uploadCalls)
+        assertFalse(readingOriginals.value)
+    }
+
+    @Test
     fun missingOrUnreadableImageFileIsMarkedEmptyAndDoesNotBlockTheQueue() = runBlocking {
         var uploadCalls = 0
 

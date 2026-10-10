@@ -1,6 +1,7 @@
 package com.lbc.breadcrumb.ocr
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.ExifInterface
 import com.google.android.gms.tasks.Task
@@ -90,6 +91,18 @@ class MlKitImageTextReader(
             "" // Unreadable image returned as empty so it never blocks
         } finally {
             bitmap.recycle()
+        }
+    }
+
+    override suspend fun readText(bitmap: Bitmap): String = withContext(Dispatchers.IO) {
+        try {
+            val inputImage = InputImage.fromBitmap(bitmap, 0)
+            val result = recognizer.process(inputImage).await()
+            result.text.trim()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Throwable) {
+            ""
         }
     }
 

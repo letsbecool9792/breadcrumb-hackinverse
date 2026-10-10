@@ -233,6 +233,43 @@ class ReadingDaoTest {
         assertEquals(SyncState.SYNCED, after?.syncState)
     }
 
+    @Test
+    fun unreadMediaIncludesBothImagesAndPdfsNewestFirst() = runBlocking {
+        memoryDao.upsertAll(
+            listOf(
+                Memory(id = "img1", type = MemoryType.IMAGE, capturedAt = 1_000, extractedText = null),
+                Memory(id = "pdf1", type = MemoryType.PDF, capturedAt = 2_000, extractedText = null),
+                Memory(id = "text1", type = MemoryType.TEXT, capturedAt = 3_000, extractedText = null),
+                Memory(id = "pdf_read", type = MemoryType.PDF, capturedAt = 4_000, extractedText = "already read"),
+            ),
+        )
+
+        assertEquals(2, readingDao.countUnreadMedia())
+        val newest = readingDao.getNewestUnreadMedia()
+        assertEquals("pdf1", newest?.id)
+
+        val unread = readingDao.observeUnreadMedia().first()
+        assertEquals(listOf("pdf1", "img1"), unread.map { it.id })
+    }
+
+    @Test
+    fun unreadPdfsQueriesReturnOnlyPdfs() = runBlocking {
+        memoryDao.upsertAll(
+            listOf(
+                Memory(id = "img1", type = MemoryType.IMAGE, capturedAt = 1_000, extractedText = null),
+                Memory(id = "pdf_old", type = MemoryType.PDF, capturedAt = 2_000, extractedText = null),
+                Memory(id = "pdf_new", type = MemoryType.PDF, capturedAt = 3_000, extractedText = null),
+            ),
+        )
+
+        assertEquals(2, readingDao.countUnreadPdfs())
+        val newest = readingDao.getNewestUnreadPdf()
+        assertEquals("pdf_new", newest?.id)
+
+        val unread = readingDao.getUnreadPdfs()
+        assertEquals(listOf("pdf_new", "pdf_old"), unread.map { it.id })
+    }
+
     private fun matchesFts(word: String): Int =
         db.openHelper.readableDatabase
             .query("SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?", arrayOf<Any?>("\"$word*\""))
