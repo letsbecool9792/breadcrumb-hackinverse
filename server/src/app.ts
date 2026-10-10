@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from "express
 import type { Db } from "mongodb";
 
 import { makeIngestHandler, type Enricher, type Embedder } from "./ingest.ts";
+import { makeImageHandler, type ImageReader } from "./images.ts";
 
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
@@ -14,6 +15,7 @@ export interface AppOptions {
   database?: Db;
   enricher?: Enricher;
   embedder?: Embedder;
+  imageReader?: ImageReader;
 }
 
 /**
@@ -22,7 +24,7 @@ export interface AppOptions {
  * what the model made of a memory, and deletes. Each route is a few lines over
  * a function tested on its own. docs/api.md is the contract.
  */
-export function createApp({ log = true, database, enricher, embedder }: AppOptions = {}) {
+export function createApp({ log = true, database, enricher, embedder, imageReader }: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
 
@@ -41,10 +43,11 @@ export function createApp({ log = true, database, enricher, embedder }: AppOptio
   // then they answer 501, which the phone treats as "try again later".
   if (database) {
     app.post("/memories", makeIngestHandler(database, enricher, embedder));
+    app.post("/memories/images", makeImageHandler(database, imageReader, embedder));
   } else {
     app.post("/memories", notBuilt);
+    app.post("/memories/images", notBuilt);
   }
-  app.post("/memories/images", notBuilt);
   app.post("/memories/enrichment", notBuilt);
   app.post("/memories/delete", notBuilt);
   app.get("/search", notBuilt);
