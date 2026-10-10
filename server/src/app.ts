@@ -35,7 +35,8 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
 
   if (log) app.use(logRequest);
 
-  app.use(express.json({ limit: "50mb" }));
+  // Eight downscaled pictures in base64 fit well inside this.
+  app.use(express.json({ limit: "16mb" }));
 
   // Unauthenticated on purpose: it reveals nothing, and it is what the app
   // pings to tell "server down" from "server up". `service` lets the app tell
@@ -44,8 +45,8 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
     res.json({ service: "breadcrumb", status: "ok" });
   });
 
-  // The server workstream builds these (docs/workstreams/server.md). Until
-  // then they answer 501, which the phone treats as "try again later".
+  // Without a database (the HTTP-surface tests) they answer 501, which the
+  // phone treats as "try again later".
   if (database) {
     app.post("/memories", makeIngestHandler(database, enricher, embedder));
     app.post("/memories/images", makeImageHandler(database, imageReader, embedder));
@@ -65,6 +66,11 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
     res.status(404).json({ error: "not found" });
   });
   app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+    // A body that is not JSON, or too big, is the request's fault: a 400 the
+    // phone will not resend as it is, never a 500.
+    const type = (err as { type?: string } | null)?.type;
+    if (type === "entity.parse.failed") return void res.status(400).json({ error: "the body is not valid JSON" });
+    if (type === "entity.too.large") return void res.status(413).json({ error: "the body is too large" });
     console.error(err);
     res.status(500).json({ error: "internal" });
   });
