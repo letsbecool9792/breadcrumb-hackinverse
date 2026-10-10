@@ -179,8 +179,12 @@ class ReadingDaoTest {
         // Quotes, hyphens, OR, column filter syntax must not throw SQLite exceptions
         assertEquals(1, readingDao.search("\"qualcomm\"").size)
         assertEquals(1, readingDao.search("qualcomm-internship").size)
-        assertEquals(1, readingDao.search("qualcomm OR internship").size)
-        assertEquals(1, readingDao.search("rawText:qualcomm").size)
+        // OR is a word to find, never an operator: as an operator it would match
+        // on "qualcomm" alone; as a word, nothing here starts with "or" or "banana".
+        assertEquals(0, readingDao.search("qualcomm OR banana").size)
+        // Nor is column: a filter: as one it would find the memory by its rawText;
+        // as words, nothing here starts with "rawtext".
+        assertEquals(0, readingDao.search("rawText:qualcomm").size)
         assertEquals(0, readingDao.search("\"").size)
         assertEquals(0, readingDao.search("-").size)
         assertEquals(0, readingDao.search(":::").size)
