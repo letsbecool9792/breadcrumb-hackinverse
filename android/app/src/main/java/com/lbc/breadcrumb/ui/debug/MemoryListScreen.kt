@@ -37,11 +37,15 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
+import com.lbc.breadcrumb.imports.ImportProgress
 import com.lbc.breadcrumb.ui.theme.Mono
 import com.lbc.breadcrumb.ui.theme.Sans
 import kotlinx.coroutines.launch
@@ -64,6 +68,31 @@ fun MemoryListScreen() {
     val dao = remember { app.database.memoryDao() }
     val memories by remember { dao.observeAll() }.collectAsStateWithLifecycle(initialValue = emptyList())
     var nextSample by rememberSaveable { mutableIntStateOf(0) }
+    val importProgress by app.importer.progress.collectAsStateWithLifecycle()
+
+    val folderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree(),
+    ) { uri ->
+        uri?.let { app.importer.importFolder(it) }
+    }
+
+    val photoLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+    ) { uris ->
+        if (uris.isNotEmpty()) app.importer.importVisualMedia(uris)
+    }
+
+    val pdfLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenMultipleDocuments(),
+    ) { uris ->
+        if (uris.isNotEmpty()) app.importer.importPdfs(uris)
+    }
+
+    val bookmarkLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+    ) { uri ->
+        uri?.let { app.importer.importBookmarks(it) }
+    }
 
     Column(
         Modifier
@@ -95,6 +124,46 @@ fun MemoryListScreen() {
                 nextSample += 1
                 app.applicationScope.launch { dao.upsert(sample) }
             }) { Text("+", style = chrome.copy(fontSize = 18.sp)) }
+        }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text("import:", style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { folderLauncher.launch(null) }) {
+                Text("folder", style = chrome)
+            }
+            TextButton(onClick = {
+                photoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            }) {
+                Text("photos", style = chrome)
+            }
+            TextButton(onClick = { pdfLauncher.launch(arrayOf("application/pdf")) }) {
+                Text("pdfs", style = chrome)
+            }
+            TextButton(onClick = { bookmarkLauncher.launch(arrayOf("text/html", "*/*")) }) {
+                Text("bookmarks", style = chrome)
+            }
+        }
+
+        val progressText = when (val p = importProgress) {
+            is ImportProgress.Scanning -> p.message
+            is ImportProgress.Running -> "importing ${p.current}/${p.total} · ${p.imported} added · ${p.skipped} skipped"
+            is ImportProgress.Done -> "import done · ${p.imported} added · ${p.skipped} skipped"
+            null -> null
+        }
+        if (progressText != null) {
+            Text(
+                progressText,
+                style = chrome,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+            )
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
