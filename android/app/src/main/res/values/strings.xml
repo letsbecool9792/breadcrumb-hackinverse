@@ -13,8 +13,21 @@
     <string name="debug_clear">Clear</string>
     <string name="debug_delete">Delete</string>
 
-    <!-- Capture workstream: toasts for C1 -->
+    <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
+         serif, the app's own voice; the rest is chrome. -->
+    <string name="capture_saving">Saving…</string>
     <string name="capture_saved">Saved</string>
+    <string name="capture_saved_many">Saved %1$d</string>
+    <string name="capture_saved_some">Saved %1$d of %2$d</string>
+    <string name="capture_removed">Removed</string>
+    <string name="capture_undo">Undo</string>
+    <string name="capture_done">Done</string>
+    <string name="capture_close">Close</string>
+    <string name="capture_add_note">add a note</string>
+    <string name="capture_note_hint">who sent it, what it\'s for…</string>
+    <string name="capture_picture">Saved picture</string>
+    <string name="capture_document">Document</string>
+    <string name="capture_pdf">PDF</string>
     <string name="capture_nothing_to_save">Nothing to save</string>
 
     <!-- Capture workstream: why the sheet saved nothing, each its own message,
