@@ -1,4 +1,4 @@
-import type { Collection, Db } from "mongodb";
+import type { Collection, Db, Document } from "mongodb";
 
 export type MemoryType = "TEXT" | "LINK" | "IMAGE" | "PDF" | "AUDIO";
 
@@ -22,8 +22,9 @@ export interface MemoryDoc {
   sourceApp?: string | null;
   sourceAppLabel?: string | null;
   /**
-   * The sites the links in its shared text point to ("instagram.com"), so a
-   * source filter finds an Instagram link however it arrived. Derived here,
+   * The sites the links in its shared text point to, named as people say
+   * them ("Instagram", sites.ts), so a source filter finds an Instagram link
+   * however it arrived. Derived here,
    * never sent by the phone; empty when it holds no link.
    */
   linkSites?: string[];
@@ -82,80 +83,107 @@ export async function ensureIndexes(database: Db): Promise<void> {
   await memories(database).createIndex({ capturedAt: -1 }, { name: "capturedAt_desc" });
   await memories(database).createIndex({ datedAt: -1 }, { name: "datedAt_desc" });
 
-  const coll = memories(database);
+  await syncSearchIndex(memories(database), VECTOR_INDEX);
+  await syncSearchIndex(memories(database), TEXT_INDEX);
+}
 
-  // Search Indexes
-  const vectorDef = {
+/** What both halves of a search narrow by. A vector index's filter fields must be declared up front. */
+const FILTER_PATHS = ["type", "hasLink", "capturedAt", "sourceAppLabel", "datedAt", "linkSites", "_id"];
+
+interface SearchIndexSpec {
+  name: string;
+  type: "vectorSearch" | "search";
+  definition: Document;
+}
+
+/** Meaning: the 768-number embedding by cosine, every filter field declared. */
+export const VECTOR_INDEX: SearchIndexSpec = {
+  name: "memories_vector",
+  type: "vectorSearch",
+  definition: {
+    fields: [
+      { type: "vector", path: "embedding", numDimensions: 768, similarity: "cosine" },
+      ...FILTER_PATHS.map((path) => ({ type: "filter", path })),
+    ],
+  },
+};
+
+const english = { type: "string", analyzer: "lucene.english" };
+
+/**
+ * Words: English analysis (stop words dropped, words stemmed) over the text,
+ * the model's summary and picture reading among it as a nested document; the
+ * filter fields as tokens, never text, so "WhatsApp" is one value, not a word.
+ */
+export const TEXT_INDEX: SearchIndexSpec = {
+  name: "memories_text",
+  type: "search",
+  definition: {
     mappings: {
       dynamic: false,
       fields: {
-        embedding: { type: "knnVector", dimensions: 768, similarity: "cosine" },
+        title: english,
+        note: english,
+        rawText: english,
+        extractedText: english,
+        enrichment: { type: "document", fields: { summary: english, readText: english } },
         type: { type: "token" },
         hasLink: { type: "boolean" },
         capturedAt: { type: "date" },
         sourceAppLabel: { type: "token" },
         datedAt: { type: "date" },
         linkSites: { type: "token" },
-        _id: { type: "token" }
+        _id: { type: "token" },
+      },
+    },
+  },
+};
+
+/** The paths an index definition declares, "enrichment.summary" for a nested one. */
+export function declaredPaths(definition: Document): string[] {
+  if (Array.isArray(definition.fields)) return definition.fields.map((field: { path: string }) => field.path);
+  const walk = (fields: Record<string, Document> | undefined, prefix: string): string[] =>
+    Object.entries(fields ?? {}).flatMap(([name, field]) =>
+      field.type === "document" ? walk(field.fields, `${prefix}${name}.`) : [`${prefix}${name}`],
+    );
+  return walk(definition.mappings?.fields, "");
+}
+
+/**
+ * Creates a missing search index, and updates one only when it lacks a declared
+ * path: Atlas reports a definition back with its own defaults filled in, so
+ * comparing whole definitions would rebuild it at every start. An index of the
+ * wrong kind (a vector index made as a plain search index) is dropped and made
+ * again. Says what it does out loud: to Atlas a missing index is no error, and
+ * the half of the search it serves quietly finds nothing.
+ */
+async function syncSearchIndex(collection: Collection<MemoryDoc>, spec: SearchIndexSpec): Promise<void> {
+  try {
+    const existing = (await collection.listSearchIndexes(spec.name).toArray())[0] as Document | undefined;
+    if (existing && existing.type === spec.type) {
+      const has = new Set(declaredPaths(existing.latestDefinition ?? existing.definition ?? {}));
+      const missing = declaredPaths(spec.definition).filter((path) => !has.has(path));
+      if (missing.length === 0) return;
+      console.log(`search index ${spec.name} lacks ${missing.join(", ")}: updating it (searchable again in about 30 s)`);
+      await collection.updateSearchIndex(spec.name, spec.definition);
+      return;
+    }
+    if (existing) {
+      console.log(`search index ${spec.name} is a ${existing.type} index, not ${spec.type}: making it again`);
+      await collection.dropSearchIndex(spec.name);
+      for (let waited = 0; waited < 60_000; waited += 2_000) {
+        if ((await collection.listSearchIndexes(spec.name).toArray()).length === 0) break;
+        await new Promise((resolve) => setTimeout(resolve, 2_000));
       }
     }
-  };
-
-  const textDef = {
-    mappings: {
-      dynamic: false,
-      fields: {
-        title: { type: "string", analyzer: "lucene.english" },
-        note: { type: "string", analyzer: "lucene.english" },
-        "enrichment.summary": { type: "string", analyzer: "lucene.english" },
-        rawText: { type: "string", analyzer: "lucene.english" },
-        extractedText: { type: "string", analyzer: "lucene.english" },
-        "enrichment.readText": { type: "string", analyzer: "lucene.english" },
-        type: { type: "token" },
-        hasLink: { type: "boolean" },
-        capturedAt: { type: "date" },
-        sourceAppLabel: { type: "token" },
-        datedAt: { type: "date" },
-        linkSites: { type: "token" },
-        _id: { type: "token" }
-      }
-    }
-  };
-
-  async function syncSearchIndex(name: string, definition: any) {
-    try {
-      // Use listSearchIndexes instead of hardcoding array length
-      let existing: any = null;
-      try {
-        const indexes = await coll.listSearchIndexes().toArray();
-        existing = indexes.find((idx: any) => idx.name === name);
-      } catch (e: any) {
-        // Ignored if listSearchIndexes fails (e.g. Atlas not available or wrong tier)
-        console.warn(`Could not list search indexes, skipping ${name}:`, e.message);
-        return;
-      }
-
-      if (!existing) {
-        console.log(`Creating search index: ${name}`);
-        await coll.createSearchIndex({ name, definition });
-      } else {
-        // Compare only declared fields. If missing a declared field in existing mapping, update it.
-        const expectedFields = Object.keys(definition.mappings.fields);
-        const actualFields = Object.keys(existing.latestDefinition?.mappings?.fields || existing.definition?.mappings?.fields || {});
-        
-        const isMissingField = expectedFields.some(f => !actualFields.includes(f));
-        if (isMissingField) {
-          console.log(`Updating search index: ${name}`);
-          await coll.updateSearchIndex(name, definition);
-        }
-      }
-    } catch (e: any) {
-      console.warn(`Could not sync search index ${name} (if refused for role, create in Atlas UI):`, e.message);
-    }
+    console.log(`search index ${spec.name} is missing: creating it (searchable in about 30 s)`);
+    await collection.createSearchIndex({ name: spec.name, type: spec.type, definition: spec.definition });
+  } catch (error) {
+    console.warn(
+      `could not set up search index ${spec.name}: ${error instanceof Error ? error.message : String(error)}\n` +
+        "  If the database user may not manage search indexes, create it in the Atlas UI rather than widen the role.",
+    );
   }
-
-  await syncSearchIndex("memories_vector", vectorDef);
-  await syncSearchIndex("memories_text", textDef);
 }
 
 /** When a memory is dated: when its picture was taken, else when it was saved. */
