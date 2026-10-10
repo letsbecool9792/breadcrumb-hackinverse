@@ -41,7 +41,7 @@ class ClipboardCaptureActivity : ComponentActivity() {
         setContent {
             val state by stateFlow.collectAsState()
 
-            BreadcrumbTheme {
+            BreadcrumbTheme(darkTheme = true) {
                 CaptureSheet(
                     state = state,
                     onUndo = {

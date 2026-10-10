@@ -7,6 +7,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -88,21 +89,29 @@ fun CaptureSheet(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(CaptureScrim.copy(alpha = 0.7f))
-            .clickable(enabled = canDismiss) { animateAndDismiss() },
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
+        // The scrim is the sheet's sibling, behind it, not its parent: a
+        // parent's clickable also hears every tap inside the sheet, so tapping
+        // the preview or the text would close it.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(CaptureScrim.copy(alpha = 0.7f))
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    enabled = canDismiss,
+                ) { animateAndDismiss() }
+        )
         androidx.compose.animation.AnimatedVisibility(
             visible = visible,
             enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
             exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
         ) {
             Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(enabled = false) {}, // intercept clicks
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 color = MaterialTheme.colorScheme.surface
             ) {
