@@ -64,7 +64,7 @@ workstream sends.
     characters); the model reads only the first 4,000.
   - Re-embed only when that text changes (`embeddedWith`).
   - *Check (live test):* two related texts score closer than two unrelated ones, by more than 0.1.
-- [ ] **S3. Pictures**: `POST /memories/images`
+- [x] **S3. Pictures**: `POST /memories/images`
   - Base64 in the body, **never written anywhere**, not even a temp file. Only for memories
     already held. The same picture is never read twice (a fingerprint of its bytes). A picture
     gets the memory's note as context.
