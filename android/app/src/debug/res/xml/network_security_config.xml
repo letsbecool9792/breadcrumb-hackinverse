@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Plain HTTP to the dev server, which the phone reaches as localhost through
+     `adb reverse tcp:3000 tcp:3000`. Scoped to localhost alone: every other
+     host keeps the default, cleartext blocked. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+    </domain-config>
+</network-security-config>

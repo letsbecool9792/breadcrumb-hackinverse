@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Ink behind the window too, so nothing flashes white between the
+         splash and the first frame, or as the keyboard resizes the window. -->
+    <style name="Theme.Breadcrumb" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/brand_ink</item>
+    </style>
+
+    <!-- Applied to the launcher activity; hands off to Theme.Breadcrumb once
+         installSplashScreen() runs. Attribute names are unprefixed because they
+         come from androidx core-splashscreen, not the platform. -->
+    <style name="Theme.Breadcrumb.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/brand_ink</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="postSplashScreenTheme">@style/Theme.Breadcrumb</item>
+    </style>
+
+    <!-- Every capture surface: a transparent window over the app the save came
+         from, holding the capture sheet. No window animation, since the sheet
+         animates itself. A window with windowNoDisplay never gains focus, and
+         the clipboard is unreadable without focus, so this theme is used
+         instead of it. -->
+    <style name="Theme.Breadcrumb.Capture" parent="android:Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

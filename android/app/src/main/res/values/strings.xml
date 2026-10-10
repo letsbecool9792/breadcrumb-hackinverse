@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Breadcrumb</string>
+
+    <!-- The Quick Settings tile's label, set by the capture workstream. -->
+    <string name="tile_label">Breadcrumb</string>
+
+    <!-- The debug list. Lowercase mono chrome, as the search screens will be. -->
+    <string name="debug_title">breadcrumb · debug</string>
+    <string name="debug_empty">Nothing saved yet. Tap + for a sample, or share something to Breadcrumb.</string>
+    <string name="debug_add_sample">Add a sample memory</string>
+    <string name="debug_clear">Clear</string>
+    <string name="debug_delete">Delete</string>
+</resources>
