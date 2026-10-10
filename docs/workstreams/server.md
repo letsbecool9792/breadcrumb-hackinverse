@@ -84,7 +84,9 @@ workstream sends.
   - If index creation is refused for the user's role, create it in the Atlas UI rather than
     widening the role for good.
 - [x] **S5. Hybrid search**: `GET /search` (architecture rule 5)
-  - `$rankFusion` over `$vectorSearch` and `$search`, equal weights; each half offers the fusion
+  - Reciprocal rank fusion of `$vectorSearch` and `$search`, equal weights, k = 60 as
+    `$rankFusion` uses; done in the server over the two halves' ranked ids (`fuse` in
+    search.ts), which also gives each result its rank in each half. Each half offers the fusion
     more candidates than the final list (twice the limit, 20 to 100), so a memory ranked modestly
     by both can rise above one ranked first by only one.
   - Exact nearest neighbours (no `numCandidates`) under about 10,000 documents.
@@ -151,3 +153,17 @@ workstream sends.
 - The free tier, per model per project: Gemini 3.5 and 3.1 Flash Lite 15 a minute and 500 a day
   each; embeddings 100 a minute and 1,000 a day. Daily limits reset at midnight Pacific; check
   them on the key's project quota page in the Cloud Console, filtered on "free tier".
+- **Spend calls per batch, never per memory:** one model call reads a whole `/memories` batch,
+  one reads a whole `/memories/images` request, and one embedding request embeds a batch
+  (`embedContent` takes a list). Per memory, a 500-item import would use the whole day.
+- **A vector index is its own kind:** `createSearchIndex({ type: "vectorSearch", definition:
+  { fields: [{ type: "vector", … }, { type: "filter", path }] } })`. A `knnVector` mapping in a
+  plain search index does not serve `$vectorSearch`.
+- **Nested fields in a search index are `document` mappings**, never dotted keys:
+  `enrichment: { type: "document", fields: { summary, readText } }`.
+- **Token fields are filtered with `in` and `equals` in `$search`**, never `text`, which finds
+  nothing on a token.
+- **Days are the server's, not UTC's** (days.ts): at UTC midnight, 3 a.m. in India is still the
+  day before.
+- **Validate field by field and answer 400 for a bad request**; a model or database that may
+  answer later is a 503, never a 200 (the phone would mark it done) or a 500.
