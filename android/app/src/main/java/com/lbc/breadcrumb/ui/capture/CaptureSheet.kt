@@ -4,7 +4,12 @@ import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.rememberTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,13 +30,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
@@ -40,7 +45,7 @@ import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.theme.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 import java.io.File
 import kotlin.math.roundToInt
 
@@ -54,7 +59,14 @@ sealed class CaptureState {
     object Removed : CaptureState()
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The sheet a capture shows over the app the share came from. One transition
+ * drives the scrim and the sheet both ways: the dim fades in as the sheet
+ * rises, and on Done, Back, a tap on the scrim, a swipe, or after Undo, both
+ * leave together. [onDismiss] runs only once the exit has played and one clear
+ * frame has drawn: finishing sooner hid the window in the frame the exit
+ * started, so the exit never showed.
+ */
 @Composable
 fun CaptureSheet(
     state: CaptureState,
@@ -65,45 +77,40 @@ fun CaptureSheet(
     onUndo: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val scope = rememberCoroutineScope()
-    var isDismissing by remember { mutableStateOf(false) }
     var showNoteField by remember { mutableStateOf(false) }
+    // Not while saving: a shared content:// URI is readable only while the activity lives.
+    val canClose = state !is CaptureState.Saving
 
-    val handleDismiss: () -> Unit = {
-        if (!isDismissing) {
-            isDismissing = true
-            scope.launch {
-                onDismiss()
-            }
+    val shown = remember { MutableTransitionState(false) }
+    LaunchedEffect(Unit) { shown.targetState = true }
+    var closing by remember { mutableStateOf(false) }
+    val close: () -> Unit = {
+        if (!closing) {
+            closing = true
+            shown.targetState = false
         }
     }
-
-    val canDismiss = state !is CaptureState.Saving
-    var visible by remember { mutableStateOf(false) }
-
-    LaunchedEffect(Unit) {
-        visible = true
-    }
-
-    fun animateAndDismiss() {
-        visible = false
-        // For simplicity, just dismiss immediately (since the activity finishes anyway)
-        handleDismiss()
-    }
-
-    androidx.activity.compose.BackHandler(enabled = true) {
-        if (canDismiss) {
-            animateAndDismiss()
+    LaunchedEffect(closing) {
+        if (closing) {
+            snapshotFlow { shown.isIdle && !shown.currentState }.first { it }
+            withFrameNanos { } // one frame drawn with nothing on it
+            onDismiss()
         }
+    }
+    // Read only while laying out and drawing, never in composition, so neither
+    // the transition nor a drag recomposes the sheet every frame.
+    val shownFraction by rememberTransition(shown, label = "capture sheet").animateFloat(
+        transitionSpec = { tween(SHEET_MILLIS) },
+        label = "shown",
+    ) { if (it) 1f else 0f }
+
+    BackHandler {
+        if (canClose) close()
     }
 
     // Swipe down to close: the sheet follows the finger and the scrim fades
-    // with it; past a third of the sheet, or on a downward fling, it goes the
-    // way Done does, note and all, and otherwise it springs back. The offset
-    // is read only while laying out and drawing, never in composition, so a
-    // drag does not recompose the sheet every frame. Not while saving: a
-    // shared content:// URI is readable only while the activity lives.
+    // with it; past a third of the sheet, or on a downward fling, it closes,
+    // and otherwise it springs back.
     var dragOffset by remember { mutableFloatStateOf(0f) }
     var sheetHeight by remember { mutableIntStateOf(0) }
     val flingVelocity = with(LocalDensity.current) { FLING_VELOCITY.toPx() }
@@ -115,13 +122,10 @@ fun CaptureSheet(
             )
         val target = if (goes) sheetHeight.toFloat() else 0f
         animate(dragOffset, target, initialVelocity = velocity) { value, _ -> dragOffset = value }
-        if (goes) handleDismiss()
+        if (goes) close()
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.BottomCenter
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         // The scrim is the sheet's sibling, behind it, not its parent: a
         // parent's clickable also hears every tap inside the sheet, so tapping
         // the preview or the text would close it.
@@ -129,58 +133,68 @@ fun CaptureSheet(
             modifier = Modifier
                 .matchParentSize()
                 .graphicsLayer {
-                    alpha = if (sheetHeight > 0) 1f - (dragOffset / sheetHeight).coerceIn(0f, 1f) else 1f
+                    val dragged = if (sheetHeight > 0) (dragOffset / sheetHeight).coerceIn(0f, 1f) else 0f
+                    alpha = shownFraction * (1f - dragged)
                 }
-                .background(CaptureScrim.copy(alpha = 0.7f))
+                .background(CaptureScrim.copy(alpha = SCRIM_ALPHA))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
-                    enabled = canDismiss,
-                ) { animateAndDismiss() }
+                    enabled = canClose && !closing,
+                ) { close() }
         )
-        androidx.compose.animation.AnimatedVisibility(
-            visible = visible,
-            enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }),
-            exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it })
+        Surface(
+            // draggable sits outside the placement below, so the gesture is
+            // measured in a frame that does not move with the sheet it moves.
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .onSizeChanged { sheetHeight = it.height }
+                .draggable(
+                    orientation = Orientation.Vertical,
+                    enabled = canClose && !closing,
+                    state = rememberDraggableState { delta ->
+                        dragOffset = (dragOffset + delta).coerceAtLeast(0f)
+                    },
+                    onDragStopped = { velocity -> settleDrag(velocity) },
+                )
+                // Below its place by the part of the transition still to play,
+                // then by the drag: in and out with the scrim, from its own height.
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) {
+                        val hidden = (1f - shownFraction) * placeable.height
+                        placeable.placeRelative(0, (hidden + dragOffset).roundToInt())
+                    }
+                },
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
-            Surface(
-                // draggable sits outside offset, so the gesture is measured in
-                // a frame that does not move with the sheet it is moving.
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .onSizeChanged { sheetHeight = it.height }
-                    .draggable(
-                        orientation = Orientation.Vertical,
-                        enabled = canDismiss && !isDismissing,
-                        state = rememberDraggableState { delta ->
-                            dragOffset = (dragOffset + delta).coerceAtLeast(0f)
-                        },
-                        onDragStopped = { velocity -> settleDrag(velocity) },
-                    )
-                    .offset { IntOffset(0, dragOffset.roundToInt()) },
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                color = MaterialTheme.colorScheme.surface
+                    // Edge to edge (targetSdk 36 on Android 15+, and enableEdgeToEdge
+                    // on older ones), adjustResize no longer lifts Compose content:
+                    // the sheet keeps clear of the navigation bar, then the keyboard.
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 20.dp),
             ) {
-                Column(
+                // Drag Handle
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 20.dp),
+                        .padding(vertical = 12.dp),
+                    contentAlignment = Alignment.Center
                 ) {
-                    // Drag Handle
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .width(32.dp)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(InkGrabber)
-                        )
-                    }
+                            .width(32.dp)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(InkGrabber)
+                    )
+                }
             when (state) {
                 is CaptureState.Saving -> {
                     Box(
@@ -296,7 +310,7 @@ fun CaptureSheet(
                             )
                         }
                         Button(
-                            onClick = { handleDismiss() },
+                            onClick = { close() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = AmberBright,
                                 contentColor = AmberOnContainer
@@ -334,7 +348,7 @@ fun CaptureSheet(
                     }
                     LaunchedEffect(Unit) {
                         delay(800)
-                        handleDismiss()
+                        close()
                     }
                 }
 
@@ -356,7 +370,7 @@ fun CaptureSheet(
                             )
                             Spacer(modifier = Modifier.height(20.dp))
                             Button(
-                                onClick = { handleDismiss() },
+                                onClick = { close() },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = InkElevated,
                                     contentColor = Bone
@@ -377,9 +391,8 @@ fun CaptureSheet(
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
+            }
         }
-    }
-    }
     }
 }
 
@@ -629,3 +642,9 @@ private fun TextPreview(memory: Memory) {
 
 /** A downward fling this fast closes the sheet from anywhere, as Material's sheets do. */
 private val FLING_VELOCITY = 125.dp
+
+/** How long the sheet and the scrim take to come in, and to go. */
+private const val SHEET_MILLIS = 280
+
+/** The scrim's dim when the sheet is fully up. */
+private const val SCRIM_ALPHA = 0.7f

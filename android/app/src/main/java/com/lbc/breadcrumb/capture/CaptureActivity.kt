@@ -1,6 +1,7 @@
 package com.lbc.breadcrumb.capture
 
 import android.content.ContentResolver
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
@@ -8,7 +9,9 @@ import android.os.Looper
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import com.lbc.breadcrumb.BreadcrumbApp
@@ -57,6 +60,12 @@ abstract class CaptureActivity : ComponentActivity() {
             finish()
             return
         }
+        // Edge to edge on every version, as Android 15+ enforces at targetSdk 36,
+        // so the sheet's own insets padding keeps it above the bar and keyboard.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
         setContent {
             val current by state.collectAsState()
             val typed by note.collectAsState()
