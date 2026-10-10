@@ -1,7 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from "express";
 import type { Db } from "mongodb";
 
-import { makeIngestHandler, type Enricher } from "./ingest.ts";
+import { makeIngestHandler, type Enricher, type Embedder } from "./ingest.ts";
 
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
@@ -13,6 +13,7 @@ export interface AppOptions {
    */
   database?: Db;
   enricher?: Enricher;
+  embedder?: Embedder;
 }
 
 /**
@@ -21,7 +22,7 @@ export interface AppOptions {
  * what the model made of a memory, and deletes. Each route is a few lines over
  * a function tested on its own. docs/api.md is the contract.
  */
-export function createApp({ log = true, database, enricher }: AppOptions = {}) {
+export function createApp({ log = true, database, enricher, embedder }: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
 
@@ -39,7 +40,7 @@ export function createApp({ log = true, database, enricher }: AppOptions = {}) {
   // The server workstream builds these (docs/workstreams/server.md). Until
   // then they answer 501, which the phone treats as "try again later".
   if (database) {
-    app.post("/memories", makeIngestHandler(database, enricher));
+    app.post("/memories", makeIngestHandler(database, enricher, embedder));
   } else {
     app.post("/memories", notBuilt);
   }

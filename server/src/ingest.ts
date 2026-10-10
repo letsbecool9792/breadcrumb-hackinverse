@@ -113,7 +113,37 @@ Extract information from it.`;
   return data;
 }
 
-export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnricher) {
+export type Embedder = (texts: string[], titles: string[]) => Promise<number[][]>;
+
+function l2Normalize(vector: number[]): number[] {
+  const norm = Math.sqrt(vector.reduce((sum, val) => sum + val * val, 0));
+  if (norm === 0) return vector;
+  return vector.map(val => val / norm);
+}
+
+export async function defaultEmbedder(texts: string[], titles: string[]): Promise<number[][]> {
+  const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  
+  const results = await Promise.all(texts.map(async (text, i) => {
+    const response = await ai.models.embedContent({
+      model: "gemini-embedding-001",
+      contents: text,
+      config: {
+        taskType: "RETRIEVAL_DOCUMENT" as any,
+        title: titles[i] || undefined,
+        outputDimensionality: 768
+      }
+    });
+    if (!response.embeddings || !response.embeddings[0] || !response.embeddings[0].values) {
+      throw new Error("Model returned no embeddings");
+    }
+    return l2Normalize(response.embeddings[0].values);
+  }));
+  
+  return results;
+}
+
+export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnricher, embedder: Embedder = defaultEmbedder) {
   return async (req: Request, res: Response) => {
     let items = req.body;
     if (!Array.isArray(items)) {
@@ -143,20 +173,21 @@ export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnri
       }
 
       const id = parsed._id!;
+      const existing = await collection.findOne({ _id: id });
+      const now = new Date();
+      
+      // 1. Enrich
       const textToEnrich = [parsed.title, parsed.rawText, parsed.extractedText].filter(Boolean).join("\n");
       const textFingerprint = textToEnrich ? getFingerprint(textToEnrich) : undefined;
       
       let enriched = false;
       let reason: string | undefined;
       let retryable: boolean | undefined;
-      let enrichment: Enrichment | undefined;
+      let enrichment: Enrichment | undefined = existing?.enrichment;
+      let enrichmentError: string | undefined = existing?.enrichmentError;
 
-      // Only call model if there is text
       if (textToEnrich) {
-        // Fetch existing memory to check fingerprint
-        const existing = await collection.findOne({ _id: id });
         if (existing?.enrichedFrom === textFingerprint && existing?.enrichment) {
-           enrichment = existing.enrichment;
            enriched = true;
         } else {
            const acquired = await limiter.acquire(60000);
@@ -166,10 +197,12 @@ export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnri
            } else {
              try {
                const result = await enricher(textToEnrich, parsed.datedAt!);
-               enrichment = { ...result, at: new Date() };
+               enrichment = { ...result, at: now };
                enriched = true;
+               enrichmentError = undefined;
              } catch (e: any) {
                reason = e.message || "model error";
+               enrichmentError = reason;
                retryable = e.status === 429 || e.status === 503 || e.status === 500;
              }
            }
@@ -177,9 +210,42 @@ export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnri
       } else {
         enriched = false;
         reason = "no text";
+        enrichmentError = "no text";
       }
 
-      const now = new Date();
+      // 2. Embed
+      let embedded = false;
+      let embeddingError: string | undefined;
+      let embedding: number[] | undefined = existing?.embedding;
+      let embeddedWith = existing?.embeddedWith;
+      
+      const textToEmbedParts = [parsed.note, parsed.title, enrichment?.summary, parsed.rawText, parsed.extractedText].filter(Boolean);
+      const textToEmbedFull = textToEmbedParts.join("\n");
+      const textToEmbed = textToEmbedFull.slice(0, 6000);
+      const embedFingerprint = textToEmbed ? getFingerprint(textToEmbed) : undefined;
+      
+      if (textToEmbed) {
+        if (existing?.embeddedWith?.from === embedFingerprint && existing?.embedding) {
+           embedded = true;
+        } else {
+           try {
+             const vectors = await embedder([textToEmbed], [parsed.title || ""]);
+             embedding = vectors[0];
+             embeddedWith = {
+               model: "gemini-embedding-001",
+               dimensions: 768,
+               from: embedFingerprint,
+               at: now
+             };
+             embedded = true;
+           } catch (e: any) {
+             reason = reason ? `${reason}; embedding failed` : "embedding failed";
+             embeddingError = e.message || "embedding failed";
+             retryable = retryable || e.status === 429 || e.status === 503 || e.status === 500;
+           }
+        }
+      }
+
       const doc: MemoryDoc = {
         _id: id,
         type: parsed.type!,
@@ -198,11 +264,16 @@ export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnri
         syncedAt: now,
       };
 
-      if (enrichment) {
+      if (enrichment && enriched) {
         doc.enrichment = enrichment;
         doc.enrichedFrom = textFingerprint;
-      } else if (reason) {
-        doc.enrichmentError = reason;
+      }
+      if (enrichmentError) {
+        doc.enrichmentError = enrichmentError;
+      }
+      if (embedding && embedded) {
+        doc.embedding = embedding;
+        doc.embeddedWith = embeddedWith;
       }
 
       await collection.updateOne(
@@ -211,7 +282,7 @@ export function makeIngestHandler(database: Db, enricher: Enricher = defaultEnri
         { upsert: true }
       );
 
-      results.push({ id, enriched, embedded: false, reason, retryable });
+      results.push({ id, enriched, embedded, reason, retryable });
     }
 
     const hasRetryable = results.some(r => r.retryable);
