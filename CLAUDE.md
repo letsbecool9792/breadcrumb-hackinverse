@@ -243,8 +243,12 @@ local index before the network round-trip completes; the Gemini pass enriches it
 **5. Hybrid search, never pure vector.**
 Pure semantic search is weakest at exactly what the target queries contain: proper nouns. In
 *"that guy from the hackathon who worked at Qualcomm"*, "Qualcomm" wants keyword matching and the
-rest wants meaning. Atlas's `$rankFusion` fuses `$vectorSearch` and `$search` by reciprocal rank
-in one pipeline. No extra infrastructure.
+rest wants meaning. `$vectorSearch` and `$search` run in parallel, and the server fuses them by
+reciprocal rank (k = 60, the constant `$rankFusion` uses), not with the `$rankFusion` stage:
+it returns each half's rank directly, and passes against the cluster. No extra infrastructure.
+For whoever revisits it: `$rankFusion` would save one round trip, and with `scoreDetails: true`
+each result's `{$meta: "scoreDetails"}` lists every input pipeline's rank
+(`details[].inputPipelineName`, `details[].rank`), so the per-half ranks survive a switch.
 
 **6. Parse the query before searching it.**
 *"that internship screenshot from April"* decomposes into words (internship), a type filter

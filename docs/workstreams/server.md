@@ -84,11 +84,14 @@ workstream sends.
   - If index creation is refused for the user's role, create it in the Atlas UI rather than
     widening the role for good.
 - [x] **S5. Hybrid search**: `GET /search` (architecture rule 5)
-  - Reciprocal rank fusion of `$vectorSearch` and `$search`, equal weights, k = 60 as
-    `$rankFusion` uses; done in the server over the two halves' ranked ids (`fuse` in
-    search.ts), which also gives each result its rank in each half. Each half offers the fusion
-    more candidates than the final list (twice the limit, 20 to 100), so a memory ranked modestly
-    by both can rise above one ranked first by only one.
+  - `$vectorSearch` and `$search` run in parallel, and the server fuses them by reciprocal rank
+    (`fuse` in search.ts): equal weights, k = 60, the constant `$rankFusion` uses, not the
+    `$rankFusion` stage. It returns each half's rank directly, and passes against the cluster.
+    Each half offers the fusion more candidates than the final list (twice the limit, 20 to
+    100), so a memory ranked modestly by both can rise above one ranked first by only one.
+  - Revisiting it: `$rankFusion` would save one round trip, and with `scoreDetails: true` each
+    result's `{$meta: "scoreDetails"}` lists every input pipeline's rank
+    (`details[].inputPipelineName`, `details[].rank`), so the per-half ranks survive a switch.
   - Exact nearest neighbours (no `numCandidates`) under about 10,000 documents.
   - Results are an **allow-list projection**: the text goes back whole, the vector never leaves.
     A field added to the document stays in the cloud until it is listed. Each result carries
