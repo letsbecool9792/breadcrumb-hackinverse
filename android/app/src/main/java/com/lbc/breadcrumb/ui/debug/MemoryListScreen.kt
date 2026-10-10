@@ -137,6 +137,7 @@ fun MemoryListScreen() {
                 app.applicationScope.launch { memoryDao.upsert(sample) }
             }) { Text("+", style = chrome.copy(fontSize = 18.sp)) }
         }
+        ServerStatusLine(app.server)
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -303,7 +304,7 @@ private fun headline(memory: Memory): String =
         ?: memory.extractedText?.lineSequence()?.firstOrNull { it.isNotBlank() }
         ?: "(nothing to show yet)"
 
-private val chrome = TextStyle(fontFamily = Mono, fontSize = 12.sp)
+internal val chrome = TextStyle(fontFamily = Mono, fontSize = 12.sp)
 private val body = TextStyle(fontFamily = Sans, fontSize = 15.sp)
 private val TIME = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
 

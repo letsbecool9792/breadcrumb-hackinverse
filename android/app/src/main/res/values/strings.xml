@@ -13,6 +13,16 @@
     <string name="debug_clear">Clear</string>
     <string name="debug_delete">Delete</string>
 
+    <!-- Sync workstream: the debug list's server line, which says what to fix for each way
+         the phone cannot reach the server. A tap checks again. -->
+    <string name="server_checking">server · checking…</string>
+    <string name="server_reachable">server · reachable</string>
+    <string name="server_refused">server · connection refused: run adb reverse tcp:3000 tcp:3000</string>
+    <string name="server_closed">server · connection closed without a reply: the forward is set, but the server is not running</string>
+    <string name="server_other">server · another server on the port (%1$s)</string>
+    <string name="server_timed_out">server · no answer in time</string>
+    <string name="server_unreachable">server · unreachable: %1$s</string>
+
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
          serif, the app's own voice; the rest is chrome. -->
     <string name="capture_saving">Saving…</string>
