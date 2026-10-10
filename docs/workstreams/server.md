@@ -83,7 +83,7 @@ workstream sends.
     one-half search. A new index takes about 30 s to become searchable.
   - If index creation is refused for the user's role, create it in the Atlas UI rather than
     widening the role for good.
-- [ ] **S5. Hybrid search**: `GET /search` (architecture rule 5)
+- [x] **S5. Hybrid search**: `GET /search` (architecture rule 5)
   - `$rankFusion` over `$vectorSearch` and `$search`, equal weights; each half offers the fusion
     more candidates than the final list (twice the limit, 20 to 100), so a memory ranked modestly
     by both can rise above one ranked first by only one.
