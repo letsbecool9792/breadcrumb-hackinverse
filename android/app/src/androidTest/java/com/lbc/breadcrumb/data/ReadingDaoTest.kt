@@ -251,6 +251,97 @@ class ReadingDaoTest {
         assertEquals(listOf("pdf1", "img1"), unread.map { it.id })
     }
 
+    @Test
+    fun unreadLinksAreReturnedNewestFirst() = runBlocking {
+        memoryDao.upsertAll(
+            listOf(
+                Memory(id = "l1", type = MemoryType.LINK, capturedAt = 1_000, rawText = "https://a.com", extractedText = null),
+                Memory(id = "l2", type = MemoryType.LINK, capturedAt = 3_000, rawText = "https://b.com", extractedText = null),
+                Memory(id = "l3", type = MemoryType.LINK, capturedAt = 2_000, rawText = "https://c.com", extractedText = "already read"),
+            ),
+        )
+
+        assertEquals(2, readingDao.countUnreadLinks())
+        val newest = readingDao.getNewestUnreadLinks(1)
+        assertEquals(1, newest.size)
+        assertEquals("l2", newest[0].id)
+
+        val unread = readingDao.observeUnreadLinks().first()
+        assertEquals(listOf("l2", "l1"), unread.map { it.id })
+    }
+
+    @Test
+    fun updateLinkReadingPreservesExistingTitleAndSetsExtractedText() = runBlocking {
+        memoryDao.upsert(
+            Memory(
+                id = "link_orig",
+                type = MemoryType.LINK,
+                rawText = "https://example.com",
+                title = "Original Title",
+                syncState = SyncState.SYNCED,
+            ),
+        )
+
+        val updated = readingDao.updateLinkReading(
+            id = "link_orig",
+            extractedText = "Article description",
+            title = "Web Page Title",
+        )
+        assertEquals(1, updated)
+
+        val after = memoryDao.getById("link_orig")!!
+        assertEquals("Original Title", after.title)
+        assertEquals("Article description", after.extractedText)
+        assertEquals(SyncState.PENDING, after.syncState)
+    }
+
+    @Test
+    fun updateLinkReadingPopulatesMissingTitle() = runBlocking {
+        memoryDao.upsert(
+            Memory(
+                id = "link_notitle",
+                type = MemoryType.LINK,
+                rawText = "https://example.com",
+                title = null,
+                syncState = SyncState.SYNCED,
+            ),
+        )
+
+        readingDao.updateLinkReading(
+            id = "link_notitle",
+            extractedText = "Article description",
+            title = "Extracted Page Title",
+        )
+
+        val after = memoryDao.getById("link_notitle")!!
+        assertEquals("Extracted Page Title", after.title)
+        assertEquals("Article description", after.extractedText)
+        assertEquals(SyncState.PENDING, after.syncState)
+    }
+
+    @Test
+    fun updateLinkReadingWithEmptyTextLeavesSyncedLinkAlone() = runBlocking {
+        memoryDao.upsert(
+            Memory(
+                id = "link_synced",
+                type = MemoryType.LINK,
+                rawText = "https://example.com",
+                title = "Title",
+                syncState = SyncState.SYNCED,
+            ),
+        )
+
+        readingDao.updateLinkReading(
+            id = "link_synced",
+            extractedText = "",
+            title = null,
+        )
+
+        val after = memoryDao.getById("link_synced")!!
+        assertEquals("", after.extractedText)
+        assertEquals(SyncState.SYNCED, after.syncState)
+    }
+
     private fun matchesFts(word: String): Int =
         db.openHelper.readableDatabase
             .query("SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?", arrayOf<Any?>("\"$word*\""))
