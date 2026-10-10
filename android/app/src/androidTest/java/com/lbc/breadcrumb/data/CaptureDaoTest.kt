@@ -65,6 +65,36 @@ class CaptureDaoTest {
     }
 
     @Test
+    fun aChangedNotePutsASyncedMemoryBackInTheQueue() = runBlocking {
+        memories.upsert(Memory(id = "s1", type = MemoryType.TEXT, rawText = "a link", syncState = SyncState.SYNCED))
+
+        val changed = capture.setNote(listOf("s1"), "Priya says apply early")
+
+        assertEquals(1, changed)
+        assertEquals(SyncState.PENDING, memories.getById("s1")?.syncState)
+    }
+
+    @Test
+    fun anUnchangedNoteChangesNothing() = runBlocking {
+        memories.upsertAll(
+            listOf(
+                Memory(id = "same", type = MemoryType.TEXT, note = "from the trip", syncState = SyncState.SYNCED, updatedAt = 1_000L),
+                Memory(id = "none", type = MemoryType.TEXT, note = null, syncState = SyncState.SYNCED, updatedAt = 1_000L),
+            ),
+        )
+
+        assertEquals(0, capture.setNote(listOf("same"), "from the trip"))
+        assertEquals(0, capture.setNote(listOf("none"), null))
+        assertEquals(0, capture.setNote(listOf("none"), ""))
+
+        for (id in listOf("same", "none")) {
+            val after = memories.getById(id)
+            assertEquals(SyncState.SYNCED, after?.syncState)
+            assertEquals(1_000L, after?.updatedAt)
+        }
+    }
+
+    @Test
     fun aNoteIsFoundByItsWords() = runBlocking {
         memories.upsert(Memory(id = "t1", type = MemoryType.TEXT, rawText = "a link"))
 
