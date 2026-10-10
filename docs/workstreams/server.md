@@ -28,7 +28,7 @@ their own cluster.
 One PR each. Test from the terminal with curl or a script; the phone joins once the sync
 workstream sends.
 
-- [ ] **S1. Ingest text memories**: `POST /memories`
+- [x] **S1. Ingest text memories**: `POST /memories`
   - Parse field by field (`parseMemory`); unknown fields dropped, so `localUri` can never be
     stored whatever the client sends. Name a test for that.
   - **Store every memory, even when the model call fails**, with the reason in

@@ -21,7 +21,7 @@ try {
   process.exit(1);
 }
 
-createApp().listen(port, host, (error) => {
+createApp({ database: db() }).listen(port, host, (error) => {
   if (error) {
     console.error(
       (error as NodeJS.ErrnoException).code === "EADDRINUSE"
