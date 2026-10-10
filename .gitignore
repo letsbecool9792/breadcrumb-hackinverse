@@ -1,0 +1,18 @@
+# generated preview — regenerate with tools/generate_icons.py, not a build input
+tools/preview.png
+tools/__pycache__/
+
+# node
+node_modules/
+.env
+.env.*
+!.env.example
+
+# ide
+# android/.idea is partly tracked on purpose (code style, inspections);
+# android/.gitignore handles the churny ones
+.vscode/
+
+# os
+Thumbs.db
+.DS_Store
