@@ -66,6 +66,20 @@ class CaptureSheetTest {
     }
 
     @Test
+    fun doneClosesOnlyOnceTheExitHasPlayed() {
+        show(saved)
+        compose.waitForIdle()
+        compose.mainClock.autoAdvance = false
+
+        compose.onNodeWithText("Done").performClick()
+        compose.mainClock.advanceTimeByFrame()
+        assertEquals("not while the exit plays", 0, dismissed)
+
+        compose.mainClock.advanceTimeBy(1_000)
+        assertEquals(1, dismissed)
+    }
+
+    @Test
     fun aShortSlowDragLetsTheSheetSpringBack() {
         show(saved)
 
