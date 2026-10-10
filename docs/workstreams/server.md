@@ -93,7 +93,7 @@ workstream sends.
     `ranks: { vector, text }`.
   - *Check:* "Qualcomm" puts the memory containing that word first, where a pure vector search
     would not; a phrase sharing no words with a memory still finds it by meaning.
-- [ ] **S6. Parse the phrase before searching it** (architecture rule 6)
+- [x] **S6. Parse the phrase before searching it** (architecture rule 6)
   - **Gemini 3.1 Flash Lite** (a different model from ingest, so the two never share one daily
     allowance) turns the phrase into `{ query, types, from, to, sourceApp }`.
   - Guards: made-up types, impossible dates and unknown sources are dropped. `sourceApp` is an
