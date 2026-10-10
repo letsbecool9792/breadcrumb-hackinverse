@@ -1,0 +1,118 @@
+# Workstream: Sync, search screens, integration
+
+**Owner:** Suparno · **Android, Kotlin** · talks to the server
+
+The phone's half of the cloud (the upload queue and the server client), the screens people
+actually use (home, search, the detail of a memory), and stitching the four workstreams into one
+app. Also: reviewing everyone's PRs on the phone.
+
+## What you own
+
+- `…/breadcrumb/net/ServerClient.kt` and the Kotlin data classes matching
+  [`docs/api.md`](../api.md)
+- `…/breadcrumb/sync/`: the upload queue (WorkManager)
+- `…/breadcrumb/ui/home/`, `…/breadcrumb/ui/common/`, `…/breadcrumb/open/`: the search screens,
+  the detail sheet, opening originals
+- `MainActivity`, and your own DAOs (`UploadDao`, `SearchDao`)
+
+## What you use
+
+- Capture's rows, and its `uploadHolds` (ids whose capture sheet is still open)
+- Reading's `readingOriginals` flag, its link-reading step, and its local word search
+- The server's five endpoints (stubs answering 501 until the server workstream builds them)
+
+## Steps
+
+- [ ] **U1. The server client, and seeing it from the phone**
+  - OkHttp (5.4.0; 5.5 needs compileSdk 37) and kotlinx.serialization. `GET /health` and check
+    `service == "breadcrumb"`.
+  - A status line on the debug list that tells the four states apart, and rechecks on tap:
+    reachable; *connection refused* (no `adb reverse`); *connection closed without a reply*
+    (the forward is set but the server is not running); another server on the port.
+  - Tests with `mockwebserver3`: reachable, another server, refused, accepted-then-closed,
+    timeout.
+- [ ] **U2. The upload queue**
+  - Unique WorkManager work, with a network constraint, scheduled after every save and every
+    read (`UploadWorker.schedule(context)`, which capture and reading call).
+  - Each pass: pending deletes first; then reading's link step; then memories, **oldest first,
+    ten per request**; then pictures; then enrichment.
+  - States: PENDING → UPLOADING → SYNCED. A 503 or a network failure goes back to PENDING (with
+    backoff); a 400 goes to FAILED and is **not** retried (the same bytes would be refused
+    again; a debug button queues refused ones again). An UPLOADING row left by a killed process
+    goes back to PENDING at the start of a pass.
+  - Held back for now: ids in `uploadHolds`; unread pictures and PDFs while `readingOriginals`
+    is true. A 10-minute grace covers anything a finished OCR queue left unread (a read that
+    failed).
+  - **The payload never carries `localUri`** (a test named for it).
+  - Pictures: only images whose OCR read under 80 characters, only once (`imageSentAt`), only
+    after their memory is on the server, downscaled to a 1,500 px long side as JPEG, four per
+    request. A text-heavy screenshot is left to its words.
+  - Enrichment: for SYNCED rows whose `enrichedAt` is null, ask in batches of 50 and copy
+    `summary`, `kind`, `readText` back. Mark every id asked, answered or not, so the pass cannot
+    loop. Sending a memory (or its picture) clears `enrichedAt`, since the server may have read
+    it again.
+  - *Check:* save in airplane mode → it stays PENDING; reconnect → it syncs, nothing duplicated;
+    kill the app mid-upload → it recovers on the next pass.
+- [ ] **U3. Home: the mosaic**
+  - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
+    picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
+    the serif at the head, handing over to a slim strip as it scrolls away.
+  - An empty mosaic says what to do: share something to Breadcrumb, tap the tile, or bring in
+    what is already on the phone.
+  - The debug list moves behind a long press on the wordmark, **in debug builds only**: pass the
+    callback only when `BuildConfig.DEBUG`, and wire no long press at all when it is null.
+- [ ] **U4. Search**
+  - One search field. While typing, reading's local word search answers at once; after a 450 ms
+    pause the server's ranking replaces it, rows gliding to their ranked places.
+  - Server order is kept; ids the phone does not hold are dropped (the server can hold memories
+    deleted before their delete synced).
+  - The server out of reach → the word matches stand, marked "offline · words only".
+  - A result row: title (sans), a fragment with the matched word lit, chips, age, source app.
+- [ ] **U5. The detail of a memory, and the way back to the original**
+  - A sheet: the artifact (the picture, the PDF's first page, a link card), where it came from
+    and when (saved, from, taken), the text found, what the model saw, the person's note
+    (editable), and **one** main action: open original, open link, or copy text.
+  - Originals are app-private (architecture rule 1), so another app can only open one through a
+    `FileProvider` content URI with a one-off read grant (`res/xml/originals_paths.xml` exposing
+    `filesDir/originals/` and nothing else; authority `${applicationId}.originals`).
+  - Delete with five seconds of Undo instead of a confirmation (`deleteEverywhere`, `restore`).
+  - *Check:* a screenshot opens in the gallery, a PDF in a PDF viewer, a link in the browser,
+    a note's text copies.
+- [ ] **U6. The "+" and the polish** (nice to have, in this order)
+  - An amber "+" beside the search field opens a sheet for keeping something from inside the
+    app: one box to write in, and a photo (system photo picker, no permission) or a PDF to go
+    with it. Text alone is the memory; with files, each file is a memory and the text is their
+    note. A draft survives the sheet being dismissed. A launcher shortcut, "Keep something",
+    opens it from the app icon.
+  - The import's way in (reading's R5) lives in this sheet, as a quiet line.
+  - Motion: the mosaic rising in on launch, results staggering in, a new save dropping in, the
+    picture travelling from its tile into the detail and back. Haptics on results landing and on
+    a delete.
+
+## Rules and pitfalls
+
+- **Search UI is search-bar-first.** No dashboard, no feed, no folder tree. Never a chatbot: a
+  ranked list that opens the original, with at most one line of why it matched.
+- **Dark always** (`BreadcrumbTheme(darkTheme = true)`): the app is a frame around other
+  people's screenshots, and a loud ground competes with them.
+- **A Text given a style takes nothing from the theme**, so every style names its face: use
+  `Serif`, `Sans` and `Mono` from `ui/theme/Type.kt`, never a bare `TextStyle(fontSize = …)`.
+- **Serif or sans is decided by where a title sits, never by the kind of memory.** Among others
+  (tiles, result rows, the capture sheet) a title is sans; opened in its detail it is serif. The
+  serif is otherwise only the app's voice: the wordmark, "Saved", empty states.
+- **Use your own sheet, not Material's `ModalBottomSheet`,** if a picture is to travel from its
+  tile into the sheet: a shared-element transition only works within one composition, and
+  Material's sheet lives in a window of its own. Your sheet then has to give back what
+  Material's gave: a height limit (84% of the window), a scrim that closes it, predictive Back,
+  standing on the keyboard, drag-to-dismiss handed off from the content's scroll.
+- **Animations that loop or follow a gesture run only while shown, and are read while drawing**
+  (`graphicsLayer`, `drawBehind`, `Canvas`), not in composition: a transition left running at
+  rest redraws every frame, and reading one in composition recomposes every frame.
+- **Haptics follow the phone's Touch feedback setting** (`performHapticFeedback` drops them when
+  it is off). Felt nothing? Check `adb shell settings get system haptic_feedback_enabled` before
+  the code.
+- **A launcher shortcut names the applicationId** (`com.lbc.breadcrumb.hackinverse`) in
+  `res/xml/shortcuts.xml` as its `targetPackage`. An `applicationIdSuffix` on a build type
+  breaks it for that build.
+- **Cleartext HTTP is blocked by default.** The debug build's network security config permits it
+  to `localhost` only; release gets none.
