@@ -113,24 +113,40 @@ test("POST /memories live test against Gemini", async (t) => {
     return;
   }
 
-  const app = createApp({ database: db, enricher: defaultEnricher, log: false });
+  const app = createApp({ database: db, log: false }); // uses defaultEnricher and defaultEmbedder
   const server = app.listen(0, "127.0.0.1");
   await new Promise<void>((resolve) => server.once("listening", resolve));
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
-  const rawMemory = {
-    id: "breadcrumb-test-live-1",
-    type: "TEXT",
-    hasLink: false,
-    capturedAt: new Date().toISOString(),
-    rawText: "I have a flight to London next Friday at 10 AM.",
-  };
+  const memories = [
+    {
+      id: "breadcrumb-test-live-1",
+      type: "TEXT",
+      hasLink: false,
+      capturedAt: new Date().toISOString(),
+      rawText: "I have a flight to London next Friday at 10 AM.",
+    },
+    {
+      id: "breadcrumb-test-live-2",
+      type: "TEXT",
+      hasLink: false,
+      capturedAt: new Date().toISOString(),
+      rawText: "British Airways flight leaves for Heathrow on Friday morning.",
+    },
+    {
+      id: "breadcrumb-test-live-3",
+      type: "TEXT",
+      hasLink: false,
+      capturedAt: new Date().toISOString(),
+      rawText: "The recipe for chocolate cake requires eggs and flour.",
+    }
+  ];
 
   try {
     const response = await fetch(`${base}/memories`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify([rawMemory])
+      body: JSON.stringify(memories)
     });
 
     if (response.status === 503) {
@@ -141,14 +157,28 @@ test("POST /memories live test against Gemini", async (t) => {
     assert.strictEqual(response.status, 200);
     const body = await response.json();
     assert.strictEqual(body.results[0].enriched, true);
+    assert.strictEqual(body.results[0].embedded, true);
     
-    const doc = await db.collection("memories").findOne({ _id: "breadcrumb-test-live-1" as any });
-    assert.ok(doc);
-    assert.ok(doc.enrichment);
-    assert.ok(doc.enrichment.summary);
-    assert.ok(doc.enrichment.kind);
-    assert.ok(Array.isArray(doc.enrichment.entities));
-    assert.ok(Array.isArray(doc.enrichment.dates));
+    const doc1 = (await db.collection("memories").findOne({ _id: "breadcrumb-test-live-1" as any })) as any;
+    const doc2 = (await db.collection("memories").findOne({ _id: "breadcrumb-test-live-2" as any })) as any;
+    const doc3 = (await db.collection("memories").findOne({ _id: "breadcrumb-test-live-3" as any })) as any;
+    
+    assert.ok(doc1?.embedding);
+    assert.ok(doc2?.embedding);
+    assert.ok(doc3?.embedding);
+    assert.strictEqual(doc1.embedding.length, 768);
+
+    const e1 = doc1.embedding;
+    const e2 = doc2.embedding;
+    const e3 = doc3.embedding;
+
+    // Compute cosine similarity (since vectors are L2 normalized, dot product is cosine similarity)
+    const dot = (a: number[], b: number[]) => a.reduce((sum, val, i) => sum + val * (b[i] || 0), 0);
+    const sim12 = dot(e1, e2);
+    const sim13 = dot(e1, e3);
+
+    assert.ok(sim12 - sim13 > 0.1, `Related texts not closer by > 0.1: sim12=${sim12}, sim13=${sim13}`);
+
   } finally {
     server.close();
   }

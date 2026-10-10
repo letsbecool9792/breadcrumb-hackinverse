@@ -54,7 +54,7 @@ workstream sends.
   - Inject the model functions into `createApp`, so tests run every endpoint with a stub model;
     plus one live test proving the pinned model, the schema and the SDK agree.
   - *Check:* curl a link → stored with a summary; curl it again unchanged → no model call.
-- [ ] **S2. Embeddings**
+- [x] **S2. Embeddings**
   - `gemini-embedding-001` at **768 dimensions**. It returns unit-length vectors only at its full
     3,072, so **L2-normalise at 768** before storing, or cosine similarity measures length as
     much as meaning. Same for search phrases.
