@@ -24,6 +24,10 @@ interface ReadingDao {
     @Query("SELECT * FROM memories WHERE type = 'IMAGE' AND extractedText IS NULL ORDER BY capturedAt DESC")
     suspend fun getUnreadImages(): List<Memory>
 
+    /** The one picture the OCR queue reads next: the newest still unread. */
+    @Query("SELECT * FROM memories WHERE type = 'IMAGE' AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT 1")
+    suspend fun getNewestUnreadImage(): Memory?
+
     @Query("SELECT COUNT(*) FROM memories WHERE type = 'IMAGE' AND extractedText IS NULL")
     suspend fun countUnreadImages(): Int
 
