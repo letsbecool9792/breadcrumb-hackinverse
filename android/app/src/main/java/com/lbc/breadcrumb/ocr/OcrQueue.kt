@@ -30,6 +30,7 @@ class OcrQueue(
     private val scope: CoroutineScope = (context.applicationContext as BreadcrumbApp).applicationScope,
     private val readingOriginals: MutableStateFlow<Boolean> = (context.applicationContext as BreadcrumbApp).readingOriginals,
     private val reader: ImageTextReader = MlKitImageTextReader(context),
+    private val scheduleUpload: (Context) -> Unit = { uploadScheduler(it) },
 ) {
     private val mutex = Mutex()
 
@@ -80,7 +81,7 @@ class OcrQueue(
         // If deleted mid-read, updates 0 rows and stays deleted.
         val rowsUpdated = readingDao.updateExtractedText(current.id, text)
         if (rowsUpdated > 0) {
-            uploadScheduler(context)
+            scheduleUpload(context)
         }
     }
 }
