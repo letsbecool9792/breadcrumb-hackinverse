@@ -366,6 +366,9 @@ private val SAMPLES: List<(BreadcrumbApp) -> Memory> = listOf(
     { app ->
         createSampleImageMemory(app, withText = false)
     },
+    { app ->
+        createSamplePdfMemory(app)
+    },
 )
 
 private fun createSampleImageMemory(app: BreadcrumbApp, withText: Boolean): Memory {
@@ -400,5 +403,37 @@ private fun createSampleImageMemory(app: BreadcrumbApp, withText: Boolean): Memo
         type = MemoryType.IMAGE,
         localUri = app.originals.uriFor(file),
         sourceAppLabel = if (withText) "Screenshots" else "Camera",
+    )
+}
+
+private fun createSamplePdfMemory(app: BreadcrumbApp): Memory {
+    val id = UUID.randomUUID().toString()
+    val doc = android.graphics.pdf.PdfDocument()
+    val pageInfo = android.graphics.pdf.PdfDocument.PageInfo.Builder(600, 800, 1).create()
+    val page = doc.startPage(pageInfo)
+    val canvas = page.canvas
+
+    val paint = Paint().apply {
+        color = android.graphics.Color.BLACK
+        textSize = 24f
+        isAntiAlias = true
+    }
+    canvas.drawText("Qualcomm Internship Guidelines", 50f, 80f, paint)
+    canvas.drawText("Modem Architecture & Firmware Team", 50f, 130f, paint)
+    canvas.drawText("Bengaluru Office, Bagmane Tech Park", 50f, 180f, paint)
+    canvas.drawText("Requirements: C++, Kotlin, algorithms", 50f, 230f, paint)
+
+    doc.finishPage(page)
+    val dir = File(app.filesDir, "originals").apply { mkdirs() }
+    val file = File(dir, "$id.pdf")
+    file.outputStream().use { doc.writeTo(it) }
+    doc.close()
+
+    return Memory(
+        id = id,
+        type = MemoryType.PDF,
+        title = "Qualcomm Internship Guidelines",
+        localUri = app.originals.uriFor(file),
+        sourceAppLabel = "Documents",
     )
 }

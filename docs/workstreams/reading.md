@@ -80,7 +80,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
   - Add a search field to the debug list so it can be checked.
   - *Check:* a word that appears only inside a screenshot finds it; case and accents fold
     ("cafe" finds "Café"); typing `"`, `-` or `OR` never breaks the search.
-- [ ] **R3. PDFs**
+- [x] **R3. PDFs**
   - The text layer on Android 15+ (`PdfRenderer.Page.getTextContents`, API 35); OCR of the
     first six pages when there is no text layer (a scan) or on older Android. Keep up to 20,000
     characters. A thin text layer is read by OCR too, and the OCR kept when it found clearly

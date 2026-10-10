@@ -3,6 +3,7 @@ package com.lbc.breadcrumb.ocr
 import android.content.Context
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.data.ReadingDao
 import kotlinx.coroutines.CancellationException
@@ -14,10 +15,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
- * Background OCR queue for saved pictures.
+ * Background reading queue for saved pictures and PDFs.
  *
- * Starts in [BreadcrumbApp.onCreate] in `applicationScope` in every process.
- * Watches Room for unread IMAGE rows and reads them newest first.
+ * Starts in [BreadcrumbApp.onCreate] in [applicationScope] in every process.
+ * Watches Room for unread IMAGE and PDF rows and reads them newest first.
  *
  * Presumes [readingOriginals] is true until it has looked at Room. It is true
  * while a pass runs and false when one ends, even with a failed read left
@@ -30,13 +31,14 @@ class OcrQueue(
     private val scope: CoroutineScope = (context.applicationContext as BreadcrumbApp).applicationScope,
     private val readingOriginals: MutableStateFlow<Boolean> = (context.applicationContext as BreadcrumbApp).readingOriginals,
     private val reader: ImageTextReader = MlKitImageTextReader(context),
+    private val pdfReader: PdfTextReader = AndroidPdfTextReader(context, reader),
     private val scheduleUpload: (Context) -> Unit = { uploadScheduler(it) },
 ) {
     private val mutex = Mutex()
 
     fun start(): Job = scope.launch {
         try {
-            readingDao.observeUnreadImages().collect { unread ->
+            readingDao.observeUnreadMedia().collect { unread ->
                 mutex.withLock {
                     if (unread.isEmpty()) {
                         readingOriginals.value = false
@@ -62,10 +64,10 @@ class OcrQueue(
     }
 
     /**
-     * Reads the newest unread pictures [BATCH] at a time, asking Room again
-     * after each batch rather than working through one snapshot: a picture
+     * Reads the newest unread pictures and PDFs [BATCH] at a time, asking Room again
+     * after each batch rather than working through one snapshot: a picture or PDF
      * saved during a large import is read after at most one batch, not after
-     * all of it. A failure is caught per memory and that picture set aside for
+     * all of it. A failure is caught per memory and that item set aside for
      * this pass, so one bad row neither ends the queue for the process nor
      * comes round again. (A read that returns has left its row read, or found
      * it gone, so it never comes back either.)
@@ -73,7 +75,10 @@ class OcrQueue(
     private suspend fun readNewestFirst() {
         val failed = mutableSetOf<String>()
         while (true) {
-            val batch = readingDao.getNewestUnreadImages(BATCH + failed.size)
+            val images = readingDao.getNewestUnreadImages(BATCH + failed.size)
+            val pdfs = readingDao.getUnreadPdfs()
+            val batch = (images + pdfs)
+                .sortedByDescending { it.capturedAt }
                 .filterNot { it.id in failed }
                 .take(BATCH)
             if (batch.isEmpty()) return
@@ -97,11 +102,15 @@ class OcrQueue(
         val file = originals.fileFor(current)
         val text = if (file != null && file.exists()) {
             try {
-                reader.readText(file)
+                when (current.type) {
+                    MemoryType.IMAGE -> reader.readText(file)
+                    MemoryType.PDF -> pdfReader.readText(file)
+                    else -> ""
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (_: Throwable) {
-                "" // Unreadable image marked empty so it never blocks
+                "" // Unreadable image or PDF marked empty so it never blocks
             }
         } else {
             "" // Missing or unresolved file marked empty
