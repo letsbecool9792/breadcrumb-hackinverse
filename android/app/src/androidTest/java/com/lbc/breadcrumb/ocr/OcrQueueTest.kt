@@ -205,15 +205,15 @@ class OcrQueueTest {
     }
 
     @Test
-    fun aPictureSavedWhileOthersAreReadIsReadNext() = runBlocking {
+    fun aPictureSavedDuringALargeImportIsReadAfterTheCurrentBatch() = runBlocking {
         val order = mutableListOf<String>()
-        memoryDao.upsertAll((1..3).map { image("old$it", capturedAt = it * 1000L) })
+        memoryDao.upsertAll((1..25).map { image("old$it", capturedAt = it * 1000L) })
 
         val fakeReader = FakeReader { file ->
             val id = file.nameWithoutExtension
-            synchronized(order) { order += id }
-            // A screenshot is shared while the queue reads the newest old picture.
-            if (id == "old3") memoryDao.upsert(image("new", capturedAt = 9000L))
+            val first = synchronized(order) { order += id; order.size == 1 }
+            // A screenshot is shared while the queue reads the first of the import.
+            if (first) memoryDao.upsert(image("new", capturedAt = 99_000L))
             "text"
         }
 
@@ -227,13 +227,40 @@ class OcrQueueTest {
             scheduleUpload = {},
         ).start()
 
-        withTimeout(3000) {
-            while (synchronized(order) { order.size } < 4) {
+        withTimeout(5000) {
+            while (synchronized(order) { order.size } < 26) {
                 delay(20)
             }
         }
 
-        assertEquals(listOf("old3", "new", "old2", "old1"), synchronized(order) { order.toList() })
+        // Right after the batch it arrived in, not after the other 15.
+        assertEquals(OcrQueue.BATCH, synchronized(order) { order.indexOf("new") })
+    }
+
+    @Test
+    fun oneBadRowDoesNotEndTheQueue() = runBlocking {
+        memoryDao.upsertAll((1..3).map { image("p$it", capturedAt = it * 1000L) })
+        var calls = 0
+
+        queueJob = OcrQueue(
+            context = context,
+            readingDao = readingDao,
+            originals = originalStore,
+            scope = scope,
+            readingOriginals = readingOriginals,
+            reader = FakeReader { "text" },
+            // The first picture's read fails after its write; the queue must go on.
+            scheduleUpload = { if (calls++ == 0) throw IllegalStateException("upload hook failed") },
+        ).start()
+
+        withTimeout(3000) {
+            while (readingDao.countUnreadImages() > 0) {
+                delay(20)
+            }
+        }
+        withTimeout(3000) { readingOriginals.first { !it } }
+
+        assertEquals(0, readingDao.countUnreadImages())
     }
 
     private fun image(id: String, capturedAt: Long): Memory {
