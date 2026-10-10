@@ -10,6 +10,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.ImportDao
 import com.lbc.breadcrumb.data.ImportedSource
+import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryDao
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.OriginalStore
@@ -107,6 +108,35 @@ class BulkImporterTest {
 
             assertTrue(importDao.exists("bookmark:https://qualcomm.com/jobs"))
             assertTrue(importDao.exists("bookmark:https://android.com"))
+        } finally {
+            bookmarkFile.delete()
+        }
+    }
+
+    @Test
+    fun aBookmarkOfAPageAlreadySavedByHandIsNotSavedAgain() = runBlocking {
+        // Shared from Chrome earlier, with words around the link.
+        memoryDao.upsert(
+            Memory(id = "shared", type = MemoryType.LINK, hasLink = true, rawText = "worth reading https://www.example.com/bct-page/ later"),
+        )
+        val bookmarkFile = File(context.cacheDir, "bookmarks_${UUID.randomUUID()}.html").apply {
+            writeText(
+                """
+                <DL><p>
+                    <DT><A HREF="http://example.com/bct-page#top" ADD_DATE="1700000000">The same page</A>
+                    <DT><A HREF="https://example.com/bct-other" ADD_DATE="1700000001">Another page</A>
+                </DL><p>
+                """.trimIndent(),
+            )
+        }
+
+        try {
+            importer.importBookmarks(Uri.fromFile(bookmarkFile)).join()
+
+            assertEquals(2, memoryDao.count())
+            assertEquals(listOf("https://example.com/bct-other"), memoryDao.getAll().filter { it.id != "shared" }.map { it.rawText })
+            assertEquals(ImportProgress.Done(total = 2, imported = 1, skipped = 1), importer.progress.value)
+            assertTrue("the skip is recorded like any other", importDao.exists("bookmark:http://example.com/bct-page#top"))
         } finally {
             bookmarkFile.delete()
         }

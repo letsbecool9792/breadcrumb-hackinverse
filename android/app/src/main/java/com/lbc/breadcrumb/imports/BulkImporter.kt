@@ -209,6 +209,10 @@ class BulkImporter(
             // Oldest bookmarks first by addDateMillis if available
             val sorted = bookmarks.sortedBy { it.addDateMillis ?: Long.MAX_VALUE }
 
+            // The pages already saved, however their addresses were written: a page
+            // shared from Chrome and also bookmarked is one memory, not two.
+            val saved = importDao.linkTexts().flatMapTo(mutableSetOf()) { UrlKey.allIn(it) }
+
             for ((index, bookmark) in sorted.withIndex()) {
                 _progress.value = ImportProgress.Running(
                     current = index + 1,
@@ -223,6 +227,15 @@ class BulkImporter(
                     skippedCount++
                     continue
                 }
+
+                val urlKey = UrlKey.of(bookmark.url)
+                if (urlKey != null && urlKey in saved) {
+                    importDao.record(ImportedSource(key = bookmarkKey, importedAt = System.currentTimeMillis()))
+                    skippedCount++
+                    continue
+                }
+                // Two spellings of one page in the same export come in once.
+                urlKey?.let { saved += it }
 
                 val now = System.currentTimeMillis()
                 val memory = Memory(
