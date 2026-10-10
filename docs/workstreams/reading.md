@@ -86,7 +86,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     characters. A thin text layer is read by OCR too, and the OCR kept when it found clearly
     more: a one-line PDF is easily mistaken for a scan. A PDF behind a password reads as empty.
   - *Check:* a PDF with text → read; a scanned PDF → read by OCR.
-- [ ] **R4. Links' pages**
+- [x] **R4. Links' pages**
   - Read on the phone, never the server: the person's own connection, as when they open it, and
     the server never fetches arbitrary URLs. Only the `<head>`, up to `</head>` or 512 KB. Plain
     http goes as https; never localhost or a bare IP.
