@@ -81,6 +81,12 @@ fun CaptureSheet(
         handleDismiss()
     }
 
+    androidx.activity.compose.BackHandler(enabled = true) {
+        if (canDismiss) {
+            animateAndDismiss()
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()

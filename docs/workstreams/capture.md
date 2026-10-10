@@ -34,7 +34,7 @@ free.** One tap, no questions, done before the user's thumb leaves the screen.
 One PR each. Check every step on a real phone before asking for review; the "check" lines are
 what Suparno runs when he reviews.
 
-- [ ] **C1. Text and links from the share sheet and the selection toolbar**
+- [x] **C1. Text and links from the share sheet and the selection toolbar**
   - `ShareReceiverActivity`: `ACTION_SEND` with `text/plain` and `text/html`, and
     `ACTION_PROCESS_TEXT` (select text anywhere → Breadcrumb in the toolbar).
   - The rules, as pure functions with JVM tests: text containing a URL → `LINK` and
@@ -43,7 +43,7 @@ what Suparno runs when he reviews.
   - Confirm with a toast for now; the sheet comes at C5.
   - *Check:* share a page from Chrome → a LINK row titled with the page's title. Select text in
     any app → Breadcrumb in the toolbar → a TEXT row.
-- [ ] **C2. Pictures and PDFs, one or many**
+- [x] **C2. Pictures and PDFs, one or many**
   - `MediaReceiverActivity`: `ACTION_SEND` and `ACTION_SEND_MULTIPLE`, `image/*` and
     `application/pdf`. Copy each file into the store **before the activity finishes**.
   - Read the provider's `DATE_TAKEN` (or EXIF) **at capture** into `contentCreatedAt`: it cannot
@@ -53,7 +53,7 @@ what Suparno runs when he reviews.
   - *Check:* a screenshot from the gallery → IMAGE row with its taken date; a WhatsApp photo with
     a caption → IMAGE (+ LINK chip if the caption has a link); several images → one row each; a
     PDF → PDF row titled by its file name; deleting a row deletes its stored file too.
-- [ ] **C3. Where it came from**
+- [x] **C3. Where it came from**
   - `Activity.getReferrer()` → `sourceApp`; the app's name → `sourceAppLabel`, **resolved and
     stored at capture** (later, an uninstalled app has no name).
   - System surfaces are not a source: the clipboard arrives as `com.android.systemui`; record
@@ -63,12 +63,12 @@ what Suparno runs when he reviews.
     `adb shell dumpsys package queries`.
   - *Check:* a Chrome share → "from Chrome"; WhatsApp → "from WhatsApp"; the selection toolbar →
     the host app; the clipboard tile → no source.
-- [ ] **C4. The Quick Settings tile saves the clipboard**
+- [x] **C4. The Quick Settings tile saves the clipboard**
   - `CaptureTileService` launches `ClipboardCaptureActivity` (not exported).
   - *Check:* copy text → pull down the shade → tap the tile → a TEXT row with no source; copy a
     link → a LINK row; Chrome's "copy image" → an IMAGE row; from the lock screen → it asks to
     unlock, then saves; an empty clipboard → a clear message, nothing saved.
-- [ ] **C5. The capture sheet** (replaces the toast)
+- [x] **C5. The capture sheet** (replaces the toast)
   - A sheet over the app the share came from, on the transparent `Theme.Breadcrumb.Capture`:
     a preview (one photo large, following its shape; several images as a row of square tiles
     with "+N" on the third; a link card with site, title and URL; the text itself; a PDF card
@@ -80,7 +80,7 @@ what Suparno runs when he reviews.
   - A failure (an empty clipboard) shows the reason and a Close button.
   - *Check:* each kind of preview; Undo → "Removed", the row and its file gone; dismissing every
     way, with no dim left behind.
-- [ ] **C6. A note on a save** (nice to have)
+- [x] **C6. A note on a save** (nice to have)
   - A quiet "add a note" in the sheet opens a field, closed by default, so saving stays one tap.
     The note goes on every memory that share saved, when the sheet goes.
   - While the sheet is open, its memories are held back from upload (a note written there would
