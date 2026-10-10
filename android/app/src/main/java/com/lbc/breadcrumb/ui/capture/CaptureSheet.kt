@@ -46,7 +46,10 @@ import kotlin.math.roundToInt
 
 sealed class CaptureState {
     object Saving : CaptureState()
-    data class Saved(val count: Int, val memories: List<Memory>) : CaptureState()
+    /** [memories] saved of the [total] offered: fewer when some could not be read or kept. */
+    data class Saved(val memories: List<Memory>, val total: Int = memories.size) : CaptureState() {
+        val count: Int get() = memories.size
+    }
     data class Failed(val reason: String) : CaptureState()
     object Removed : CaptureState()
 }
@@ -55,23 +58,21 @@ sealed class CaptureState {
 @Composable
 fun CaptureSheet(
     state: CaptureState,
+    // The note lives with the activity, not here: it writes the note when the
+    // person leaves (onStop), when this sheet never hears of it.
+    note: String,
+    onNoteChange: (String) -> Unit,
     onUndo: () -> Unit,
     onDismiss: () -> Unit,
-    onNote: ((String) -> Unit)? = null
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var isDismissing by remember { mutableStateOf(false) }
-    var noteText by remember { mutableStateOf("") }
     var showNoteField by remember { mutableStateOf(false) }
 
     val handleDismiss: () -> Unit = {
         if (!isDismissing) {
             isDismissing = true
-            // Deliver note if present
-            if (noteText.isNotBlank()) {
-                onNote?.invoke(noteText.trim())
-            }
             scope.launch {
                 onDismiss()
             }
@@ -202,9 +203,13 @@ fun CaptureSheet(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Title: "Saved" or "Saved 3"
+                    // Title: "Saved", "Saved 3", or "Saved 2 of 3" when some could not be kept
                     Text(
-                        text = if (state.count == 1) "Saved" else "Saved ${state.count}",
+                        text = when {
+                            state.count < state.total -> "Saved ${state.count} of ${state.total}"
+                            state.count == 1 -> "Saved"
+                            else -> "Saved ${state.count}"
+                        },
                         style = TextStyle(
                             fontFamily = Serif,
                             fontWeight = FontWeight.Normal,
@@ -219,8 +224,8 @@ fun CaptureSheet(
                     AnimatedVisibility(visible = showNoteField) {
                         Column {
                             BasicTextField(
-                                value = noteText,
-                                onValueChange = { noteText = it },
+                                value = note,
+                                onValueChange = onNoteChange,
                                 textStyle = TextStyle(
                                     fontFamily = Sans,
                                     fontSize = 14.sp,
@@ -237,7 +242,7 @@ fun CaptureSheet(
                                     .padding(12.dp)
                                     .heightIn(min = 48.dp),
                                 decorationBox = { innerTextField ->
-                                    if (noteText.isEmpty()) {
+                                    if (note.isEmpty()) {
                                         Text(
                                             "Add a note…",
                                             style = TextStyle(

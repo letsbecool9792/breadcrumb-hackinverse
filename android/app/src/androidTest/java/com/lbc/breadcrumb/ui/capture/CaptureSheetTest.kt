@@ -1,5 +1,6 @@
 package com.lbc.breadcrumb.ui.capture
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.test.hasProgressBarRangeInfo
@@ -30,21 +31,23 @@ class CaptureSheetTest {
     val compose = createComposeRule()
 
     private val saved = CaptureState.Saved(
-        1,
         listOf(Memory(type = MemoryType.TEXT, rawText = "Try the brewery burger in Indiranagar")),
     )
 
     private var dismissed = 0
-    private val notes = mutableListOf<String>()
+
+    // The note lives with the activity; here, with the test.
+    private val note = mutableStateOf("")
 
     private fun show(state: CaptureState) {
         compose.setContent {
             BreadcrumbTheme(darkTheme = true) {
                 CaptureSheet(
                     state = state,
+                    note = note.value,
+                    onNoteChange = { note.value = it },
                     onUndo = {},
                     onDismiss = { dismissed++ },
-                    onNote = { notes += it },
                 )
             }
         }
@@ -99,6 +102,6 @@ class CaptureSheetTest {
         compose.waitForIdle()
 
         assertEquals(1, dismissed)
-        assertEquals(listOf("Priya's pick"), notes)
+        assertEquals("Priya's pick", note.value)
     }
 }

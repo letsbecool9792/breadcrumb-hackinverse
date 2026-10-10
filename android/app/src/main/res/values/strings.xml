@@ -14,4 +14,11 @@
     <!-- Capture workstream: toasts for C1 -->
     <string name="capture_saved">Saved</string>
     <string name="capture_nothing_to_save">Nothing to save</string>
+
+    <!-- Capture workstream: why the sheet saved nothing, each its own message,
+         shown with a Close button rather than a silent close. -->
+    <string name="capture_failed">Couldn\'t save that</string>
+    <string name="capture_clipboard_empty">Clipboard is empty</string>
+    <string name="capture_clipboard_sensitive">Not saved: clipboard is marked sensitive</string>
+    <string name="capture_clipboard_unreadable">Couldn\'t read the clipboard</string>
 </resources>
