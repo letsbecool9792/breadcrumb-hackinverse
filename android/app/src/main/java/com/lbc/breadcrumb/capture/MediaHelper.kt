@@ -42,13 +42,17 @@ object MediaHelper {
         
         if (date == null || date == 0L) {
             try {
-                // Try EXIF
+                // Not from MediaStore (a chat app's own provider, say): the photo's EXIF
                 context.contentResolver.openInputStream(uri)?.use { input ->
                     val exif = ExifInterface(input)
-                    val dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
-                    // EXIF format is "YYYY:MM:DD HH:MM:SS"
-                    // Let's just return null if it's too complex to parse right now, 
-                    // or parse it using SimpleDateFormat.
+                    date = exifDateToMillis(
+                        exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL)
+                            ?: exif.getAttribute(ExifInterface.TAG_DATETIME),
+                        // TAG_OFFSET_TIME_ORIGINAL, by name: the exifinterface this compiles
+                        // against (1.0.0, through ML Kit) predates the constant, while the
+                        // one that runs (1.4.1) reads the tag. An older one answers null.
+                        exif.getAttribute("OffsetTimeOriginal"),
+                    )
                 }
             } catch (e: Exception) {
                 // ignore
