@@ -5,6 +5,7 @@ import { makeIngestHandler, type Enricher, type Embedder } from "./ingest.ts";
 import { makeImageHandler, type ImageReader } from "./images.ts";
 import { makeSearchHandler, type QueryEmbedder } from "./search.ts";
 import { type SearchParser } from "./search_parser.ts";
+import { makeEnrichmentHandler, makeDeleteHandler } from "./sync.ts";
 
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
@@ -49,13 +50,15 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
     app.post("/memories", makeIngestHandler(database, enricher, embedder));
     app.post("/memories/images", makeImageHandler(database, imageReader, embedder));
     app.get("/search", makeSearchHandler(database, queryEmbedder, searchParser));
+    app.post("/memories/enrichment", makeEnrichmentHandler(database));
+    app.post("/memories/delete", makeDeleteHandler(database));
   } else {
     app.post("/memories", notBuilt);
     app.post("/memories/images", notBuilt);
     app.get("/search", notBuilt);
+    app.post("/memories/enrichment", notBuilt);
+    app.post("/memories/delete", notBuilt);
   }
-  app.post("/memories/enrichment", notBuilt);
-  app.post("/memories/delete", notBuilt);
 
   // JSON, never Express's HTML pages: the only client parses JSON.
   app.use((_req: Request, res: Response) => {
