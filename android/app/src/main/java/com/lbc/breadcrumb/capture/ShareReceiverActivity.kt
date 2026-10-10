@@ -44,7 +44,7 @@ class ShareReceiverActivity : ComponentActivity() {
         }
 
         val subject = intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString()
-        val cleanTitle = TextRules.cleanSubject(subject)
+        val cleanTitle = TextRules.titleFor(subject, text)
         val (type, hasLink) = TextRules.parseText(text)
         val (sourceApp, sourceAppLabel) = SourceHelper.getSource(this)
         
