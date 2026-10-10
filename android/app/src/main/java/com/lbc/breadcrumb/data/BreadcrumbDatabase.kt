@@ -32,6 +32,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
     // Capture workstream: the capture sheet's note, written by id
     abstract fun captureDao(): CaptureDao
 
+    // Reading workstream: bulk importer duplicate tracking
+    abstract fun importDao(): ImportDao
+
     companion object {
         private const val DB_NAME = "breadcrumb.db"
 

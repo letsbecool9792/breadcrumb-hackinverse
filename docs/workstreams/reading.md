@@ -84,7 +84,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
   - Expose it as one step the upload queue runs first on each pass (`LinkReading`), four pages
     at a time.
   - *Check:* a bare link copied from a chat gets its page's title and description.
-- [ ] **R5. Bring in what is already on the phone** (needed to seed the demo)
+- [x] **R5. Bring in what is already on the phone** (needed to seed the demo)
   - Through pickers only, so no storage permission: a whole folder
     (`ACTION_OPEN_DOCUMENT_TREE`, for `Pictures/Screenshots` or `DCIM`); only some pictures (the
     photo picker); PDFs and a bookmarks export (the file picker). The Download folder cannot be

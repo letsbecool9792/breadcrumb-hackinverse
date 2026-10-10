@@ -3,6 +3,7 @@ package com.lbc.breadcrumb
 import android.app.Application
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
+import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.ocr.OcrQueue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,6 +28,9 @@ class BreadcrumbApp : Application() {
 
     /** Where the originals of saved pictures and PDFs live (architecture rule 1). */
     val originals: OriginalStore by lazy { OriginalStore(this) }
+
+    /** Bulk importer for bringing in content already on the phone (reading R5). */
+    val importer: BulkImporter by lazy { BulkImporter(this) }
 
     /**
      * Reading workstream: true while the OCR queue is working through unread
