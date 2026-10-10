@@ -127,6 +127,8 @@ fun MemoryListScreen() {
                 app.applicationScope.launch {
                     memoryDao.clearEverywhere(System.currentTimeMillis())
                     app.originals.clear()
+                    // Or importing again after a Clear would skip everything as seen.
+                    app.database.importDao().clear()
                 }
             }) { Text(stringResource(R.string.debug_clear), style = chrome) }
             TextButton(onClick = {
