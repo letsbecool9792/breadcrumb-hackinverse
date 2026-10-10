@@ -19,9 +19,9 @@ import kotlinx.coroutines.sync.withLock
  * Starts in [BreadcrumbApp.onCreate] in `applicationScope` in every process.
  * Watches Room for unread IMAGE rows and reads them newest first.
  *
- * Presumes [readingOriginals] is true until it has looked at Room, and sets it
- * false when there are no unread pictures left or in a finally block if the queue
- * stops or fails to start.
+ * Presumes [readingOriginals] is true until it has looked at Room. It is true
+ * while a pass runs and false when one ends, even with a failed read left
+ * unread, and false in a finally block if the queue stops or fails to start.
  */
 class OcrQueue(
     private val context: Context,
@@ -43,8 +43,12 @@ class OcrQueue(
                     } else {
                         readingOriginals.value = true
                         readNewestFirst()
-                        val remaining = readingDao.countUnreadImages()
-                        readingOriginals.value = remaining > 0
+                        // The flag means a pass is running, not that something is
+                        // unread. Whatever is still unread now is a read that
+                        // failed; left true, it would hold every unread picture
+                        // back from upload. The uploader's 10-minute grace decides
+                        // when a failed one goes.
+                        readingOriginals.value = false
                     }
                 }
             }

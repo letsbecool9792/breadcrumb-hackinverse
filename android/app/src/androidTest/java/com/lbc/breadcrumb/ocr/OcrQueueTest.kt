@@ -238,6 +238,39 @@ class OcrQueueTest {
     }
 
     @Test
+    fun aPassWithAFailedReadEndsWithReadingOriginalsFalse() = runBlocking {
+        memoryDao.upsertAll(listOf(image("good1", capturedAt = 1000L), image("bad", capturedAt = 2000L), image("good2", capturedAt = 3000L)))
+        // The database refuses one memory's write, so its row stays unread.
+        val failing = object : ReadingDao by readingDao {
+            override suspend fun updateExtractedText(id: String, extractedText: String, updatedAt: Long): Int =
+                if (id == "bad") throw IllegalStateException("disk full") else readingDao.updateExtractedText(id, extractedText, updatedAt)
+        }
+
+        queueJob = OcrQueue(
+            context = context,
+            readingDao = failing,
+            originals = originalStore,
+            scope = scope,
+            readingOriginals = readingOriginals,
+            reader = FakeReader { "text" },
+            scheduleUpload = {},
+        ).start()
+
+        withTimeout(3000) {
+            while (readingDao.countUnreadImages() > 1) {
+                delay(20)
+            }
+        }
+        // The flag means a pass is running, not that something is unread: one
+        // failed read must not hold every unread picture back from upload.
+        withTimeout(3000) { readingOriginals.first { !it } }
+
+        assertEquals("text", readingDao.getById("good1")?.extractedText)
+        assertEquals("text", readingDao.getById("good2")?.extractedText)
+        assertNull(readingDao.getById("bad")?.extractedText)
+    }
+
+    @Test
     fun oneBadRowDoesNotEndTheQueue() = runBlocking {
         memoryDao.upsertAll((1..3).map { image("p$it", capturedAt = it * 1000L) })
         var calls = 0
