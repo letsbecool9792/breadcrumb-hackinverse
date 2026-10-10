@@ -4,6 +4,7 @@ import type { Db } from "mongodb";
 import { makeIngestHandler, type Enricher, type Embedder } from "./ingest.ts";
 import { makeImageHandler, type ImageReader } from "./images.ts";
 import { makeSearchHandler, type QueryEmbedder } from "./search.ts";
+import { type SearchParser } from "./search_parser.ts";
 
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
@@ -18,6 +19,7 @@ export interface AppOptions {
   embedder?: Embedder;
   imageReader?: ImageReader;
   queryEmbedder?: QueryEmbedder;
+  searchParser?: SearchParser;
 }
 
 /**
@@ -26,7 +28,7 @@ export interface AppOptions {
  * what the model made of a memory, and deletes. Each route is a few lines over
  * a function tested on its own. docs/api.md is the contract.
  */
-export function createApp({ log = true, database, enricher, embedder, imageReader, queryEmbedder }: AppOptions = {}) {
+export function createApp({ log = true, database, enricher, embedder, imageReader, queryEmbedder, searchParser }: AppOptions = {}) {
   const app = express();
   app.disable("x-powered-by");
 
@@ -46,7 +48,7 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
   if (database) {
     app.post("/memories", makeIngestHandler(database, enricher, embedder));
     app.post("/memories/images", makeImageHandler(database, imageReader, embedder));
-    app.get("/search", makeSearchHandler(database, queryEmbedder));
+    app.get("/search", makeSearchHandler(database, queryEmbedder, searchParser));
   } else {
     app.post("/memories", notBuilt);
     app.post("/memories/images", notBuilt);
