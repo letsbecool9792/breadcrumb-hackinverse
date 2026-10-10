@@ -60,8 +60,10 @@ what Suparno runs when he reviews.
 - [x] **C3. Where it came from**
   - `Activity.getReferrer()` → `sourceApp`; the app's name → `sourceAppLabel`, **resolved and
     stored at capture** (later, an uninstalled app has no name).
-  - System surfaces are not a source: the clipboard arrives as `com.android.systemui`; record
-    those as null, not as "System UI".
+  - System surfaces are not a source: the clipboard arrives as `com.android.systemui`, a share
+    passes through `com.android.intentresolver`, and `android`, `com.android.shell` and
+    Breadcrumb itself are not sources either; record those as null, not as "System UI". A name
+    equal to its package is no name. (`Sources.of`, a pure function with JVM tests.)
   - Add the `<queries>` block (launcher intent) to the manifest, or Android 11+ hides most
     packages and no name can be read. Never `QUERY_ALL_PACKAGES`. Check visibility with
     `adb shell dumpsys package queries`.
@@ -122,8 +124,37 @@ what Suparno runs when he reviews.
   clipboard tile is the way in for those.
 - **Closing a capture activity is a cross-task transition, and apps cannot customise those:**
   `overrideActivityTransition`, `overridePendingTransition` and `windowAnimationStyle` are all
-  ignored. Whatever the window still draws slides away with it. To close cleanly: make the decor
-  view `INVISIBLE`, wait two frames for the window manager to hide the surface, then `finish()`.
+  ignored. Whatever the window still draws slides away with it. To close cleanly: set
+  `FLAG_NOT_TOUCHABLE`, make the decor view `INVISIBLE`, wait two frames for the window manager
+  to hide the surface, then `finish()`; and post a ~150 ms fallback `finish()`, since a hidden
+  window may stop receiving frames and the two-frame wait would never end.
+- **One base class runs every capture** (`CaptureActivity`): the sheet's state, the upload
+  hold, the note, Undo and closing. An activity only captures, through `saveText`,
+  `saveFiles` or `fail`.
+- **`content://` only.** An exported activity handed a `file://` URI would copy the app's own
+  private files into the store.
+- **Type and extension:** the provider's `getType`, else the intent's (or the clip's) type.
+  Only `image/*` and `application/pdf` are saved; the rest is skipped. The extension comes
+  from a fixed map (jpg png webp gif heic heif avif bmp pdf), never from the sender's name.
+- **Copy and write each file in turn, in `applicationScope`**, its row right after its copy:
+  leaving mid-copy keeps what was copied. "Saved N of M" when some failed.
+- **Shared text goes on a file only when exactly one came.** A subject equal to the shared
+  text is dropped; on media, a generic one ("Photo/Image/Video/Document/File from …") or one
+  equal to the file name is no title, and a PDF falls back to its file name without ".pdf".
+- **Dates:** `DATE_TAKEN`, else `DATE_MODIFIED` (seconds), else `COLUMN_LAST_MODIFIED`, else
+  EXIF from the stored copy, all read at capture.
+- **`noHistory` finishes the activity the moment the person leaves**, so the sheet's ending
+  runs in `onStop` as well as on dismiss: write whatever note is typed, then release the
+  hold, then call the upload hook, in that order. A note kept for dismiss is lost on Home.
+- **Undo joins the insert job before deleting**, or a row still being written outlives it.
+- **Re-created with a saved state** (the process died): finish without capturing. Capturing
+  again would save everything twice.
+- **The clipboard:** every item, coerced to text unless it is a `content://` picture or PDF.
+  A sensitive clip is never saved; text wins over files. Each failure has its own message and
+  a Close button ("Clipboard is empty", "Not saved: clipboard is marked sensitive", "Couldn't
+  save that"), and the focus timeout shows "Couldn't read the clipboard": never a silent close.
+- **The tile is an action, not a toggle:** `STATE_INACTIVE` in `onStartListening`, with a "Save
+  clipboard" subtitle. From the lock screen, `unlockAndRun` before launching.
 - **Chip model: one primary `type`, plus `hasLink`.** A file decides the type (IMAGE, PDF);
   otherwise LINK if the text has a URL; otherwise TEXT. `hasLink` comes from shared text only,
   never from OCR: a screenshot with a URL bar in it is not a link someone sent.
