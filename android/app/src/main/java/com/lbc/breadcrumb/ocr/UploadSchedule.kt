@@ -3,17 +3,10 @@ package com.lbc.breadcrumb.ocr
 import android.content.Context
 
 /**
- * Notifies the sync workstream that a memory has been read and is ready to upload.
+ * Tells the sync workstream there is something new to send. Called after every
+ * read, including one that found nothing: an empty read is exactly the case
+ * whose picture gets sent.
  *
- * Calls `UploadWorker.schedule(context)` once the sync workstream lands it on main.
- * Until then, defaults to a no-op callback.
+ * A no-op until the sync workstream points it at `UploadWorker.schedule` (U2).
  */
-var uploadScheduler: (Context) -> Unit = { context ->
-    try {
-        val clazz = Class.forName("com.lbc.breadcrumb.sync.UploadWorker")
-        val method = clazz.getMethod("schedule", Context::class.java)
-        method.invoke(null, context)
-    } catch (_: Throwable) {
-        // No-op until UploadWorker is on main
-    }
-}
+var uploadScheduler: (Context) -> Unit = {}

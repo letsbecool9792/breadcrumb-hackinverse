@@ -4,10 +4,11 @@ import android.app.Application
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.ocr.OcrQueue
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class BreadcrumbApp : Application() {
 
@@ -37,8 +38,10 @@ class BreadcrumbApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // Reading workstream: start the on-device OCR queue in every process
-        // (including capture cold starts) watching Room for unread images.
-        OcrQueue(this).start()
+        // Work that runs in every process starts here, inside applicationScope
+        // so none of it touches the main thread during a capture's cold start:
+        // the OCR queue (reading workstream), and the upload queue's first
+        // schedule (sync workstream). Building the queue builds the database.
+        applicationScope.launch { OcrQueue(this@BreadcrumbApp).start() }
     }
 }
