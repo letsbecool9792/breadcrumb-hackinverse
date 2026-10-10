@@ -148,6 +148,16 @@ class MediaReceiverActivity : ComponentActivity() {
     private fun releaseAndFinish(app: BreadcrumbApp) {
         app.uploadHolds.removeAll(heldIds)
         heldIds.clear()
-        finish()
+        closeCleanly()
+    }
+
+    private fun closeCleanly() {
+        val decorView = window.decorView
+        decorView.visibility = android.view.View.INVISIBLE
+        decorView.postOnAnimation {
+            decorView.postOnAnimation {
+                finish()
+            }
+        }
     }
 }
