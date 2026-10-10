@@ -33,7 +33,8 @@ object BookmarkParser {
 
             val hrefMatcher = HREF_REGEX.matcher(attributes)
             if (!hrefMatcher.find()) continue
-            val url = hrefMatcher.group(1)?.trim() ?: continue
+            // Browsers write the address HTML-escaped too: a query's & is &amp;
+            val url = hrefMatcher.group(1)?.let(::decodeEntities)?.trim() ?: continue
 
             // Ignore empty URLs and internal browser pseudo-URLs
             if (url.isEmpty() ||
@@ -71,32 +72,34 @@ object BookmarkParser {
         return parse(html)
     }
 
-    fun unescapeHtml(input: String): String {
-        // Strip any inner HTML formatting tags (e.g. <b>, <span>)
-        val stripped = input.replace(Regex("<[^>]+>"), "")
-        return stripped
-            .replace("&amp;", "&")
-            .replace("&quot;", "\"")
-            .replace("&apos;", "'")
-            .replace("&#39;", "'")
-            .replace("&#039;", "'")
-            .replace("&lt;", "<")
-            .replace("&gt;", ">")
-            .replace("&nbsp;", " ")
-            .replace("&copy;", "©")
-            .replace("&reg;", "®")
-            .replace("&trade;", "™")
-            .replace("&mdash;", "—")
-            .replace("&ndash;", "–")
-            .replace("&hellip;", "…")
-            .replace(Regex("&#(\\d+);")) { matchResult ->
-                val code = matchResult.groupValues[1].toIntOrNull()
-                if (code != null) code.toChar().toString() else matchResult.value
+    /** A title as the browser showed it: inner tags stripped, entities decoded, whitespace collapsed. */
+    fun unescapeHtml(input: String): String =
+        decodeEntities(input.replace(Regex("<[^>]+>"), "")).replace(Regex("\\s+"), " ")
+
+    /**
+     * Decodes HTML character references in one pass, so "&amp;lt;" stays "&lt;"
+     * rather than becoming "<", and a numeric reference beyond the basic plane
+     * (an emoji) stays whole. Names it does not know are left as written.
+     */
+    fun decodeEntities(input: String): String =
+        ENTITY_REGEX.replace(input) { match ->
+            val body = match.groupValues[1]
+            val codePoint = when {
+                body.startsWith("#x", ignoreCase = true) -> body.substring(2).toIntOrNull(16)
+                body.startsWith("#") -> body.substring(1).toIntOrNull()
+                else -> null
             }
-            .replace(Regex("&#x([0-9a-fA-F]+);")) { matchResult ->
-                val code = matchResult.groupValues[1].toIntOrNull(16)
-                if (code != null) code.toChar().toString() else matchResult.value
+            when {
+                codePoint != null && Character.isValidCodePoint(codePoint) -> String(Character.toChars(codePoint))
+                codePoint != null -> match.value
+                else -> NAMED_ENTITIES[body] ?: match.value
             }
-            .replace(Regex("\\s+"), " ")
-    }
+        }
+
+    private val ENTITY_REGEX = Regex("&(#[0-9]{1,7}|#[xX][0-9a-fA-F]{1,6}|[a-zA-Z]+);")
+
+    private val NAMED_ENTITIES = mapOf(
+        "amp" to "&", "quot" to "\"", "apos" to "'", "lt" to "<", "gt" to ">", "nbsp" to " ",
+        "copy" to "©", "reg" to "®", "trade" to "™", "mdash" to "—", "ndash" to "–", "hellip" to "…",
+    )
 }

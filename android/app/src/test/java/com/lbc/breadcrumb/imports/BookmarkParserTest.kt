@@ -68,6 +68,22 @@ class BookmarkParserTest {
     }
 
     @Test
+    fun `an address keeps its query when the browser escaped it`() {
+        val html = """<DT><A HREF="https://www.youtube.com/watch?v=abc&amp;t=42s" ADD_DATE="1700000000">Talk</A>"""
+
+        val bookmarks = BookmarkParser.parse(html)
+
+        assertEquals("https://www.youtube.com/watch?v=abc&t=42s", bookmarks.single().url)
+    }
+
+    @Test
+    fun `entities are decoded once, and an emoji stays whole`() {
+        assertEquals("&lt;b&gt;", BookmarkParser.decodeEntities("&amp;lt;b&amp;gt;"))
+        assertEquals("Trip 🌴", BookmarkParser.decodeEntities("Trip &#127796;"))
+        assertEquals("&unknown;", BookmarkParser.decodeEntities("&unknown;"))
+    }
+
+    @Test
     fun `strips inner tags inside anchor tag`() {
         val html = """<DT><A HREF="https://example.com"><b>Bold</b> and <i>Italic</i> Title</A>"""
         val bookmarks = BookmarkParser.parse(html)
