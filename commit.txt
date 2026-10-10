@@ -1,3 +1,0 @@
-feat(server): embed memories with gemini-embedding-001
-
-Adds L2-normalized 768-dimensional embeddings for memory texts using the gemini-embedding-001 model. Embeddings are batched per request when possible. A live test ensures that related texts score closer together in cosine similarity by at least 0.1.

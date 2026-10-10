@@ -69,7 +69,7 @@ workstream sends.
     already held. The same picture is never read twice (a fingerprint of its bytes). A picture
     gets the memory's note as context.
   - The model's reading goes into `enrichment.readText`, and the memory is re-embedded.
-- [ ] **S4. The search indexes**, created at startup
+- [x] **S4. The search indexes**, created at startup
   - `memories_vector`: 768 dims, cosine, with filter fields `type`, `hasLink`, `capturedAt`,
     `sourceAppLabel`, `datedAt`, `linkSites`, `_id`. **A vector index's filter fields must be
     declared up front;** adding one means rebuilding it.
