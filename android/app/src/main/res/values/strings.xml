@@ -3,6 +3,8 @@
 
     <!-- The Quick Settings tile's label, set by the capture workstream. -->
     <string name="tile_label">Breadcrumb</string>
+    <!-- The tile's second line: what a tap does, since it is an action, not a toggle. -->
+    <string name="tile_subtitle">Save clipboard</string>
 
     <!-- The debug list. Lowercase mono chrome, as the search screens will be. -->
     <string name="debug_title">breadcrumb · debug</string>
