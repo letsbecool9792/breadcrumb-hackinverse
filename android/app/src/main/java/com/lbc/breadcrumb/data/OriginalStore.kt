@@ -47,6 +47,30 @@ class OriginalStore(
         }
     }
 
+    /**
+     * Moves a file already in the app's own storage, such as the importer's
+     * staging copy, into the store as [id].[extension], and returns it. A rename
+     * where it can (cacheDir and filesDir share a volume); otherwise a copy
+     * through a .part file, as [copyIn], so a failure never leaves a truncated
+     * original behind.
+     */
+    fun moveIn(file: File, id: String, extension: String): File {
+        root.mkdirs()
+        val target = File(root, "$id.$extension")
+        if (file.renameTo(target)) return target
+
+        val partial = File(root, "$id.$extension.part")
+        try {
+            file.inputStream().use { src -> partial.outputStream().use { dst -> src.copyTo(dst) } }
+            if (!partial.renameTo(target)) throw IOException("could not finalise $target")
+            file.delete()
+            return target
+        } catch (e: Exception) {
+            partial.delete()
+            throw e
+        }
+    }
+
     fun uriFor(file: File): String = Uri.fromFile(file).toString()
 
     /**
