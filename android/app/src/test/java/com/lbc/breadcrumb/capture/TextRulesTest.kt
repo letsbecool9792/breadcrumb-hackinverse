@@ -27,6 +27,13 @@ class TextRulesTest {
     }
 
     @Test
+    fun `the first URL is found anywhere, without a sentence's punctuation`() {
+        assertEquals("https://example.com/a", TextRules.firstUrl("Read this (https://example.com/a). Then https://b.org"))
+        assertEquals("www.example.org/x", TextRules.firstUrl("see www.example.org/x!"))
+        assertEquals(null, TextRules.firstUrl("no link here"))
+    }
+
+    @Test
     fun `no subject is no title`() {
         assertEquals(null, TextRules.titleFor(null, "some text"))
         assertEquals(null, TextRules.titleFor("   ", "some text"))

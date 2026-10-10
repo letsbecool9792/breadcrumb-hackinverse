@@ -11,6 +11,10 @@ object TextRules {
         return Pair(type, hasLink)
     }
 
+    /** The first URL anywhere in [text], without the punctuation a sentence puts after it. */
+    fun firstUrl(text: String): String? =
+        URL_REGEX.find(text)?.value?.trimEnd('.', ',', ';', ':', '!', '?', ')', ']', '\'')
+
     /** "Photo from Priya", "Document from …": what a chat app writes, not a title. */
     fun isGenericSubject(subject: String): Boolean = GENERIC_SUBJECT.containsMatchIn(subject.trim())
 
