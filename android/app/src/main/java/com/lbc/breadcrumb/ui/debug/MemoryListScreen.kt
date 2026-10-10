@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -61,8 +63,16 @@ import java.util.Locale
 @Composable
 fun MemoryListScreen() {
     val app = LocalContext.current.applicationContext as BreadcrumbApp
-    val dao = remember { app.database.memoryDao() }
-    val memories by remember { dao.observeAll() }.collectAsStateWithLifecycle(initialValue = emptyList())
+    val memoryDao = remember { app.database.memoryDao() }
+    val readingDao = remember { app.database.readingDao() }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    val memories by remember(searchQuery) {
+        if (searchQuery.isBlank()) {
+            memoryDao.observeAll()
+        } else {
+            readingDao.observeSearch(searchQuery)
+        }
+    }.collectAsStateWithLifecycle(initialValue = emptyList())
     var nextSample by rememberSaveable { mutableIntStateOf(0) }
 
     Column(
@@ -86,21 +96,48 @@ fun MemoryListScreen() {
             Text("${memories.size}", style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = {
                 app.applicationScope.launch {
-                    dao.clearEverywhere(System.currentTimeMillis())
+                    memoryDao.clearEverywhere(System.currentTimeMillis())
                     app.originals.clear()
                 }
             }) { Text(stringResource(R.string.debug_clear), style = chrome) }
             TextButton(onClick = {
                 val sample = SAMPLES[nextSample % SAMPLES.size](app)
                 nextSample += 1
-                app.applicationScope.launch { dao.upsert(sample) }
+                app.applicationScope.launch { memoryDao.upsert(sample) }
             }) { Text("+", style = chrome.copy(fontSize = 18.sp)) }
         }
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = { searchQuery = it },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            placeholder = {
+                Text(
+                    "Search words (local FTS)...",
+                    style = body,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            textStyle = body.copy(color = MaterialTheme.colorScheme.onBackground),
+            singleLine = true,
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    TextButton(onClick = { searchQuery = "" }) {
+                        Text("×", style = chrome.copy(fontSize = 18.sp))
+                    }
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+            ),
+        )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
 
         if (memories.isEmpty()) {
             Text(
-                stringResource(R.string.debug_empty),
+                if (searchQuery.isNotBlank()) "No memories matching \"$searchQuery\"" else stringResource(R.string.debug_empty),
                 style = body,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(16.dp),
@@ -110,7 +147,7 @@ fun MemoryListScreen() {
                 items(memories, key = { it.id }) { memory ->
                     MemoryRow(memory, onDelete = {
                         app.applicationScope.launch {
-                            dao.deleteEverywhere(memory, System.currentTimeMillis())
+                            memoryDao.deleteEverywhere(memory, System.currentTimeMillis())
                             app.originals.delete(memory)
                         }
                     })
@@ -207,7 +244,7 @@ private val SAMPLES: List<(BreadcrumbApp) -> Memory> = listOf(
     { _ ->
         Memory(
             type = MemoryType.TEXT,
-            rawText = "Try the brewery burger at that place in Indiranagar, Priya said it's the best in town",
+            rawText = "Try the brewery burger at that place in Indiranagar, or grab espresso at Café Coffee Day, Priya said it's the best in town",
         )
     },
     { _ ->

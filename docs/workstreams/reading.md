@@ -55,7 +55,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
   - *Check:* share a text-heavy screenshot → "read · N lines/chars", its words visible on tap; a
     photo with no text → "no text found"; pictures saved before installing the build are read on
     the next launch.
-- [ ] **R2. Local word search**
+- [x] **R2. Local word search**
   - Search `memories_fts` with `MATCH`. **Input always goes through `FtsQuery.matchExpression`,
     never straight into MATCH:** raw input containing `"`, `-`, `OR` or `column:` is a syntax
     error or means something else. Every word becomes a quoted prefix term, and all must match:

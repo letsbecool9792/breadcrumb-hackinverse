@@ -116,6 +116,99 @@ class ReadingDaoTest {
         assertEquals(listOf("img1"), afterInsert.map { it.id })
     }
 
+    @Test
+    fun wordInsideScreenshotFindsItViaExtractedText() = runBlocking {
+        val screenshot = Memory(
+            id = "shot1",
+            type = MemoryType.IMAGE,
+            title = null,
+            rawText = null,
+            extractedText = "Software Engineering Intern Qualcomm Bengaluru",
+        )
+        memoryDao.upsert(screenshot)
+
+        val results = readingDao.search("intern")
+        assertEquals(1, results.size)
+        assertEquals("shot1", results[0].id)
+
+        val multiTerm = readingDao.search("qualcomm bengaluru")
+        assertEquals(1, multiTerm.size)
+        assertEquals("shot1", multiTerm[0].id)
+    }
+
+    @Test
+    fun searchOrdersNewestFirst() = runBlocking {
+        memoryDao.upsertAll(
+            listOf(
+                Memory(id = "older", type = MemoryType.TEXT, rawText = "internship note", capturedAt = 1000),
+                Memory(id = "newer", type = MemoryType.TEXT, rawText = "internship offer", capturedAt = 5000),
+            ),
+        )
+
+        val results = readingDao.search("internship")
+        assertEquals(listOf("newer", "older"), results.map { it.id })
+    }
+
+    @Test
+    fun searchFoldsCaseAndAccents() = runBlocking {
+        val memory = Memory(
+            id = "c1",
+            type = MemoryType.TEXT,
+            rawText = "Meet at Café Coffee Day on MG Road",
+        )
+        memoryDao.upsert(memory)
+
+        val lowerNoAccent = readingDao.search("cafe")
+        assertEquals(1, lowerNoAccent.size)
+        assertEquals("c1", lowerNoAccent[0].id)
+
+        val withAccent = readingDao.search("Café")
+        assertEquals(1, withAccent.size)
+        assertEquals("c1", withAccent[0].id)
+    }
+
+    @Test
+    fun specialCharactersNeverBreakTheSearch() = runBlocking {
+        val memory = Memory(
+            id = "m1",
+            type = MemoryType.TEXT,
+            rawText = "Qualcomm internship in April",
+        )
+        memoryDao.upsert(memory)
+
+        // Quotes, hyphens, OR, column filter syntax must not throw SQLite exceptions
+        assertEquals(1, readingDao.search("\"qualcomm\"").size)
+        assertEquals(1, readingDao.search("qualcomm-internship").size)
+        assertEquals(1, readingDao.search("qualcomm OR internship").size)
+        assertEquals(1, readingDao.search("rawText:qualcomm").size)
+        assertEquals(0, readingDao.search("\"").size)
+        assertEquals(0, readingDao.search("-").size)
+        assertEquals(0, readingDao.search(":::").size)
+        assertEquals(0, readingDao.search("").size)
+    }
+
+    @Test
+    fun observeSearchEmitsLiveResults() = runBlocking {
+        val flow = readingDao.observeSearch("burger")
+        assertEquals(0, flow.first().size)
+
+        memoryDao.upsert(Memory(id = "b1", type = MemoryType.TEXT, rawText = "Brewery burger indiranagar"))
+        val afterInsert = flow.first()
+        assertEquals(1, afterInsert.size)
+        assertEquals("b1", afterInsert[0].id)
+    }
+
+    @Test
+    fun searchRespectsLimit() = runBlocking {
+        for (i in 1..10) {
+            memoryDao.upsert(Memory(id = "item$i", type = MemoryType.TEXT, rawText = "hackathon project $i", capturedAt = i.toLong()))
+        }
+
+        val results = readingDao.search("hackathon", limit = 3)
+        assertEquals(3, results.size)
+        assertEquals(listOf("item10", "item9", "item8"), results.map { it.id })
+    }
+
     private fun matchesFts(word: String): Int =
         db.openHelper.readableDatabase
             .query("SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?", arrayOf<Any?>("\"$word*\""))
