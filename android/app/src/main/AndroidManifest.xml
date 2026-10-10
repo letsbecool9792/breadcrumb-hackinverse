@@ -93,6 +93,7 @@
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
+                <data android:mimeType="application/pdf" />
             </intent-filter>
         </activity>
 
@@ -100,7 +101,7 @@
         <service
             android:name=".capture.CaptureTileService"
             android:label="@string/tile_label"
-            android:icon="@mipmap/ic_launcher"
+            android:icon="@drawable/ic_tile_crumb"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
             <intent-filter>
