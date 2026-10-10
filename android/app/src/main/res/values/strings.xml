@@ -10,4 +10,8 @@
     <string name="debug_add_sample">Add a sample memory</string>
     <string name="debug_clear">Clear</string>
     <string name="debug_delete">Delete</string>
+
+    <!-- Capture workstream: toasts for C1 -->
+    <string name="capture_saved">Saved</string>
+    <string name="capture_nothing_to_save">Nothing to save</string>
 </resources>
