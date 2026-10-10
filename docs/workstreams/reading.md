@@ -38,7 +38,9 @@ its words seconds after it is saved, before the network has done anything.
     is working through unread pictures and PDFs, so the uploader holds them back rather than
     send them unread. **Presume true until the queue has looked**, and set false in a `finally`
     when the queue stops or never starts, building it throwing included
-    (`OcrQueue.launchIn`): a stuck true strands memories off the server.
+    (`OcrQueue.launchIn`): a stuck true strands memories off the server. **The flag means "a
+    pass is running", not "something is unread"**: it goes false when a pass ends, even with a
+    failed read left unread, and the uploader's 10-minute grace decides when that one goes.
   - the link-reading step (R4), which the upload queue runs first on each pass.
   - local word search (R2), which the search screens use for instant results.
 
