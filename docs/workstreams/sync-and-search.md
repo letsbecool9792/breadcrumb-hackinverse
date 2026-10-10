@@ -40,6 +40,11 @@ app. Also: reviewing everyone's PRs on the phone.
     backoff); a 400 goes to FAILED and is **not** retried (the same bytes would be refused
     again; a debug button queues refused ones again). An UPLOADING row left by a killed process
     goes back to PENDING at the start of a pass.
+  - **Any write that changes what the server reads puts the memory back in the queue**
+    (PENDING): reading's `updateExtractedText` when the text is non-empty, capture's `setNote`
+    when the note changed. So **marking synced only moves UPLOADING to SYNCED**
+    (`… WHERE syncState = 'UPLOADING'`): a read or a note that lands mid-upload set the row
+    back to PENDING, and stays PENDING for the next pass instead of being marked sent.
   - Held back for now: ids in `uploadHolds`; unread pictures and PDFs while `readingOriginals`
     is true. A 10-minute grace covers anything a finished OCR queue left unread (a read that
     failed).
