@@ -192,6 +192,7 @@ fun MemoryListScreen() {
             is ImportProgress.Scanning -> p.message
             is ImportProgress.Running -> "importing ${p.current}/${p.total} · ${p.imported} added · ${p.skipped} skipped"
             is ImportProgress.Done -> "import done · ${p.imported} added · ${p.skipped} skipped"
+            is ImportProgress.Failed -> "import failed · ${p.reason}"
             null -> null
         }
         if (progressText != null) {
