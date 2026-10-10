@@ -29,6 +29,10 @@ interface ImportDao {
     @Query("SELECT COUNT(*) FROM imported_sources")
     suspend fun count(): Int
 
+    /** The text of every memory carrying a link, to find the pages already saved by hand. */
+    @Query("SELECT rawText FROM memories WHERE (type = 'LINK' OR hasLink = 1) AND rawText IS NOT NULL")
+    suspend fun linkTexts(): List<String>
+
     @Query("DELETE FROM imported_sources")
     suspend fun clear()
 }
