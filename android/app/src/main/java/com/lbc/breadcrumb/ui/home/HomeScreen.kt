@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,6 +67,8 @@ fun HomeScreen(
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchState by viewModel.search.collectAsStateWithLifecycle()
+    // Read again whenever the screen comes back from the debug list, where it is switched.
+    val cloudReads = viewModel.cloudReads
     val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
     val gridState = rememberLazyStaggeredGridState()
     val context = LocalContext.current
@@ -133,7 +136,8 @@ fun HomeScreen(
                         // One "now" per screenful, so ages don't tick apart row by row.
                         val now = remember(list, searching) { System.currentTimeMillis() }
                         remember(list) { viewModel.entrances.submit(list.map { it.id }) }
-                        val kept = ResultText.kept(list.size, list.count { it.syncState != SyncState.SYNCED })
+                        val unsent = if (cloudReads) list.count { it.syncState != SyncState.SYNCED } else 0
+                        val kept = ResultText.kept(list.size, unsent)
 
                         AnimatedContent(
                             targetState = searching,
@@ -225,7 +229,9 @@ fun HomeScreen(
                         onNote = { viewModel.setNote(memory.id, it) },
                     )
                 }
-                MemoryDetail(memory, now, visibility, actions)
+                CompositionLocalProvider(LocalCloudReads provides cloudReads) {
+                    MemoryDetail(memory, now, visibility, actions)
+                }
             }
 
             // Keeping something from inside the app, or bringing in what's already on the phone.

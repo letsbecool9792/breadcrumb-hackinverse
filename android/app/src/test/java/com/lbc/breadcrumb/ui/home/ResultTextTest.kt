@@ -145,10 +145,12 @@ class ResultTextTest {
     @Test
     fun `status formats reading and sending states`() {
         val readingLink = Memory(type = MemoryType.LINK, extractedText = null, syncState = SyncState.PENDING)
-        assertEquals("page not read yet · not sent yet · words only", ResultText.status(readingLink))
+        assertEquals("page not read yet · not sent yet", ResultText.status(readingLink))
+        // With cloud reading off, nothing is waiting to be sent.
+        assertEquals("page not read yet", ResultText.status(readingLink, cloudReads = false))
 
         val readingImage = Memory(type = MemoryType.IMAGE, localUri = "file://img.jpg", extractedText = null, syncState = SyncState.UPLOADING)
-        assertEquals("still reading it · not sent yet · words only", ResultText.status(readingImage))
+        assertEquals("still reading it · not sent yet", ResultText.status(readingImage))
 
         val refused = Memory(type = MemoryType.TEXT, extractedText = "text", syncState = SyncState.FAILED)
         assertEquals("the server refused it", ResultText.status(refused))

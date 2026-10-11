@@ -31,6 +31,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val memories: StateFlow<List<Memory>?> = app.database.memoryDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** Whether Gemini reads memories (local-first L4); off, nothing is waiting to be sent. Set in the debug list. */
+    internal val cloudReads: Boolean get() = app.syncSettings.geminiReadsMemories
+
     /** Bringing in what is already on the phone; its line shows over the search field. */
     internal val importer: BulkImporter get() = app.importer
 

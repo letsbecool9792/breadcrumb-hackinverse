@@ -263,7 +263,7 @@ object ResultText {
      * Sending: FAILED → "the server refused it"; PENDING or UPLOADING → "not sent yet · words only"; SYNCED → nothing.
      * Joined " · "; null when empty.
      */
-    fun status(memory: Memory): String? {
+    fun status(memory: Memory, cloudReads: Boolean = true): String? {
         val parts = mutableListOf<String>()
 
         if (memory.extractedText == null) {
@@ -277,7 +277,8 @@ object ResultText {
 
         when (memory.syncState) {
             SyncState.FAILED -> parts.add("the server refused it")
-            SyncState.PENDING, SyncState.UPLOADING -> parts.add("not sent yet · words only")
+            // With cloud reading off, a memory isn't waiting to be sent: it stays on the phone (local-first L4).
+            SyncState.PENDING, SyncState.UPLOADING -> if (cloudReads) parts.add("not sent yet")
             SyncState.SYNCED -> { /* nothing */ }
         }
 
