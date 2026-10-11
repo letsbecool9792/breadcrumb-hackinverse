@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,6 +34,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.SoftwareKeyboardController
@@ -41,12 +43,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.SyncState
+import com.lbc.breadcrumb.open.Originals
 import com.lbc.breadcrumb.ui.theme.Ink
 
 /**
  * The app's face (design §4): the mosaic of everything kept, or the ranked list
- * while searching, with the one search field underneath. The "+" and the detail
- * sheet join it in U5 and U6.
+ * while searching, with the one search field underneath, and one memory opened
+ * in a sheet over either. The "+" joins it in U6.
  *
  * [onOpenDebug] is passed only in debug builds; null, the wordmark has no
  * gesture at all.
@@ -54,12 +57,16 @@ import com.lbc.breadcrumb.ui.theme.Ink
 @Composable
 fun HomeScreen(
     onOpenDebug: (() -> Unit)?,
-    onOpen: (Memory) -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchState by viewModel.search.collectAsStateWithLifecycle()
+    val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
     val gridState = rememberLazyStaggeredGridState()
+    val context = LocalContext.current
+
+    // The memory opened in the sheet, by id: the row is live, so what is copied back appears in place.
+    var openedId by rememberSaveable { mutableStateOf<String?>(null) }
 
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.setQuery(query) }
@@ -74,81 +81,123 @@ fun HomeScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val focus = LocalFocusManager.current
     val hideKeyboardOnDrag = remember(keyboard, focus) { HideKeyboardOnDrag(keyboard, focus) }
+    // Opening a memory puts the keyboard away first, so the sheet never rises behind it.
+    val open: (Memory) -> Unit = { memory ->
+        keyboard?.hide()
+        focus.clearFocus()
+        openedId = memory.id
+    }
 
     // One layer over everything, so a picture can travel between its tile and the sheet.
-    PictureTravelLayer(openedId = null) {
-        Column(
-            Modifier
-                .fillMaxSize()
-                .background(Ink)
-                .statusBarsPadding(),
-        ) {
-            Box(
-                Modifier
-                    .weight(1f)
-                    .fillMaxWidth()
-                    .nestedScroll(hideKeyboardOnDrag),
-            ) {
-                // While Room has not answered, nothing is drawn.
-                memories?.let { list ->
-                    // One "now" per screenful, so ages don't tick apart row by row.
-                    val now = remember(list, searching) { System.currentTimeMillis() }
-                    remember(list) { viewModel.entrances.submit(list.map { it.id }) }
-                    val kept = ResultText.kept(list.size, list.count { it.syncState != SyncState.SYNCED })
-
-                    AnimatedContent(
-                        targetState = searching,
-                        transitionSpec = { fadeIn(tween(240, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
-                        modifier = Modifier.fillMaxSize(),
-                        label = "browse or search",
-                    ) { isSearching ->
-                        val shown = lastSearch.value
-                        if (isSearching && shown != null) {
-                            SearchResults(
-                                state = shown,
-                                total = list.size,
-                                now = now,
-                                arrivals = viewModel.arrivals,
-                                onOpen = onOpen,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        } else {
-                            Mosaic(
-                                memories = list,
-                                kept = kept,
-                                now = now,
-                                entrances = viewModel.entrances,
-                                state = gridState,
-                                onOpen = onOpen,
-                                onLongPressWordmark = onOpenDebug,
-                                modifier = Modifier.fillMaxSize(),
-                            )
-                        }
-                    }
-                }
-                // Content fades under the search field rather than stopping at it.
-                Box(
-                    Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .height(48.dp)
-                        .background(Brush.verticalGradient(listOf(Color.Transparent, Ink))),
-                )
-            }
-
+    PictureTravelLayer(openedId = openedId) {
+        Box(Modifier.fillMaxSize()) {
             Column(
                 Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .imePadding()
-                    .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                    .fillMaxSize()
+                    .background(Ink)
+                    .statusBarsPadding(),
             ) {
-                SearchField(
-                    query = query,
-                    onQueryChange = { query = it },
-                    searching = searching,
-                    ranking = (searchState as? SearchState.Searching)?.status == SearchStatus.RANKING,
-                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .nestedScroll(hideKeyboardOnDrag),
+                ) {
+                    // While Room has not answered, nothing is drawn.
+                    memories?.let { list ->
+                        // One "now" per screenful, so ages don't tick apart row by row.
+                        val now = remember(list, searching) { System.currentTimeMillis() }
+                        remember(list) { viewModel.entrances.submit(list.map { it.id }) }
+                        val kept = ResultText.kept(list.size, list.count { it.syncState != SyncState.SYNCED })
+
+                        AnimatedContent(
+                            targetState = searching,
+                            transitionSpec = { fadeIn(tween(240, delayMillis = 60)) togetherWith fadeOut(tween(160)) },
+                            modifier = Modifier.fillMaxSize(),
+                            label = "browse or search",
+                        ) { isSearching ->
+                            val shown = lastSearch.value
+                            if (isSearching && shown != null) {
+                                // The live rows, so a note written or a memory deleted shows at once.
+                                val live = list.associateBy { it.id }
+                                val current = shown.copy(
+                                    results = shown.results.mapNotNull { r -> live[r.memory.id]?.let { r.copy(memory = it) } },
+                                )
+                                SearchResults(
+                                    state = current,
+                                    total = list.size,
+                                    now = now,
+                                    arrivals = viewModel.arrivals,
+                                    onOpen = open,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            } else {
+                                Mosaic(
+                                    memories = list,
+                                    kept = kept,
+                                    now = now,
+                                    entrances = viewModel.entrances,
+                                    state = gridState,
+                                    onOpen = open,
+                                    onLongPressWordmark = onOpenDebug,
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+                        }
+                    }
+                    // Content fades under the search field rather than stopping at it.
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Ink))),
+                    )
+                }
+
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .imePadding()
+                        .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    UndoBar(
+                        what = pendingDelete?.let { undoLine(ResultText.title(it)) },
+                        onUndo = viewModel::undoDelete,
+                    )
+                    SearchField(
+                        query = query,
+                        onQueryChange = { query = it },
+                        searching = searching,
+                        ranking = (searchState as? SearchState.Searching)?.status == SearchStatus.RANKING,
+                    )
+                }
+            }
+
+            // The memory opened, in the app's own sheet so its picture can travel into it.
+            val list = memories
+            val opened = list?.firstOrNull { it.id == openedId }
+            // A memory deleted or cleared while open closes its sheet.
+            LaunchedEffect(opened == null, list != null) { if (opened == null && list != null) openedId = null }
+            SheetLayer(item = opened, onDismiss = { openedId = null }) { memory, visibility ->
+                val now = remember(memory.id) { System.currentTimeMillis() }
+                val actions = remember(memory) {
+                    val action = Originals.actionFor(context, memory)
+                    val share = Originals.shareFor(context, memory)
+                    DetailActions(
+                        main = action,
+                        onMain = { action.open(context) },
+                        onShare = share?.let { s -> { s.share(context) } },
+                        onDelete = {
+                            viewModel.delete(memory)
+                            openedId = null
+                        },
+                        onNote = { viewModel.setNote(memory.id, it) },
+                    )
+                }
+                MemoryDetail(memory, now, visibility, actions)
             }
         }
     }
