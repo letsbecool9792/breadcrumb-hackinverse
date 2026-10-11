@@ -97,11 +97,23 @@ the design wins.
     rows go back to PENDING). A large import syncs across several runs.
   - The link step (reading R4) runs after deletes and before memories, so a link goes once, with
     its page's words.
-- [ ] **U3. Home: the mosaic**
+- [x] **U3. Home: the mosaic**
   - Design §4 to §7: `HomeScreen`, the masthead and slim strip, the mosaic with its entrances,
     the date scrubber, and the empty mosaic. `MainActivity` shows it, and the view model
     schedules an upload once at start. JVM tests: `mastheadCollapse` and `MosaicEntrances`.
-    Builds on R6, S8, and S9's unsent count.
+    Builds on R6 and S8.
+  - Built as `ui/home/`: `HomeScreen` and `HomeViewModel`, `Mosaic` (grid, date scrubber),
+    `Masthead` and `SlimStrip`, `Tiles`, `NothingKept`, `EntranceModifier`; and the pure
+    `MosaicMath`, `MastheadCollapse`, `MosaicEntrances`. The "unsent" count is taken from the
+    list the mosaic already holds (anything not SYNCED), so U3 needs no new query; S9's
+    `observeUnsentCount` isn't used here.
+  - The entrance record lives in the view model, not the composition, so a rotation replays
+    nothing. The search field, the "+" and the detail sheet join the screen in U4, U5 and U6;
+    a drag on the mosaic will hide the keyboard once there is one.
+  - *Check:* the mosaic opens with tiles rising in; a share drops in from the top; scrolling
+    past the masthead brings the slim strip, and a tap on it goes back to the top; the month
+    shows at the right edge while it scrolls; long-pressing the wordmark opens the debug list
+    (debug build), and Back returns; Clear on the debug list shows the empty state.
   - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
     picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
     the serif at the head, handing over to a slim strip as it scrolls away. Tapping the slim
