@@ -6,6 +6,16 @@
     <!-- The tile's second line: what a tap does, since it is an action, not a toggle. -->
     <string name="tile_subtitle">Save clipboard</string>
 
+    <!-- Reading workstream R8: bringing in what's already on the phone (design §14, §16) -->
+    <string name="import_title">Bring in</string>
+    <string name="import_back">back</string>
+    <string name="import_choice_folder">A whole folder</string>
+    <string name="import_choice_folder_detail">every picture and PDF in it — screenshots, usually</string>
+    <string name="import_choice_photos">Only these pictures</string>
+    <string name="import_choice_photos_detail">pick them yourself</string>
+    <string name="import_choice_files">PDFs, or a bookmarks export</string>
+    <string name="import_choice_files_detail">from the file picker</string>
+
     <!-- The debug list. Lowercase mono chrome, as the search screens will be. -->
     <string name="debug_title">breadcrumb · debug</string>
     <string name="debug_empty">Nothing saved yet. Tap + for a sample, or share something to Breadcrumb.</string>
@@ -75,14 +85,4 @@
     <!-- Capture workstream: launcher shortcut (design §13, §16) -->
     <string name="shortcut_keep_short">Keep</string>
     <string name="shortcut_keep_long">Keep something</string>
-
-    <!-- Reading workstream R8: bringing in what's already on the phone (design §14, §16) -->
-    <string name="import_title">Bring in</string>
-    <string name="import_back">back</string>
-    <string name="import_choice_folder">A whole folder</string>
-    <string name="import_choice_folder_detail">every picture and PDF in it — screenshots, usually</string>
-    <string name="import_choice_photos">Only these pictures</string>
-    <string name="import_choice_photos_detail">pick them yourself</string>
-    <string name="import_choice_files">PDFs, or a bookmarks export</string>
-    <string name="import_choice_files_detail">from the file picker</string>
 </resources>
