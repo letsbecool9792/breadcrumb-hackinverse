@@ -31,9 +31,13 @@ and what we are deliberately not building.** Read it before proposing work. Then
   original; the "+" keeps something or brings in what's on the phone, and the launcher
   shortcut opens it. The debug list sits behind a long press on the wordmark, in debug builds.
 
+- **Local first** ([`docs/workstreams/local-first.md`](docs/workstreams/local-first.md)): memories
+  are embedded and ranked on the phone with EmbeddingGemma 2. By default only the search phrase
+  goes to the server, to be parsed into filters; Gemini reads memories only when the person turns
+  it on in the privacy sheet, stripped of personal details first, and pictures never go.
+
 **Next:**
-- Seeding the demo phone (below).
-- Deciding how much stays on the phone: the judges asked about personal data on the server.
+- Seeding the demo phone (below), then leaving it on the charger so pictures get embedded.
 
 Each brief holds its own checklist; tick a step in the PR that finishes it.
 
@@ -250,7 +254,10 @@ Share sheet / tile → write to Room → return immediately → WorkManager hand
 and retry. The user sees "Saved" before anything touches a server, which is also why a server
 cold start is invisible on the ingest path.
 
-**3. One Gemini call for ingest, not a four-stage pipeline.**
+**3. One Gemini call for ingest, not a four-stage pipeline, and only when the person asks.**
+Gemini reads memories only with "Gemini reads my memories" on (off by default, in the privacy
+sheet); what goes is stripped of personal details first, and pictures and saves from banking and
+password apps never go. Search never needs it.
 A single multimodal Flash Lite call takes the artifact and returns structured JSON: a one-line
 summary, entities, an inferred kind, date references. This is *better* than raw OCR, not just
 simpler, because it understands context: "LinkedIn post, Qualcomm SWE internship, deadline April
@@ -260,7 +267,10 @@ simpler, because it understands context: "LinkedIn post, Qualcomm SWE internship
 ML Kit reads text locally at save time. Free, instant, offline. The item is searchable in the
 local index before the network round-trip completes; the Gemini pass enriches it afterward.
 
-**5. Hybrid search, never pure vector.**
+**5. Hybrid search, never pure vector, on the phone.** EmbeddingGemma 2 embeds memories and the
+phrase on the phone, every vector is scored there (no vector database at this size), and the
+result is fused with the phone's word search by reciprocal rank (`embed/LocalSearch`). The server's
+hybrid search below still runs for memories it was sent.
 Pure semantic search is weakest at exactly what the target queries contain: proper nouns. In
 *"that guy from the hackathon who worked at Qualcomm"*, "Qualcomm" wants keyword matching and the
 rest wants meaning. `$vectorSearch` and `$search` run in parallel, and the server fuses them by
@@ -270,7 +280,9 @@ For whoever revisits it: `$rankFusion` would save one round trip, and with `scor
 each result's `{$meta: "scoreDetails"}` lists every input pipeline's rank
 (`details[].inputPipelineName`, `details[].rank`), so the per-half ranks survive a switch.
 
-**6. Parse the query before searching it.**
+**6. Parse the query before searching it.** Only the phrase goes, to `POST /parse`, with the app
+and site names it may mean; the phone applies the filters. "Understand searches in the cloud"
+off, search runs without them.
 *"that internship screenshot from April"* decomposes into words (internship), a type filter
 (screenshot) and a date filter (April). Vector search handles none of the filtering: "from April"
 just becomes noise in the embedding. A cheap Flash Lite call turns the phrase into
@@ -480,8 +492,8 @@ What has to be true when it is shown:
   *"that guy from the hackathon who worked at Qualcomm"*, and one tap to the original.
 - A save from the share sheet and one from the tile, found by a search seconds later, with the
   network off for the save.
-- One sentence on privacy: the original never leaves the phone; the cloud holds only text and a
-  vector.
+- One sentence on privacy: search runs on the phone, and by default only the search phrase
+  leaves it; the person can open "privacy" and switch even that off.
 
 ## The name
 
