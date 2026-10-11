@@ -34,10 +34,12 @@ the server reads memories only when the person turns it on; what goes is strippe
 
 ## Steps
 
-- [ ] **L0. Kotlin 2.4 and LiteRT-LM** (Suparno; branch `local/l0-kotlin`)
+- [x] **L0. Kotlin 2.4 and LiteRT-LM** (Suparno)
   - LiteRT-LM is compiled with Kotlin 2.4, and the project with 2.2.10: move the project to 2.4.
     Check that KSP, Compose and serialization still build, and that every test still passes.
   - Add `com.google.ai.edge.litertlm:litertlm-android:0.18.0`.
+  - **Done:** Kotlin 2.4.21, coroutines 1.11.0 to match what LiteRT-LM brings in. All 275 JVM
+    tests pass, and the home screen's and `MemoryDaoTest`'s on the phone.
 - [ ] **L1. Embeddings on the phone** (Suparno; after L0)
   - `Embedder`: one `EmbeddingEngine` for the app, on the CPU, started lazily and closed when idle.
     Documents take `title: none | text: …`, queries take `task: search result | query: …`, and the
