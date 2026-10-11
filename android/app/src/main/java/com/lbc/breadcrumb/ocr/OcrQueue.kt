@@ -17,7 +17,7 @@ import kotlinx.coroutines.sync.withLock
 /**
  * Background reading queue for saved pictures and PDFs.
  *
- * Starts in [BreadcrumbApp.onCreate] in [applicationScope] in every process.
+ * Starts in [BreadcrumbApp.onCreate] in `applicationScope` in every process.
  * Watches Room for unread IMAGE and PDF rows and reads them newest first.
  *
  * Presumes [readingOriginals] is true until it has looked at Room. It is true
@@ -75,10 +75,7 @@ class OcrQueue(
     private suspend fun readNewestFirst() {
         val failed = mutableSetOf<String>()
         while (true) {
-            val images = readingDao.getNewestUnreadImages(BATCH + failed.size)
-            val pdfs = readingDao.getUnreadPdfs()
-            val batch = (images + pdfs)
-                .sortedByDescending { it.capturedAt }
+            val batch = readingDao.getNewestUnreadMedia(BATCH + failed.size)
                 .filterNot { it.id in failed }
                 .take(BATCH)
             if (batch.isEmpty()) return
