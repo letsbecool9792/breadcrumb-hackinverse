@@ -63,3 +63,17 @@ export function makeDeleteHandler(database: Db) {
     }
   };
 }
+
+/**
+ * Deletes every memory the server holds. Idempotent: answers the count deleted.
+ */
+export function makeForgetHandler(database: Db) {
+  return async (_req: Request, res: Response) => {
+    try {
+      const { deletedCount } = await memories(database).deleteMany({});
+      res.json({ deleted: deletedCount });
+    } catch (error) {
+      unavailable(res, error);
+    }
+  };
+}

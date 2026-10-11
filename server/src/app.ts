@@ -4,8 +4,8 @@ import type { Db } from "mongodb";
 import { makeIngestHandler, type Enricher, type Embedder } from "./ingest.ts";
 import { makeImageHandler, type ImageReader } from "./images.ts";
 import { makeSearchHandler, type QueryEmbedder } from "./search.ts";
-import { type SearchParser } from "./search_parser.ts";
-import { makeEnrichmentHandler, makeDeleteHandler } from "./sync.ts";
+import { makeParseHandler, type SearchParser } from "./search_parser.ts";
+import { makeEnrichmentHandler, makeDeleteHandler, makeForgetHandler } from "./sync.ts";
 
 export interface AppOptions {
   /** One line per request. Off in tests, where it only buries the results. */
@@ -45,6 +45,8 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
     res.json({ service: "breadcrumb", status: "ok" });
   });
 
+  app.post("/parse", makeParseHandler(searchParser));
+
   // Without a database (the HTTP-surface tests) they answer 501, which the
   // phone treats as "try again later".
   if (database) {
@@ -53,12 +55,14 @@ export function createApp({ log = true, database, enricher, embedder, imageReade
     app.get("/search", makeSearchHandler(database, queryEmbedder, searchParser));
     app.post("/memories/enrichment", makeEnrichmentHandler(database));
     app.post("/memories/delete", makeDeleteHandler(database));
+    app.post("/memories/forget", makeForgetHandler(database));
   } else {
     app.post("/memories", notBuilt);
     app.post("/memories/images", notBuilt);
     app.get("/search", notBuilt);
     app.post("/memories/enrichment", notBuilt);
     app.post("/memories/delete", notBuilt);
+    app.post("/memories/forget", notBuilt);
   }
 
   // JSON, never Express's HTML pages: the only client parses JSON.

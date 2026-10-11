@@ -1,8 +1,9 @@
 import { Type } from "@google/genai";
+import type { Request, Response } from "express";
 import type { Db } from "mongodb";
-import type { Interpretation } from "./api.ts";
+import { MAX_QUERY_CHARS, type Interpretation } from "./api.ts";
 import { localDay, startOfDay } from "./days.ts";
-import { gemini, models } from "./gemini.ts";
+import { gemini, modelFailure, models } from "./gemini.ts";
 import { memories, type MemoryType } from "./memories.ts";
 
 const MEMORY_TYPES: readonly MemoryType[] = ["TEXT", "LINK", "IMAGE", "PDF", "AUDIO"];
@@ -60,6 +61,60 @@ export function guardInterpretation(raw: unknown, sources: string[]): Interpreta
   if (from && to && from > to) [from, to] = [to, from];
   const sourceApp = typeof input.sourceApp === "string" && sources.includes(input.sourceApp) ? input.sourceApp : null;
   return { query: typeof input.query === "string" ? input.query.trim() : "", types, from, to, sourceApp };
+}
+
+let parsedDay = "";
+const parses = new Map<string, Interpretation>();
+
+export function clearParseCache() {
+  parses.clear();
+  parsedDay = "";
+}
+
+/** A phrase is parsed once a day: the same phrase, against the same sources, on the same day. */
+export async function cachedParse(phrase: string, now: Date, sources: string[], parser: SearchParser): Promise<Interpretation> {
+  const day = localDay(now);
+  if (day !== parsedDay) {
+    parses.clear();
+    parsedDay = day;
+  }
+  const key = `${sources.join("\u0000")}\u0001${phrase.toLowerCase()}`;
+  const known = parses.get(key);
+  if (known) return known;
+  const interpretation = await parser(phrase, now, sources);
+  parses.set(key, interpretation);
+  return interpretation;
+}
+
+/**
+ * Handles POST /parse: takes { phrase, sources } and returns { interpretation }.
+ * Uses the once-a-day cache and defaultSearchParser (or injected parser).
+ */
+export function makeParseHandler(parser: SearchParser = defaultSearchParser) {
+  return async (req: Request, res: Response) => {
+    const body = req.body;
+    if (typeof body !== "object" || body === null || Array.isArray(body)) {
+      res.status(400).json({ error: "body must be an object" });
+      return;
+    }
+    const { phrase, sources } = body as { phrase?: unknown; sources?: unknown };
+    if (typeof phrase !== "string" || !phrase.trim() || phrase.length > 500) {
+      res.status(400).json({ error: "phrase: required, 1 to 500 characters" });
+      return;
+    }
+    if (!Array.isArray(sources) || !sources.every((s) => typeof s === "string")) {
+      res.status(400).json({ error: "sources: required array of strings" });
+      return;
+    }
+
+    try {
+      const interpretation = await cachedParse(phrase.trim(), new Date(), sources, parser);
+      res.json({ interpretation });
+    } catch (error) {
+      const { reason, retryable } = modelFailure(error);
+      res.status(retryable ? 503 : 502).json({ error: "could not parse the phrase", reason, retryable });
+    }
+  };
 }
 
 let names: { at: number; list: string[] } | undefined;

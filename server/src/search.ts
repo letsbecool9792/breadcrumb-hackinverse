@@ -12,7 +12,7 @@ import {
 import { localDay, startOfDay, startOfNextDay } from "./days.ts";
 import { embedQuery, modelFailure } from "./gemini.ts";
 import { TEXT_INDEX, VECTOR_INDEX, memories, type MemoryDoc, type MemoryType } from "./memories.ts";
-import { defaultSearchParser, sourceNames, type SearchParser } from "./search_parser.ts";
+import { cachedParse, defaultSearchParser, sourceNames, type SearchParser } from "./search_parser.ts";
 
 /** Embeds a search phrase. */
 export type QueryEmbedder = (phrase: string) => Promise<number[]>;
@@ -160,23 +160,8 @@ function hit(doc: MemoryDoc, score: number | null, ranks: Ranks): SearchHit {
   };
 }
 
-let parsedDay = "";
-const parses = new Map<string, Interpretation>();
-
 /** A phrase is parsed once a day: the same phrase, against the same sources, on the same day. */
-async function parse(phrase: string, now: Date, sources: string[], parser: SearchParser): Promise<Interpretation> {
-  const day = localDay(now);
-  if (day !== parsedDay) {
-    parses.clear();
-    parsedDay = day;
-  }
-  const key = `${sources.join("\u0000")}\u0001${phrase.toLowerCase()}`;
-  const known = parses.get(key);
-  if (known) return known;
-  const interpretation = await parser(phrase, now, sources);
-  parses.set(key, interpretation);
-  return interpretation;
-}
+const parse = cachedParse;
 
 /**
  * A ranked list of memories for [phrase], never an answer. The phrase is

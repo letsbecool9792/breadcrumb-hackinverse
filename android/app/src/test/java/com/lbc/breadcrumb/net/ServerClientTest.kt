@@ -235,4 +235,87 @@ class ServerClientTest {
             caller.shutdown()
         }
     }
+
+    @Test
+    fun `parse success reads the interpretation`() = runBlocking {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"interpretation":{"query":"internship","types":["IMAGE"],"from":"2026-04-01","to":"2026-04-30","sourceApp":"WhatsApp"}}""")
+                .build(),
+        )
+
+        val reply = client().parse("internship screenshot", listOf("WhatsApp"))
+        assertEquals(
+            Reply.Done(Interpretation(query = "internship", types = listOf("IMAGE"), from = "2026-04-01", to = "2026-04-30", sourceApp = "WhatsApp")),
+            reply,
+        )
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/parse", request.url.encodedPath)
+        assertEquals("""{"phrase":"internship screenshot","sources":["WhatsApp"]}""", request.body!!.utf8())
+    }
+
+    @Test
+    fun `parse refusal is refused`() = runBlocking {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(400)
+                .body("""{"error":"phrase: required, 1 to 500 characters"}""")
+                .build(),
+        )
+
+        val reply = client().parse("", emptyList())
+        assertEquals(Reply.Refused(400, emptyList()), reply)
+    }
+
+    @Test
+    fun `parse with a server away is later`() = runBlocking {
+        val port = server.port
+        server.close()
+
+        val reply = ServerClient("http://127.0.0.1:$port/").parse("test", emptyList())
+        assertTrue(reply is Reply.Later)
+        assertEquals(Reply.Later(null, "Refused"), reply)
+    }
+
+    @Test
+    fun `forgetAll success returns deleted count`() = runBlocking {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(200)
+                .body("""{"deleted":42}""")
+                .build(),
+        )
+
+        val reply = client().forgetAll()
+        assertEquals(Reply.Done(42), reply)
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/memories/forget", request.url.encodedPath)
+        assertEquals("{}", request.body!!.utf8())
+    }
+
+    @Test
+    fun `forgetAll refusal is refused`() = runBlocking {
+        server.enqueue(
+            MockResponse.Builder()
+                .code(400)
+                .body("""{"error":"bad request"}""")
+                .build(),
+        )
+
+        val reply = client().forgetAll()
+        assertEquals(Reply.Refused(400, emptyList()), reply)
+    }
+
+    @Test
+    fun `forgetAll with a server away is later`() = runBlocking {
+        val port = server.port
+        server.close()
+
+        val reply = ServerClient("http://127.0.0.1:$port/").forgetAll()
+        assertTrue(reply is Reply.Later)
+        assertEquals(Reply.Later(null, "Refused"), reply)
+    }
 }
