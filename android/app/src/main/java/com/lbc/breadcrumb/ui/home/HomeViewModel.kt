@@ -6,6 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.embed.EmbedWorker
+import com.lbc.breadcrumb.embed.LocalSearch
+import com.lbc.breadcrumb.embed.VectorIndex
+import com.lbc.breadcrumb.net.SearchOutcome
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,13 +47,24 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     /**
-     * The search (design §9): the phone's own words at once, the server's ranking
-     * after a pause, and the words alone when the server is out of reach.
+     * The search (design §9): the phone's own words at once, then the ranking
+     * after a pause. The ranking runs on the phone (local-first L2); only the
+     * phrase goes to the server, to be parsed. Until the model is on the phone,
+     * the server ranks, and the words stand alone when it is out of reach.
      */
+    private val localSearch = LocalSearch(
+        embed = { app.embedder.text(it) },
+        vectors = VectorIndex(app.database.embeddingDao())::current,
+        words = { query, limit -> app.database.readingDao().search(query, limit) },
+        // Until the server has its parse-only call (L3), its search carries the parse.
+        parse = { (app.server.search(it, 1) as? SearchOutcome.Found)?.interpretation },
+        memories = { app.database.memoryDao().getAll() },
+    )
+
     val search: StateFlow<SearchState> = twoStageSearch(
         queries = typed,
         wordSearch = { app.database.readingDao().search(it, MATCHES) },
-        serverSearch = { app.server.search(it, MATCHES) },
+        serverSearch = { localSearch.search(it, MATCHES) ?: app.server.search(it, MATCHES) },
         heldMemories = { app.database.memoryDao().getAll() },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState.Resting)
 
