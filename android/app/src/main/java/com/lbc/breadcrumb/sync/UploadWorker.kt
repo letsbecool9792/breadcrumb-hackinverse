@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.lbc.breadcrumb.BreadcrumbApp
+import com.lbc.breadcrumb.ocr.LinkReading
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Duration
@@ -31,6 +32,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             held = { app.uploadHolds.toList() },
             reading = { app.readingOriginals.value },
             pictureOf = { memory -> app.originals.fileFor(memory)?.let(Pictures::jpeg) },
+            readLinks = { LinkReading(app).readAllPending() },
         )
         val outcome = passes.withLock {
             var outcome: UploadPass.Outcome
