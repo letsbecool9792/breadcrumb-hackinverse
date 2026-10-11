@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -24,6 +25,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     val memories: StateFlow<List<Memory>?> = app.database.memoryDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    /** Bringing in what is already on the phone; its line shows over the search field. */
+    internal val importer: BulkImporter get() = app.importer
 
     /** Held here, not by the composition, so a rotation replays no entrance. */
     internal val entrances = MosaicEntrances()
