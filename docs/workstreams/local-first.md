@@ -58,13 +58,21 @@ the server reads memories only when the person turns it on; what goes is strippe
     on the charger; meanwhile its few words stand in.
   - Tests: `EmbedTextTest` and `EmbedPassTest` (JVM). `EmbedOnPhoneTest` uses the real model and
     an in-memory database: a vague phrase finds its memory, and a vector goes with its memory.
-- [ ] **L2. Ranking on the phone** (Suparno; after L1, with L3's client)
-  - Every vector in memory, kept current from Room; a query scores against all of them by dot
-    product. No vector database: 5,000 memories is 15 MB.
-  - Fuse with the word search by reciprocal rank (k = 60), as the server's `fuse` does, and apply
-    the parsed filters. This becomes the second stage of `twoStageSearch`, with the same
-    `SearchState`, so the screens don't change.
-  - Without the server, the same ranking without filters, and the status says so.
+- [x] **L2. Ranking on the phone** (Suparno; after L1)
+  - `embed/LocalSearch`: the phrase is embedded on the phone and scored against every vector
+    (`VectorIndex`, reloaded only when a vector changes; no vector database). Only memories within
+    0.12 of the best match count as answers by meaning, so a small corpus doesn't list everything.
+    They are fused with the word search by reciprocal rank (k = 60), and the parsed filters apply
+    to both halves, as the server's `fuse` and `mqlFilter` do. A link filter takes anything
+    carrying a link; dates are the content's own, or when it was saved; a source is the app or a
+    link's site.
+  - It is the second stage of `twoStageSearch`, with the same `SearchState`, so the screens didn't
+    change. Until the model is on the phone, the server still ranks.
+  - **The parse:** until L3 lands, the server's `GET /search` carries it (its interpretation
+    only); then `HomeViewModel` switches to `ServerClient.parse`. A parse that fails, or takes
+    over 2.5 s, costs only the filters.
+  - Tests: `LocalSearchTest` (JVM): fusion, the meaning window, each filter, a failed or slow
+    parse, no model. `EmbedOnPhoneTest` runs the whole search with the real model.
 - [ ] **L3. Parsing on its own, and forgetting** (Ayushi; server and client)
   - `POST /parse` with `{ "phrase": "...", "sources": ["WhatsApp", "LinkedIn"] }` returns the
     `Interpretation` and nothing else. It uses the existing parser and its cache for the day,
