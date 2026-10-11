@@ -29,9 +29,8 @@ free.** One tap, no questions, done before the user's thumb leaves the screen.
 - **What you hand on:** rows with `type`, `hasLink`, `title`, `rawText`, `localUri`,
   `contentCreatedAt`, `sourceApp`, `sourceAppLabel` (and `note`, if you build the note). Leave
   `extractedText` **null**: the reading workstream finds its work by that null, and reads every
-  picture and PDF you save without you calling anything. After a save, call the upload queue's
-  schedule function once the sync workstream has it (`UploadWorker.schedule(context)`); until
-  then, nothing.
+  picture and PDF you save without you calling anything. After a save, call
+  `uploadScheduler`, which `BreadcrumbApp.onCreate` points at `UploadWorker.schedule(context)`.
 
 ## Steps
 

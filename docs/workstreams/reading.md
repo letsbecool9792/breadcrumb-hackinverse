@@ -32,8 +32,9 @@ its words seconds after it is saved, before the network has done anything.
   server reads does the same.
 - **You hand on** to the sync workstream:
   - a way to tell it there is something new to send. After every read, including one that
-    found nothing, call its schedule function (`UploadWorker.schedule(context)`; until it
-    exists, a no-op callback). An empty read is exactly the case whose picture gets sent.
+    found nothing, call `uploadScheduler` (`ocr/UploadSchedule.kt`), which
+    `BreadcrumbApp.onCreate` points at `UploadWorker.schedule` before the OCR queue starts. An
+    empty read is exactly the case whose picture gets sent.
   - `readingOriginals: MutableStateFlow<Boolean>` on `BreadcrumbApp`: true while the OCR queue
     is working through unread pictures and PDFs, so the uploader holds them back rather than
     send them unread. **Presume true until the queue has looked**, and set false in a `finally`
