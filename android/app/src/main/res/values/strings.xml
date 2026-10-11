@@ -31,8 +31,13 @@
     <string name="home_wordmark">breadcrumb</string>
     <string name="home_nothing_title">Nothing kept yet</string>
     <string name="home_nothing_start">Start here: the + brings in the screenshots and PDFs already on your phone.</string>
-    <string name="home_nothing_or">or share anything to breadcrumb from any app,
-or copy it and tap the breadcrumb tile</string>
+    <string name="home_nothing_or">or share anything to breadcrumb from any app,\nor copy it and tap the breadcrumb tile</string>
+    <string name="search_hint">search your memory</string>
+    <string name="search_clear">Clear search</string>
+    <string name="search_none_title">Nothing matches that</string>
+    <string name="search_none_hint">try fewer words, or describe it\nthe way you\'d say it out loud</string>
+    <string name="search_words_title">No saved words match</string>
+    <string name="search_words_hint">ranked search is out of reach, so this\nlooked for the words themselves</string>
 
     <!-- Reading R7: opening and sharing saved originals (design §11, §12, §16) -->
     <string name="detail_action_open_original">Open original</string>
