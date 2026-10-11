@@ -7,6 +7,8 @@ This file is the source of truth for **what we are building, what we decided, wh
 and what we are deliberately not building.** Read it before proposing work. Then read:
 
 - [`docs/api.md`](docs/api.md): the phone–server contract
+- [`docs/design.md`](docs/design.md): the screens, exactly: sizes, colours, words and motion.
+  Every screen, and the capture sheet, builds to it.
 - your workstream's brief in [`docs/workstreams/`](docs/workstreams/): what to build, in what
   order, the pitfalls, and what to check on the phone
 
