@@ -176,7 +176,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     - `OriginalsProviderTest` (on the phone): a stored original reads back through its content
       URI; the grant is read-only and one-off; the database and cache are unreachable through
       the provider.
-- [ ] **R8. Bringing in, from the app** (design §14; branch `reading/import-ui`; after R6)
+- [x] **R8. Bringing in, from the app** (design §14; branch `reading/import-ui`; after R6)
   - `BulkImporter.forget()`: clears a finished or failed progress.
   - `importLine(progress): String?`: pure; the bar's words for each state (§14).
   - `@Composable fun ColumnScope.ImportPanel(onBack: () -> Unit, onPicked: () -> Unit)`: the

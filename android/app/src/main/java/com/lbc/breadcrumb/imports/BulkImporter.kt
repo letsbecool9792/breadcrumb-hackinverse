@@ -14,10 +14,13 @@ import com.lbc.breadcrumb.data.MemoryDao
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.data.ReadingDao
+import kotlin.coroutines.coroutineContext
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -81,14 +84,29 @@ class BulkImporter(
     val progress: StateFlow<ImportProgress?> = _progress.asStateFlow()
 
     private val importMutex = Mutex()
+    private var currentJob: Job? = null
 
     /**
      * Imports run one at a time, in the order they were asked for: two at once
      * would share one progress line, and could both import the same file
      * before either had recorded it.
      */
-    private fun launchImport(block: suspend CoroutineScope.() -> Unit): Job =
-        scope.launch(Dispatchers.IO) { importMutex.withLock { block() } }
+    private fun launchImport(block: suspend CoroutineScope.() -> Unit): Job {
+        val job = scope.launch(Dispatchers.IO) { importMutex.withLock { block() } }
+        currentJob = job
+        return job
+    }
+
+    /**
+     * Clears a finished or failed import progress (reading workstream R8).
+     * If called while an import is in flight, cancels the active import job.
+     * Never deletes existing saved memories.
+     */
+    fun forget() {
+        currentJob?.cancel()
+        currentJob = null
+        _progress.value = null
+    }
 
     data class Candidate(
         val uri: Uri,
@@ -214,6 +232,7 @@ class BulkImporter(
             val saved = importDao.linkTexts().flatMapTo(mutableSetOf()) { UrlKey.allIn(it) }
 
             for ((index, bookmark) in sorted.withIndex()) {
+                coroutineContext.ensureActive()
                 _progress.value = ImportProgress.Running(
                     current = index + 1,
                     total = total,
@@ -283,6 +302,7 @@ class BulkImporter(
             val existingHashCache = mutableMapOf<File, String>()
 
             for ((index, candidate) in candidates.withIndex()) {
+                coroutineContext.ensureActive()
                 _progress.value = ImportProgress.Running(
                     current = index + 1,
                     total = total,
@@ -403,9 +423,11 @@ class BulkImporter(
 
             _progress.value = ImportProgress.Done(total, importedCount, skippedCount)
         } finally {
-            // Prevent readingOriginals from remaining stuck true if no unread images remain
-            if (hasImages && readingDao.countUnreadImages() == 0) {
-                readingOriginals.value = false
+            withContext(NonCancellable) {
+                // Prevent readingOriginals from remaining stuck true if no unread images remain
+                if (hasImages && readingDao.countUnreadImages() == 0) {
+                    readingOriginals.value = false
+                }
             }
         }
     }

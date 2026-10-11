@@ -70,4 +70,14 @@ or copy it and tap the breadcrumb tile</string>
     <!-- Capture workstream: launcher shortcut (design §13, §16) -->
     <string name="shortcut_keep_short">Keep</string>
     <string name="shortcut_keep_long">Keep something</string>
+
+    <!-- Reading workstream R8: bringing in what's already on the phone (design §14, §16) -->
+    <string name="import_title">Bring in</string>
+    <string name="import_back">back</string>
+    <string name="import_choice_folder">A whole folder</string>
+    <string name="import_choice_folder_detail">every picture and PDF in it — screenshots, usually</string>
+    <string name="import_choice_photos">Only these pictures</string>
+    <string name="import_choice_photos_detail">pick them yourself</string>
+    <string name="import_choice_files">PDFs, or a bookmarks export</string>
+    <string name="import_choice_files_detail">from the file picker</string>
 </resources>
