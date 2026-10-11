@@ -32,7 +32,7 @@ internal fun rowText(memory: Memory, hit: SearchHit?, words: List<String>): RowT
     val why = when {
         fragment != null -> Why.Fragment(fragment.lead, fragment.hit, fragment.tail)
         !summary.isNullOrBlank() && summary != title -> Why.Summary(summary)
-        else -> null
+        else -> Snippet.of(memory, words)?.takeIf { it != title }?.let { Why.Summary(it) }
     }
     return RowText(title, why)
 }
