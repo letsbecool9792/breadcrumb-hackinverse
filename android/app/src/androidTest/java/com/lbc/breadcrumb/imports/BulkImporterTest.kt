@@ -344,23 +344,25 @@ class BulkImporterTest {
     }
 
     @Test
-    fun forgetCancelsInFlightImportWithoutDeletingSavedMemories() = runBlocking {
-        val files = (1..5).map { i ->
-            File(context.cacheDir, "photo_cancel_$i.png").apply {
-                writeBytes("content $i".toByteArray())
-            }
+    fun forgetNeverStopsAnImportThatIsStillRunning() = runBlocking {
+        val bookmarks = (1..60).map { """<DT><A HREF="https://example.com/page$it" ADD_DATE="1711929600">Page $it</A>""" }
+        val file = File(context.cacheDir, "bookmarks_running_${UUID.randomUUID()}.html").apply {
+            writeText(
+                (listOf("<!DOCTYPE NETSCAPE-Bookmark-file-1>", "<TITLE>Bookmarks</TITLE>", "<DL><p>") + bookmarks + "</DL><p>")
+                    .joinToString(System.lineSeparator()),
+            )
         }
 
         try {
-            val job = importer.importVisualMedia(files.map { Uri.fromFile(it) })
-            importer.forget()
+            val job = importer.importBookmarks(Uri.fromFile(file))
+            // A tap on the bar while it runs, as often as the person likes.
+            repeat(20) { importer.forget() }
             job.join()
 
-            assertNull(importer.progress.value)
-            // Any saved memories must remain preserved (not deleted)
-            assertTrue(memoryDao.count() >= 0)
+            // Everything the person asked for came in; none of it was cut short.
+            assertEquals(60, memoryDao.count())
         } finally {
-            files.forEach { it.delete() }
+            file.delete()
         }
     }
 }
