@@ -123,7 +123,7 @@ the design wins.
     what is already on the phone.
   - The debug list moves behind a long press on the wordmark, **in debug builds only**: pass the
     callback only when `BuildConfig.DEBUG`, and wire no long press at all when it is null.
-- [ ] **U4. Search**
+- [x] **U4. Search**
   - Design §8 and §9: the field and its light, the counter, the list and its rows, the lit word,
     the empty states, and the haptic. Builds on S8 to S10.
   - One search field. While typing, reading's local word search answers at once; after a 450 ms
@@ -133,6 +133,18 @@ the design wins.
   - The server out of reach → the word matches stand, marked "offline · words only".
   - A result row: title (sans), a fragment with the matched word lit, chips, age, source app.
   - A drag on the results puts the keyboard away, as on the mosaic.
+  - Built as `ui/home/`: `SearchField` (the pill, its light, the walking crumbs), `SearchResults`
+    (counter, rows, empty states, the lit word), `RowText` and `SearchArrivals` (pure), and the
+    search state in `HomeViewModel` (over S10's `twoStageSearch`). `HomeScreen` is now the
+    layout of design §4: the mosaic or the results above, the one field below.
+  - A drag on the content hides the keyboard through a nested-scroll connection that acts on user
+    input only, so a list moving by itself leaves it be. Back clears a search before it leaves.
+  - The arrival record lives in the view model, so a rotation replays nothing.
+  - *Check:* type "qualcomm": the phone's word matches appear at once, the ranked list replaces
+    them after a pause, rows gliding to their places, with the word lit a moment after each row
+    lands; "that internship screenshot from april" shows `1 of N · internship · images · apr`;
+    stop the server and type: "offline · words only"; Back clears the field; a drag on the
+    results puts the keyboard away.
 - [ ] **U5. The detail of a memory, and the way back to the original**
   - Design §10 to §12: `SheetLayer`, the detail, and delete with Undo and the undo bar.
     Opening and sharing come from R7.
