@@ -164,7 +164,7 @@ the Android build once (CLAUDE.md, "Setting up a machine").
     - `ServerClientTest`: found; interpretation null; a non-2xx is unavailable, not offline; a
       refused connection is offline.
     - `SearchJoinTest`: the order is kept, and unknown ids are dropped.
-- [ ] **S10. Two answers in turn** (design §9's logic; branch `sync/two-stage-search`)
+- [x] **S10. Two answers in turn** (design §9's logic; branch `sync/two-stage-search`)
   - `ui/home/TwoStageSearch.kt` turns a `Flow<String>` of what is typed into a
     `Flow<SearchState>`: `Resting`, or `Searching(phrase, results, interpretation, status)`.
   - It runs on every change of the normalised query (trimmed, with runs of whitespace as one
