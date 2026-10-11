@@ -6,6 +6,10 @@ The phone's half of the cloud (the upload queue and the server client), the scre
 actually use (home, search, the detail of a memory), and stitching the four workstreams into one
 app. Also: reviewing everyone's PRs on the phone.
 
+**The screens build to [`docs/design.md`](../design.md)**, U3 to U6 and capture's sheet alike:
+every size, colour, word and motion is written there. Where this brief and the design differ,
+the design wins.
+
 ## What you own
 
 - `…/breadcrumb/net/ServerClient.kt` and the Kotlin data classes matching
