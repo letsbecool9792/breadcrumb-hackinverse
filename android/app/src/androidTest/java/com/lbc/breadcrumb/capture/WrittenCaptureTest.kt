@@ -7,7 +7,9 @@ import android.provider.MediaStore
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lbc.breadcrumb.BreadcrumbApp
+import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
+import com.lbc.breadcrumb.ocr.uploadScheduler
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -19,37 +21,49 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 
+/**
+ * Keep, on the phone. These tests run in the app's own process, so they write to
+ * the person's real database: they look only at what they create, and remove
+ * only that. They must never clear or list-and-delete everything -- that wiped
+ * saved memories once. Uploads are held off meanwhile, so the test's words never
+ * reach the server.
+ */
 @RunWith(AndroidJUnit4::class)
 class WrittenCaptureTest {
 
     private lateinit var app: BreadcrumbApp
     private val createdUris = mutableListOf<Uri>()
+    private var before = emptySet<String>()
+    private var scheduler: (Context) -> Unit = {}
 
     @Before
     fun setup() {
         app = ApplicationProvider.getApplicationContext<Context>() as BreadcrumbApp
-        runBlocking {
-            app.database.memoryDao().getAll().forEach {
-                app.database.memoryDao().deleteEverywhere(it, System.currentTimeMillis())
-                app.originals.delete(it)
-            }
-        }
+        scheduler = uploadScheduler
+        uploadScheduler = {}
+        before = runBlocking { app.database.memoryDao().getAll().map { it.id }.toSet() }
     }
 
     @After
     fun tearDown() {
+        uploadScheduler = scheduler
         for (uri in createdUris) {
             try {
                 app.contentResolver.delete(uri, null, null)
             } catch (_: Exception) {}
         }
         runBlocking {
-            app.database.memoryDao().getAll().forEach {
+            // Only what this test made.
+            created().forEach {
                 app.database.memoryDao().deleteEverywhere(it, System.currentTimeMillis())
                 app.originals.delete(it)
             }
         }
     }
+
+    /** The memories made since the test began, oldest first. */
+    private suspend fun created(): List<Memory> =
+        app.database.memoryDao().getAll().filter { it.id !in before }.sortedBy { it.capturedAt }
 
     @Test
     fun textAloneGivesOneMemoryByTheShareRulesWithNoSource() = runBlocking {
@@ -57,7 +71,7 @@ class WrittenCaptureTest {
         val textCount = Keep.keep(app, text = "Remember to buy milk", uris = emptyList())
         assertEquals(1, textCount)
 
-        val textMemories = app.database.memoryDao().getAll()
+        val textMemories = created()
         assertEquals(1, textMemories.size)
         val textMem = textMemories.first()
         assertEquals(MemoryType.TEXT, textMem.type)
@@ -71,7 +85,7 @@ class WrittenCaptureTest {
         val linkCount = Keep.keep(app, text = "Interesting article https://example.com/story", uris = emptyList())
         assertEquals(1, linkCount)
 
-        val allMemories = app.database.memoryDao().getAll()
+        val allMemories = created()
         assertEquals(2, allMemories.size)
         val linkMem = allMemories.first { it.id != textMem.id }
         assertEquals(MemoryType.LINK, linkMem.type)
@@ -91,7 +105,7 @@ class WrittenCaptureTest {
         val keptCount = Keep.keep(app, text = noteText, uris = listOf(uri1, uri2))
         assertEquals(2, keptCount)
 
-        val memories = app.database.memoryDao().getAll()
+        val memories = created()
         assertEquals(2, memories.size)
 
         for (memory in memories) {
@@ -112,7 +126,7 @@ class WrittenCaptureTest {
     fun emptyKeepSavesNothingAndReportsZero() = runBlocking {
         val count = Keep.keep(app, text = "", uris = emptyList())
         assertEquals(0, count)
-        assertEquals(0, app.database.memoryDao().getAll().size)
+        assertEquals(0, created().size)
     }
 
     private fun createMediaUri(name: String, mime: String, bytes: ByteArray): Uri {
