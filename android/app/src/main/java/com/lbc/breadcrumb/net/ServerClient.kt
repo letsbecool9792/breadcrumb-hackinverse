@@ -1,7 +1,9 @@
 package com.lbc.breadcrumb.net
 
 import com.lbc.breadcrumb.BuildConfig
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.Call
@@ -72,7 +74,7 @@ class ServerClient(
             .build()
         val request = Request.Builder().url(url).get().build()
         return try {
-            searchClient.newCall(request).await().use { response ->
+            searchClient.newCall(request).answer { response ->
                 val body = response.body.string()
                 if (response.isSuccessful) {
                     val reply = runCatching { json.decodeFromString<SearchReply>(body) }.getOrNull()
@@ -94,7 +96,7 @@ class ServerClient(
     suspend fun checkHealth(): ServerStatus {
         val request = Request.Builder().url(root.resolve("health")!!).get().build()
         return try {
-            healthClient.newCall(request).await().use { response ->
+            healthClient.newCall(request).answer { response ->
                 val reply = runCatching { json.decodeFromString<HealthReply>(response.body.string()) }.getOrNull()
                 when {
                     // /health names the service, so another server holding the port is not taken for this one.
@@ -126,7 +128,7 @@ class ServerClient(
     private suspend fun <T> post(path: String, body: String, read: (String) -> T): Reply<T> {
         val request = Request.Builder().url(root.resolve(path)!!).post(body.toRequestBody(JSON_TYPE)).build()
         return try {
-            uploadClient.newCall(request).await().use { response ->
+            uploadClient.newCall(request).answer { response ->
                 val text = response.body.string()
                 val answer = runCatching { read(text) }.getOrNull()
                 when {
@@ -190,6 +192,18 @@ internal fun statusOf(error: IOException): ServerStatus = when {
         error.message?.contains("unexpected end of stream") == true -> ServerStatus.ClosedWithoutReply
     else -> ServerStatus.Unreachable(error.message ?: error.javaClass.simpleName)
 }
+
+/**
+ * Sends the call and reads its answer with [read], all on the IO dispatcher.
+ *
+ * Reading a body is network work, and some callers (the search, in the view
+ * model; the debug list's server line) run on the main thread, where Android
+ * refuses it: a quick answer arrives already buffered, and a slow one, like a
+ * vector search, crashed the app with NetworkOnMainThreadException. The answer
+ * is closed here too, since closing one not read to its end reads the rest.
+ */
+private suspend fun <T> Call.answer(read: (Response) -> T): T =
+    withContext(Dispatchers.IO) { await().use(read) }
 
 /** OkHttp's call as a suspend function, cancelled with its coroutine. */
 internal suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->

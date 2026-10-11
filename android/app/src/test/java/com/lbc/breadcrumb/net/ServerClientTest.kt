@@ -1,6 +1,11 @@
 package com.lbc.breadcrumb.net
 
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import mockwebserver3.MockResponse
 import mockwebserver3.MockWebServer
 import mockwebserver3.SocketEffect
@@ -14,6 +19,8 @@ import java.io.IOException
 import java.net.NoRouteToHostException
 import java.net.SocketException
 import java.net.SocketTimeoutException
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 class ServerClientTest {
 
@@ -188,5 +195,44 @@ class ServerClientTest {
         assertTrue(outcome is SearchOutcome.Unavailable)
         val unavail = outcome as SearchOutcome.Unavailable
         assertEquals(true, unavail.offline)
+    }
+
+    @Test
+    fun `a slow answer is read off the thread that asked, which on the phone is the main thread`() {
+        // A vector search answers slowly: the headers come, and the body trickles in.
+        val hits = (1..40).joinToString(",") { """{"id":"m$it","summary":"${"words ".repeat(12)}"}""" }
+        server.enqueue(
+            MockResponse.Builder()
+                .body("""{"query":"q","interpretation":null,"results":[$hits]}""")
+                .throttleBody(1_000, 300, TimeUnit.MILLISECONDS)
+                .build(),
+        )
+        val caller = Executors.newSingleThreadExecutor()
+        val callerThread = caller.asCoroutineDispatcher()
+        val gaps = mutableListOf<Long>()
+        try {
+            val outcome = runBlocking {
+                // Something else that needs the same thread, ticking while the answer is read.
+                val heartbeat = launch(callerThread) {
+                    var last = System.nanoTime()
+                    repeat(60) {
+                        delay(25)
+                        val now = System.nanoTime()
+                        gaps += (now - last) / 1_000_000
+                        last = now
+                    }
+                }
+                val found = withContext(callerThread) { client().search("q") }
+                heartbeat.cancelAndJoin()
+                found
+            }
+
+            assertTrue(outcome is SearchOutcome.Found)
+            assertEquals(40, (outcome as SearchOutcome.Found).hits.size)
+            // Reading the body on the caller's thread would stall the heartbeat for the better part of a second.
+            assertTrue("the thread stalled for ${gaps.max()} ms", gaps.max() < 250)
+        } finally {
+            caller.shutdown()
+        }
     }
 }
