@@ -40,6 +40,8 @@ describe("the HTTP surface", () => {
       ["POST", "/memories/images"],
       ["POST", "/memories/enrichment"],
       ["POST", "/memories/delete"],
+      ["POST", "/memories/forget"],
+      ["POST", "/parse"],
       ["GET", "/search?q=anything"],
     ];
     for (const [method, path] of routes) {

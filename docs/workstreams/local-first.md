@@ -73,7 +73,7 @@ the server reads memories only when the person turns it on; what goes is strippe
     over 2.5 s, costs only the filters.
   - Tests: `LocalSearchTest` (JVM): fusion, the meaning window, each filter, a failed or slow
     parse, no model. `EmbedOnPhoneTest` runs the whole search with the real model.
-- [ ] **L3. Parsing on its own, and forgetting** (Ayushi; server and client)
+- [x] **L3. Parsing on its own, and forgetting** (Ayushi; server and client)
   - `POST /parse` with `{ "phrase": "...", "sources": ["WhatsApp", "LinkedIn"] }` returns the
     `Interpretation` and nothing else. It uses the existing parser and its cache for the day,
     with no embedding call and no Atlas query. The phone sends its own source app names, since
