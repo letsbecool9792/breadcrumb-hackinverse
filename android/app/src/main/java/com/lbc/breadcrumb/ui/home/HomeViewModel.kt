@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /**
  * What the home screen holds (design §4). The memories come straight from Room,
@@ -47,6 +48,34 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         serverSearch = { app.server.search(it, MATCHES) },
         heldMemories = { app.database.memoryDao().getAll() },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState.Resting)
+
+    /** Delete with five seconds of Undo (design §12); its changes outlive the screen. */
+    private val deletes = UndoableDeletes(
+        scope = app.applicationScope,
+        deleteRow = { app.database.memoryDao().deleteEverywhere(it, System.currentTimeMillis()) },
+        restoreRow = { app.database.memoryDao().restore(it) },
+        deleteOriginal = { app.originals.delete(it) },
+        scheduleUpload = { UploadWorker.schedule(app) },
+    )
+
+    /** The memory just deleted, that can still be brought back; null once the five seconds pass. */
+    val pendingDelete: StateFlow<Memory?> = deletes.pending
+
+    fun delete(memory: Memory) = deletes.delete(memory)
+
+    fun undoDelete() = deletes.undo()
+
+    /** Writes the person's note on a memory (null clears it), and sends it. */
+    fun setNote(id: String, note: String?) {
+        app.applicationScope.launch {
+            if (app.database.captureDao().setNote(listOf(id), note) > 0) UploadWorker.schedule(app)
+        }
+    }
+
+    override fun onCleared() {
+        // Gone mid-undo: make the delete final rather than leave a file behind.
+        deletes.finish()
+    }
 
     init {
         // Whatever a killed process left, or a server that came back, goes now.
