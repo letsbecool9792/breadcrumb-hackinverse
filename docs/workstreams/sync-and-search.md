@@ -124,6 +124,11 @@ the design wins.
 - [ ] **U5. The detail of a memory, and the way back to the original**
   - Design §10 to §12: `SheetLayer`, the detail, and delete with Undo and the undo bar.
     Opening and sharing come from R7.
+  - **`SheetLayer` and the travelling picture are built** (`ui/home/SheetLayer.kt`,
+    `SheetMath.kt`, `TravellingPicture.kt`; branch `sync/u5-sheet`): `PictureTravelLayer` over the
+    screen, `TravellingPicture` in a tile or row, `SheetPicture` in the sheet. The tile's picture
+    keeps its size while it is away (`sharedElementWithCallerManagedVisibility`, so visibility
+    is the caller's). The detail, delete and the undo bar are still to do.
   - A sheet: the artifact (the picture, the PDF's first page, a link card), where it came from
     and when (saved, from, taken), the text found, what the model saw, the person's note
     (editable), and **one** main action: open original, open link, or copy text.
