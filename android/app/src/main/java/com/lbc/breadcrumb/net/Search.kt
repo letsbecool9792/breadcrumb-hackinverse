@@ -16,6 +16,17 @@ data class Interpretation(
     val sourceApp: String? = null,
 )
 
+@Serializable
+internal data class ParseRequest(
+    val phrase: String,
+    val sources: List<String>,
+)
+
+@Serializable
+internal data class ParseReply(
+    val interpretation: Interpretation,
+)
+
 /**
  * Where a result placed by meaning (vector) and by words (text).
  * Null for a half that did not rank it.

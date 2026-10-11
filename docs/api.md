@@ -132,6 +132,52 @@ vector in the cloud.
 1 to 100 ids. Answer `{ "deleted": 1 }`. Idempotent: an id already gone, or never sent, is simply
 not counted, so the phone can send the same delete again after a failure.
 
+## POST /memories/forget
+
+Deletes every memory the server holds. The phone calls it when the person turns the server off.
+
+```json
+{}
+```
+
+Answer:
+
+```json
+{ "deleted": 42 }
+```
+
+Idempotent: returns `{ "deleted": 0 }` when nothing remains.
+
+## POST /parse
+
+Takes a search phrase and candidate source app names, returning only the parsed interpretation
+without embedding the query or running an Atlas search. Reuses the once-a-day cache per phrase
+and source list.
+
+```json
+{
+  "phrase": "internship screenshot from april",
+  "sources": ["WhatsApp", "LinkedIn"]
+}
+```
+
+Answer (200, 502 or 503):
+
+```json
+{
+  "interpretation": {
+    "query": "internship",
+    "types": ["IMAGE"],
+    "from": "2026-04-01",
+    "to": "2026-04-30",
+    "sourceApp": null
+  }
+}
+```
+
+A missing or bad phrase (not 1 to 500 characters) or bad `sources` (not an array of strings)
+answers 400. A model rate limit or transient failure answers 503; a model refusal answers 502.
+
 ## GET /search?q=…&limit=…
 
 A ranked list of memories, never an answer: each result is a way back to the original on the

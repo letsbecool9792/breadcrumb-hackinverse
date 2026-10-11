@@ -4,7 +4,7 @@ import type { Interpretation } from "./api.ts";
 import { startOfDay } from "./days.ts";
 import { TEXT_INDEX, VECTOR_INDEX, ensureIndexes, memories, type MemoryDoc } from "./memories.ts";
 import { filtersOf, fuse, mqlFilter, search, searchFilters, type SearchOptions } from "./search.ts";
-import { guardInterpretation } from "./search_parser.ts";
+import { clearParseCache, guardInterpretation } from "./search_parser.ts";
 import { axis, realDatabase, serve } from "./test_support.ts";
 
 const interpretation = (fields: Partial<Interpretation>): Interpretation => ({
@@ -87,6 +87,53 @@ describe("GET /search", () => {
       assert.equal((await app.get(`/search?q=${"a".repeat(501)}`)).status, 400);
       assert.equal((await app.get("/search?q=test&limit=51")).status, 400);
       assert.equal((await app.get("/search?q=test&limit=0")).status, 400);
+    } finally {
+      await app.close();
+    }
+  });
+});
+
+describe("POST /parse", () => {
+  test("a missing or bad phrase or sources is a 400", async () => {
+    const app = await serve({});
+    try {
+      assert.equal((await app.post("/parse", null)).status, 400);
+      assert.equal((await app.post("/parse", [])).status, 400);
+      assert.equal((await app.post("/parse", {})).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "" })).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "   " })).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "a".repeat(501), sources: [] })).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "hello" })).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "hello", sources: "not-an-array" })).status, 400);
+      assert.equal((await app.post("/parse", { phrase: "hello", sources: [123] })).status, 400);
+    } finally {
+      await app.close();
+    }
+  });
+
+  test("returns the interpretation using the parser and its once-a-day cache", async () => {
+    clearParseCache();
+    let calls = 0;
+    const parser = async (phrase: string, _today: Date, sources: string[]) => {
+      calls++;
+      return { query: phrase.toUpperCase(), types: ["IMAGE" as const], from: null, to: null, sourceApp: sources[0] ?? null };
+    };
+    const app = await serve({ searchParser: parser });
+    try {
+      const res1 = await app.post("/parse", { phrase: "internship screenshot", sources: ["WhatsApp"] });
+      assert.equal(res1.status, 200);
+      const data1 = await res1.json();
+      assert.deepEqual(data1, {
+        interpretation: { query: "INTERNSHIP SCREENSHOT", types: ["IMAGE"], from: null, to: null, sourceApp: "WhatsApp" },
+      });
+      assert.equal(calls, 1);
+
+      // Same phrase and sources reuses cache
+      const res2 = await app.post("/parse", { phrase: "internship screenshot", sources: ["WhatsApp"] });
+      assert.equal(res2.status, 200);
+      const data2 = await res2.json();
+      assert.deepEqual(data2, data1);
+      assert.equal(calls, 1, "reuses once-a-day cache without invoking parser again");
     } finally {
       await app.close();
     }

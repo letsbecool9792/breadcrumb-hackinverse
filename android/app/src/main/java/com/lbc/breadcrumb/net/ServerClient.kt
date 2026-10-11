@@ -121,6 +121,14 @@ class ServerClient(
     override suspend fun sendDeletes(ids: List<String>) =
         post("memories/delete", json.encodeToString(Ids(ids))) { json.decodeFromString<Deleted>(it).deleted }
 
+    /** POST /parse with {"phrase": string, "sources": string[]} */
+    suspend fun parse(phrase: String, sources: List<String>): Reply<Interpretation> =
+        post("parse", json.encodeToString(ParseRequest(phrase, sources))) { json.decodeFromString<ParseReply>(it).interpretation }
+
+    /** POST /memories/forget: deletes every memory the server holds */
+    suspend fun forgetAll(): Reply<Int> =
+        post("memories/forget", "{}") { json.decodeFromString<Deleted>(it).deleted }
+
     /**
      * Posts [body] and sorts the answer into the three ways the phone acts on.
      * A 503's body is read too: it still says which memories were finished.

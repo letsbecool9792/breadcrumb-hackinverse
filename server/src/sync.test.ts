@@ -49,6 +49,13 @@ describe("POST /memories/enrichment and /memories/delete", () => {
       assert.deepEqual(deleted, { deleted: 1 });
       const again = await (await app.post("/memories/delete", { ids: ["breadcrumb-test-sync-read"] })).json();
       assert.deepEqual(again, { deleted: 0 }, "a delete sent again is simply not counted");
+
+      const forgot = await (await app.post("/memories/forget", {})).json();
+      assert.deepEqual(forgot, { deleted: 1 }, "forget deletes every remaining memory");
+      const empty = await memories(database.db).countDocuments();
+      assert.equal(empty, 0);
+      const forgotAgain = await (await app.post("/memories/forget", {})).json();
+      assert.deepEqual(forgotAgain, { deleted: 0 });
     } finally {
       await app.close();
     }
