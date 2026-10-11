@@ -128,7 +128,14 @@ the design wins.
     `SheetMath.kt`, `TravellingPicture.kt`; branch `sync/u5-sheet`): `PictureTravelLayer` over the
     screen, `TravellingPicture` in a tile or row, `SheetPicture` in the sheet. The tile's picture
     keeps its size while it is away (`sharedElementWithCallerManagedVisibility`, so visibility
-    is the caller's). The detail, delete and the undo bar are still to do.
+    is the caller's). The detail and the undo bar are still to do.
+  - **Delete with Undo is built** (`ui/home/UndoableDeletes.kt`; branch `sync/u5-undo`), without
+    its bar: the row goes at once, and the file and the server's delete wait out the five
+    seconds, so Undo is free. Undo restores the row as PENDING with `imageSentAt` and
+    `enrichedAt` cleared, since the server may have heard the delete (a picture it still holds
+    costs no model call to send again). Changes run one at a time in the order asked. If the
+    process dies inside the window, the row is gone and its delete is queued, but the original
+    file is left behind; nothing sweeps orphans yet.
   - A sheet: the artifact (the picture, the PDF's first page, a link card), where it came from
     and when (saved, from, taken), the text found, what the model saw, the person's note
     (editable), and **one** main action: open original, open link, or copy text.
