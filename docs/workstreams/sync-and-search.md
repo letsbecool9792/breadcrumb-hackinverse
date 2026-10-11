@@ -38,6 +38,9 @@ app. Also: reviewing everyone's PRs on the phone.
     so a check says what happened; uploads use `uploadClient`, read 100 s, call 130 s. Two more
     states beside the four: *no answer in time*, and *unreachable* with its reason (a cleartext
     refusal, say).
+  - Failures are told apart by exception type, never by message: a connection closed under the
+    request reads "Connection reset" or "Broken pipe" on the phone and "An established
+    connection was aborted" on Windows.
   - *Check:* the line says *reachable* with `npm run dev` and `npm run reverse`; *connection
     closed without a reply* with the server stopped; *connection refused* after
     `adb reverse --remove-all`. A tap checks again.
