@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -54,11 +55,13 @@ import com.lbc.breadcrumb.ui.theme.Ink
  * and one memory opened in a sheet over either, or the "+" sheet.
  *
  * [onOpenDebug] is passed only in debug builds; null, the wordmark has no
- * gesture at all.
+ * gesture at all. [keepRequests] counts the launcher shortcut's requests; each
+ * new one opens the "+" sheet.
  */
 @Composable
 fun HomeScreen(
     onOpenDebug: (() -> Unit)?,
+    keepRequests: Int = 0,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
@@ -96,6 +99,18 @@ fun HomeScreen(
         keyboard?.hide()
         focus.clearFocus()
         plus = PlusPanel.opening(nothingKept = memories?.isEmpty() == true)
+    }
+
+    // Each new request from the launcher shortcut opens the composer, over any memory open.
+    var keepRequestsAnswered by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(keepRequests) {
+        if (keepRequests > keepRequestsAnswered) {
+            keepRequestsAnswered = keepRequests
+            keyboard?.hide()
+            focus.clearFocus()
+            openedId = null
+            plus = PlusPanel.COMPOSER
+        }
     }
 
     // One layer over everything, so a picture can travel between its tile and the sheet.
