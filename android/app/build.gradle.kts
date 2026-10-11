@@ -77,6 +77,8 @@ dependencies {
     implementation(libs.coil.compose)
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)
+    // Virtual time testing for TwoStageSearch flow debouncing and step execution (§9)
+    testImplementation(libs.kotlinx.coroutines.test)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
