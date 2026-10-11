@@ -3,6 +3,9 @@ package com.lbc.breadcrumb
 import android.app.Application
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
+import com.lbc.breadcrumb.embed.EmbedWorker
+import com.lbc.breadcrumb.embed.Embedder
+import com.lbc.breadcrumb.embed.ModelStore
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.net.ServerClient
 import com.lbc.breadcrumb.ocr.OcrQueue
@@ -35,6 +38,12 @@ class BreadcrumbApp : Application() {
     /** The server's API (docs/api.md), shared so its connection pool is too. */
     val server: ServerClient by lazy { ServerClient() }
 
+    /** The embedding model's file, downloaded once (local-first L1). */
+    val models: ModelStore by lazy { ModelStore(this) }
+
+    /** EmbeddingGemma 2 on the phone: memories are embedded, and searched, here (local-first L1). */
+    val embedder: Embedder by lazy { Embedder(models::ready, cacheDir, applicationScope) }
+
     /** Bulk importer for bringing in content already on the phone (reading R5). */
     val importer: BulkImporter by lazy { BulkImporter(this) }
 
@@ -58,13 +67,20 @@ class BreadcrumbApp : Application() {
         super.onCreate()
         // Before the OCR queue starts: a read landing first would call the
         // no-op, and nothing would be scheduled.
-        uploadScheduler = { UploadWorker.schedule(it) }
+        uploadScheduler = {
+            UploadWorker.schedule(it)
+            // What was saved or read is embedded on the phone too (local-first L1).
+            EmbedWorker.schedule(it)
+        }
         // Work that runs in every process starts here, inside applicationScope
         // so none of it touches the main thread during a capture's cold start:
         // the OCR queue (reading workstream), and the upload queue's first
         // schedule (sync workstream), which sends whatever a killed process
         // left. Building the queue builds the database.
         OcrQueue.launchIn(applicationScope, readingOriginals) { OcrQueue(this) }
-        applicationScope.launch { UploadWorker.schedule(this@BreadcrumbApp) }
+        applicationScope.launch {
+            UploadWorker.schedule(this@BreadcrumbApp)
+            EmbedWorker.schedule(this@BreadcrumbApp)
+        }
     }
 }

@@ -5,6 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +60,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         deleteRow = { app.database.memoryDao().deleteEverywhere(it, System.currentTimeMillis()) },
         restoreRow = { app.database.memoryDao().restore(it) },
         deleteOriginal = { app.originals.delete(it) },
-        scheduleUpload = { UploadWorker.schedule(app) },
+        // A memory brought back lost its vector with the row: embed it again too.
+        scheduleUpload = {
+            UploadWorker.schedule(app)
+            EmbedWorker.schedule(app)
+        },
     )
 
     /** The memory just deleted, that can still be brought back; null once the five seconds pass. */
@@ -72,7 +77,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** Writes the person's note on a memory (null clears it), and sends it. */
     fun setNote(id: String, note: String?) {
         app.applicationScope.launch {
-            if (app.database.captureDao().setNote(listOf(id), note) > 0) UploadWorker.schedule(app)
+            if (app.database.captureDao().setNote(listOf(id), note) > 0) {
+                UploadWorker.schedule(app)
+                // The note is part of what is embedded.
+                EmbedWorker.schedule(app)
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 package com.lbc.breadcrumb.data
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -17,9 +18,13 @@ import androidx.room.TypeConverters
  * Each workstream adds its own DAO here: one abstract function per DAO.
  */
 @Database(
-    entities = [Memory::class, MemoryFts::class, PendingDelete::class, ImportedSource::class],
-    version = 1,
+    entities = [Memory::class, MemoryFts::class, PendingDelete::class, ImportedSource::class, Embedding::class],
+    version = 2,
     exportSchema = true,
+    autoMigrations = [
+        // Local-first L1: the embeddings table.
+        AutoMigration(from = 1, to = 2),
+    ],
 )
 @TypeConverters(Converters::class)
 abstract class BreadcrumbDatabase : RoomDatabase() {
@@ -37,6 +42,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
 
     // Sync workstream: the upload queue's claims and marks
     abstract fun uploadDao(): UploadDao
+
+    // Local first: the vectors made on the phone
+    abstract fun embeddingDao(): EmbeddingDao
 
     companion object {
         private const val DB_NAME = "breadcrumb.db"
