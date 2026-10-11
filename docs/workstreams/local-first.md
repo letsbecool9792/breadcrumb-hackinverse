@@ -84,7 +84,7 @@ the server reads memories only when the person turns it on; what goes is strippe
     same `Reply` handling as the other calls, off the main thread.
   - Document both in `docs/api.md`. Tests: `npm test` for the routes, and `ServerClientTest`
     against MockWebServer.
-- [ ] **L4. What leaves the phone** (Aritra)
+- [x] **L4. What leaves the phone** (Aritra)
   - A setting, "Gemini reads my memories", off by default, held in SharedPreferences. While it is
     off, the upload pass sends no memories and no pictures; deletes still go. Turning it off calls
     `forgetAll()` (L3). For now the switch sits in the debug list.

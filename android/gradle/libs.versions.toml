@@ -19,6 +19,7 @@ work = "2.11.2"
 # The bundled model, not play-services-mlkit-text-recognition: that one fetches
 # its model on first use, so OCR would not work offline until it had.
 mlkitTextRecognition = "16.0.1"
+mlkitEntityExtraction = "16.0.0-beta6"
 # 5.5.0 requires compileSdk 37; 5.4.0 is the newest that builds against 36.1.
 okhttp = "5.4.0"
 # Pinned; 1.10+ wanted Kotlin 2.3, which the project now has, so it can move when there is a reason.
@@ -53,6 +54,7 @@ androidx-room-runtime = { group = "androidx.room", name = "room-runtime", versio
 androidx-room-compiler = { group = "androidx.room", name = "room-compiler", version.ref = "room" }
 androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
 mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+mlkit-entity-extraction = { group = "com.google.mlkit", name = "entity-extraction", version.ref = "mlkitEntityExtraction" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }

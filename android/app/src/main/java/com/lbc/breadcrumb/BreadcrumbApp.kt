@@ -38,6 +38,9 @@ class BreadcrumbApp : Application() {
     /** The server's API (docs/api.md), shared so its connection pool is too. */
     val server: ServerClient by lazy { ServerClient() }
 
+    /** Sync settings, including 'Gemini reads my memories' (local-first L4). */
+    val syncSettings: com.lbc.breadcrumb.sync.SyncSettings by lazy { com.lbc.breadcrumb.sync.SyncSettings(this) }
+
     /** The embedding model's file, downloaded once (local-first L1). */
     val models: ModelStore by lazy { ModelStore(this) }
 
@@ -65,6 +68,8 @@ class BreadcrumbApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // ML Kit entity extraction for redacting text leaving the phone (local-first L4).
+        com.lbc.breadcrumb.net.Redactor.deviceExtractor = com.lbc.breadcrumb.net.DeviceEntityExtractor()
         // Before the OCR queue starts: a read landing first would call the
         // no-op, and nothing would be scheduled.
         uploadScheduler = {
