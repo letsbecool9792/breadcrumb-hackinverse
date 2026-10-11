@@ -98,7 +98,7 @@ the server reads memories only when the person turns it on; what goes is strippe
   - Saves from banking, UPI and password-manager apps never go, by package name.
   - Tests: `RedactorTest` (JVM, the regexes, with real-looking samples), and the upload pass
     sending nothing while the setting is off.
-- [ ] **L5. A headline and a snippet in place of the summary** (Dhruba)
+- [x] **L5. A headline and a snippet in place of the summary** (Dhruba)
   - With the server off, there is no summary. `Headline.of(memory)` (pure):
     - a link's page title;
     - a PDF's title, or its first real line;

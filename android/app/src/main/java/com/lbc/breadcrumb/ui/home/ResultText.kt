@@ -150,8 +150,11 @@ object ResultText {
             MemoryType.IMAGE -> memory.title?.takeIf { it.isNotBlank() }
                 ?: memory.rawText?.let { firstLine(it) }
                 ?: summary?.takeIf { it.isNotBlank() }
+                ?: Headline.of(memory)
                 ?: "Image"
             MemoryType.PDF -> memory.title?.takeIf { it.isNotBlank() }
+                ?: summary?.takeIf { it.isNotBlank() }
+                ?: Headline.of(memory)
                 ?: "Document"
             MemoryType.AUDIO -> memory.title?.takeIf { it.isNotBlank() }
                 ?: "Audio"
