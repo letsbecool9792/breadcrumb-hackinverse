@@ -3,6 +3,7 @@ package com.lbc.breadcrumb.data
 import androidx.room.Dao
 import androidx.room.Query
 import androidx.room.Transaction
+import kotlinx.coroutines.flow.Flow
 
 /**
  * Sync workstream: what the upload queue claims, sends and marks.
@@ -128,6 +129,12 @@ interface UploadDao {
      */
     @Query("SELECT MIN(capturedAt) FROM memories WHERE syncState = 'PENDING' AND type IN ('IMAGE', 'PDF') AND extractedText IS NULL")
     suspend fun oldestUnreadWaiting(): Long?
+
+    /**
+     * Memories not yet SYNCED (PENDING, UPLOADING, FAILED).
+     */
+    @Query("SELECT COUNT(*) FROM memories WHERE syncState != 'SYNCED'")
+    fun observeUnsentCount(): Flow<Int>
 }
 
 /** What the server made of one memory, as the phone keeps it. */
