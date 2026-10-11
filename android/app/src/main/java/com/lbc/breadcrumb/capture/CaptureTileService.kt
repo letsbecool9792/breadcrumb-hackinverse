@@ -1,5 +1,6 @@
 package com.lbc.breadcrumb.capture
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -42,6 +43,7 @@ class CaptureTileService : TileService() {
             )
             startActivityAndCollapse(pendingIntent)
         } else {
+            @SuppressLint("StartActivityAndCollapseDeprecated")
             @Suppress("DEPRECATION")
             startActivityAndCollapse(intent)
         }
