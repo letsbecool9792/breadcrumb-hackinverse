@@ -367,17 +367,9 @@ fun LeavesTheAppGlyph(
     }
 }
 
-@Composable
-fun LeavesAppGlyph(
-    modifier: Modifier = Modifier,
-    color: Color = BoneDim,
-) {
-    LeavesTheAppGlyph(modifier = modifier, color = color)
-}
-
 /**
  * Clear × glyph (design §2):
- * Two diagonals across the box, stroke 1.5dp, round caps.
+ * Two diagonals across the whole box, stroke 1.5dp, round caps.
  */
 @Composable
 fun ClearGlyph(
@@ -386,34 +378,28 @@ fun ClearGlyph(
     strokeWidth: Dp = 1.5.dp,
 ) {
     Canvas(modifier = modifier) {
-        val u = minOf(size.width, size.height) / 16f
-        if (u <= 0f) return@Canvas
         val strokePx = strokeWidth.toPx()
+        // Across the whole box, the round caps kept inside it.
+        val lo = strokePx / 2f
+        val hiX = size.width - lo
+        val hiY = size.height - lo
+        if (hiX <= lo || hiY <= lo) return@Canvas
 
         drawLine(
             color = color,
-            start = Offset(3.5f * u, 3.5f * u),
-            end = Offset(12.5f * u, 12.5f * u),
+            start = Offset(lo, lo),
+            end = Offset(hiX, hiY),
             strokeWidth = strokePx,
             cap = StrokeCap.Round,
         )
         drawLine(
             color = color,
-            start = Offset(12.5f * u, 3.5f * u),
-            end = Offset(3.5f * u, 12.5f * u),
+            start = Offset(hiX, lo),
+            end = Offset(lo, hiY),
             strokeWidth = strokePx,
             cap = StrokeCap.Round,
         )
     }
-}
-
-@Composable
-fun ClearXGlyph(
-    modifier: Modifier = Modifier,
-    color: Color = BoneDim,
-    strokeWidth: Dp = 1.5.dp,
-) {
-    ClearGlyph(modifier = modifier, color = color, strokeWidth = strokeWidth)
 }
 
 /**
@@ -427,21 +413,26 @@ fun PlusGlyph(
     strokeWidth: Dp = 1.5.dp,
 ) {
     Canvas(modifier = modifier) {
-        val u = minOf(size.width, size.height) / 16f
-        if (u <= 0f) return@Canvas
         val strokePx = strokeWidth.toPx()
+        // Along the box's centre lines and across all of it, the round caps kept inside it.
+        val lo = strokePx / 2f
+        val hiX = size.width - lo
+        val hiY = size.height - lo
+        if (hiX <= lo || hiY <= lo) return@Canvas
+        val cx = size.width / 2f
+        val cy = size.height / 2f
 
         drawLine(
             color = color,
-            start = Offset(3.5f * u, 8f * u),
-            end = Offset(12.5f * u, 8f * u),
+            start = Offset(lo, cy),
+            end = Offset(hiX, cy),
             strokeWidth = strokePx,
             cap = StrokeCap.Round,
         )
         drawLine(
             color = color,
-            start = Offset(8f * u, 3.5f * u),
-            end = Offset(8f * u, 12.5f * u),
+            start = Offset(cx, lo),
+            end = Offset(cx, hiY),
             strokeWidth = strokePx,
             cap = StrokeCap.Round,
         )
