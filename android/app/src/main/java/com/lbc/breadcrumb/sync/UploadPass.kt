@@ -51,7 +51,8 @@ class UploadPass(
     suspend fun run(): Outcome {
         // Nothing is in flight when a pass starts: an UPLOADING row is one a killed process left.
         dao.releaseStale()
-        sendDeletes()?.let { return it }
+        // Off, the server was told to forget everything: a delete would only be a call to it (local first).
+        if (cloudAllowed()) sendDeletes()?.let { return it }
         // A link's page is read on the phone even with the setting off, since local search embeds its words (local-first L4).
         readLinks()
         // While the setting is off, send no memories and no pictures; deletes still go (local-first L4).

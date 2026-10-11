@@ -207,7 +207,7 @@ class UploadPassTest {
     }
 
     @Test
-    fun whileSettingIsOffUploadPassSendsNoMemoriesNoPicturesAndDeletesStillGo() = runBlocking {
+    fun whileSettingIsOffNothingGoesToTheServer() = runBlocking {
         val gone = text("gone", 0)
         memoryDao.upsert(gone)
         memoryDao.deleteEverywhere(gone, now = 1)
@@ -218,9 +218,9 @@ class UploadPassTest {
 
         assertTrue(outcome is UploadPass.Outcome.Done)
         assertTrue(linksRead)
-        // Deletes still go, but memories, pictures, and enrichment are never sent
-        assertEquals(listOf("delete"), api.calls.map { it.substringBefore(' ') })
-        assertEquals(0, memoryDao.pendingDeleteCount())
+        // No call at all: the server was told to forget everything, so even deletes wait.
+        assertEquals(emptyList<String>(), api.calls)
+        assertEquals(1, memoryDao.pendingDeleteCount())
         assertEquals(emptyList<UploadMemory>(), api.sent)
         assertEquals(emptyList<UploadPicture>(), api.pictures)
         assertEquals(SyncState.PENDING, state("m1"))

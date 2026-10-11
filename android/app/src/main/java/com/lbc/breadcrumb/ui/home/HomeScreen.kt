@@ -67,8 +67,10 @@ fun HomeScreen(
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchState by viewModel.search.collectAsStateWithLifecycle()
-    // Read again whenever the screen comes back from the debug list, where it is switched.
-    val cloudReads = viewModel.cloudReads
+    val cloudReads by viewModel.cloudReads.collectAsStateWithLifecycle()
+    val cloudParses by viewModel.cloudParses.collectAsStateWithLifecycle()
+    // What leaves the phone, opened from "privacy" under the wordmark.
+    var privacyOpen by rememberSaveable { mutableStateOf(false) }
     val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
     val gridState = rememberLazyStaggeredGridState()
     val context = LocalContext.current
@@ -169,6 +171,7 @@ fun HomeScreen(
                                     state = gridState,
                                     onOpen = open,
                                     onLongPressWordmark = onOpenDebug,
+                                    onPrivacy = { privacyOpen = true },
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -232,6 +235,15 @@ fun HomeScreen(
                 CompositionLocalProvider(LocalCloudReads provides cloudReads) {
                     MemoryDetail(memory, now, visibility, actions)
                 }
+            }
+
+            SheetLayer(item = if (privacyOpen) Unit else null, onDismiss = { privacyOpen = false }) { _, _ ->
+                PrivacySheet(
+                    cloudParses = cloudParses,
+                    onCloudParses = viewModel::setCloudParses,
+                    cloudReads = cloudReads,
+                    onCloudReads = viewModel::setCloudReads,
+                )
             }
 
             // Keeping something from inside the app, or bringing in what's already on the phone.
