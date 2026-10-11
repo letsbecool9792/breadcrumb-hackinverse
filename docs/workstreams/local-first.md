@@ -105,10 +105,9 @@ the server reads memories only when the person turns it on; what goes is strippe
     - a screenshot's first real line of OCR text, skipping status-bar and app chrome such as
       `12:20`, `KB/S LTE 4G`, battery and `Inbox`;
     - a note's first line.
-  - `Snippet.of(memory, words)` (pure): in a result row, the one line around the best match for
-    the query's words. It is the row's "why this matched", like a search engine's.
-  - Wire both into `ResultText.title` and `RowText`'s why line, where the summary sits now. A
-    summary, when there is one, still wins.
+  - ~~`Snippet.of(memory, words)`~~: dropped. `ResultText.fragment` (design §17) already shows the
+    words around the match in a row, and a match by meaning has no words to show.
+  - Wired into `ResultText.title`, after the summary, which still wins.
   - Tests (JVM): the OCR text of real screenshots on the phone makes good fixtures.
 
 ## Rules
