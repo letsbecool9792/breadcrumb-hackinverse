@@ -11,6 +11,7 @@ free.** One tap, no questions, done before the user's thumb leaves the screen.
 - `android/app/src/main/java/com/lbc/breadcrumb/capture/`: the receiving activities, the tile
   service, the rules that turn a share into a memory
 - `android/app/src/main/java/com/lbc/breadcrumb/ui/capture/`: the capture sheet
+- `android/app/src/main/java/com/lbc/breadcrumb/ui/keep/`: the "+" composer (C9)
 - Your entries in `AndroidManifest.xml` (activities, the tile service, the `<queries>` block) and
   your strings in `res/values/strings.xml`
 - Your tests under `app/src/test/…/capture/` (JVM) and `app/src/androidTest/…/capture/` (on the phone)
@@ -97,6 +98,58 @@ what Suparno runs when he reviews.
     `ConcurrentHashMap.newKeySet()`) to `BreadcrumbApp`; the sync workstream's queue skips those
     ids. Release on dismiss, on leaving for another app, and in `onDestroy`: a hold never
     released strands a memory until the process dies.
+- [ ] **C7. Keeping from inside the app: what Keep does, the draft, the shortcut** (design §13;
+  branch `capture/keep`; no UI yet)
+  - `capture/Keep.kt`: `const val ACTION_KEEP = "com.lbc.breadcrumb.action.KEEP"`, and what Keep
+    does, on the application's scope:
+    - Text alone is one memory by the share rules (a note, or a link when it holds a URL), with
+      no source app.
+    - With files, each file is its own memory, copied in as a share would be, with the text as
+      the note on every one.
+    - It schedules an upload and says how many it kept; none is a failure.
+    - It shares the code paths `CaptureActivity` already uses; it doesn't copy them.
+  - `capture/Draft.kt`:
+    - `Draft(text, attachments: List<DraftFile(uri, name, isPdf)>)`.
+    - `DraftCodec`: JSON; junk decodes to an empty draft.
+    - `DraftStore`: SharedPreferences, removed when empty. Each picked file gets
+      `takePersistableUriPermission(READ)`, released when the file is kept or removed. Loading
+      runs off the main thread and drops a file whose grant is gone.
+  - The launcher shortcut "Keep something" (short label "Keep"), as §13 has it:
+    `res/xml/shortcuts.xml`, its adaptive icon, and the `android.app.shortcuts` meta-data on
+    `MainActivity`. Counting its requests in `MainActivity` is Suparno's (U6).
+  - Tests:
+    - `DraftCodecTest` (JVM): a round trip; junk decodes to an empty draft.
+    - `DraftStoreTest` (on the phone): a file whose grant is gone is dropped on load.
+    - `WrittenCaptureTest` (on the phone): text alone gives one memory by the share rules, with
+      no source; files give one memory each, with the text as their note.
+- [ ] **C8. The capture sheet's look** (design §15; branch `capture/sheet-design`; after R6)
+  - Restyle `ui/capture/CaptureSheet.kt` to §15: the layout, sizes, `CrumbMark`, buttons and
+    words.
+  - Keep every behaviour it has:
+    - it stays until dismissed, and can't be dismissed while saving;
+    - one transition drives scrim and sheet;
+    - it finishes after the exit and a clear frame;
+    - the note is held and written on leaving;
+    - insets.
+  - Use R6's type helpers and `DocumentGlyph`; don't draw your own.
+  - `CaptureSheetTest` keeps passing, with its text lookups moved to the new words.
+  - *Check:* share a screenshot, a PDF, several pictures and a link. Each preview looks as §15
+    has it, the crumbs drop in on "Saved", and Undo and Done work as before.
+- [ ] **C9. The "+" composer** (design §13's sheet, and the "+" button of §8; branch
+  `capture/keep-sheet`; after R6 and C7)
+  - `ui/keep/KeepComposer.kt`:
+    - `@Composable fun ColumnScope.KeepComposer(state: KeepState, onBringIn: () -> Unit,
+      onKept: () -> Unit)`: the sheet's content as §13 has it, grabber included.
+    - `KeepState`: holds the draft through `DraftStore` (anything typed before the draft loads
+      wins), runs Keep, and says when it is keeping and when the last keep failed.
+  - `ui/keep/KeepSomethingButton.kt`: `KeepSomethingButton(hasDraft: Boolean, onClick: () -> Unit)`
+    (§8).
+  - Suparno hosts both (U6): the composer in his `SheetLayer`, the button beside the search
+    field.
+  - Tests on the phone (Compose):
+    - Keep is disabled with nothing to keep.
+    - Text alone keeps one memory and empties the draft.
+    - A failed keep shows the failure line and keeps the draft.
 
 ## Rules and pitfalls
 

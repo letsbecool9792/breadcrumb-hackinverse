@@ -31,8 +31,12 @@ The app's face is still the debug list: every memory, its state, and buttons to 
 and clear.
 
 **Next:**
-- The search screens, U3 to U6 in [sync-and-search.md](docs/workstreams/sync-and-search.md):
-  home, search, the detail, and the way back to the original.
+- The screens, built to [`docs/design.md`](docs/design.md) and split four ways:
+  - Dhruba: R6 to R8.
+  - Ayushi: S8 to S10.
+  - Aritra: C7 to C9.
+  - Suparno: U3 to U6, stitching the others' pieces in.
+- **R6 and S8 come first:** the screens build on them.
 - Then seeding the demo phone (below).
 
 Each brief holds its own checklist; tick a step in the PR that finishes it.
@@ -43,10 +47,10 @@ Each brief holds its own checklist; tick a step in the PR that finishes it.
 
 | Workstream | Owner | Brief | Builds | Needs the server? |
 |---|---|---|---|---|
-| Capture | Aritra (GitHub AM2004legend) | [capture.md](docs/workstreams/capture.md) | Share sheet, selection toolbar, Quick Settings tile, source app, the capture sheet | No |
-| Reading on the phone | Dhruba (DhrubaIsha2006) | [reading.md](docs/workstreams/reading.md) | OCR, PDF text, links' pages, local word search, the bulk importer | No |
-| Server | Ayushi (aeryxii) | [server.md](docs/workstreams/server.md) | Gemini ingest, embeddings, Atlas indexes, hybrid search, query parsing | Is the server |
-| Sync, search screens, integration | Suparno (letsbecool9792) | [sync-and-search.md](docs/workstreams/sync-and-search.md) | Upload queue, server client, home, search, detail, opening originals; reviews every PR | Yes |
+| Capture | Aritra (GitHub AM2004legend) | [capture.md](docs/workstreams/capture.md) | Share sheet, selection toolbar, Quick Settings tile, source app, the capture sheet and its look, the "+" composer and its draft | No |
+| Reading on the phone | Dhruba (DhrubaIsha2006) | [reading.md](docs/workstreams/reading.md) | OCR, PDF text, links' pages, local word search, the bulk importer and its way in; the screens' type, glyphs and thumbnails; opening and sharing originals | No |
+| Server | Ayushi (aeryxii) | [server.md](docs/workstreams/server.md) | Gemini ingest, embeddings, Atlas indexes, hybrid search, query parsing; on the phone, the search client, two-stage search and the text rules | Is the server |
+| Sync, search screens, integration | Suparno (letsbecool9792) | [sync-and-search.md](docs/workstreams/sync-and-search.md) | Upload queue, server client, home, search, the detail and its sheet, stitching the screens together; reviews every PR | Yes |
 
 **How the pieces meet:**
 

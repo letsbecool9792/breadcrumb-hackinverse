@@ -11,7 +11,10 @@ its words seconds after it is saved, before the network has done anything.
 
 - `…/breadcrumb/ocr/`: the OCR queue, the ML Kit reader, PDF reading
 - `…/breadcrumb/net/PageReader.kt` and the link-reading step (see R4)
-- `…/breadcrumb/imports/`: the bulk importer
+- `…/breadcrumb/imports/`: the bulk importer, and its way in from the app (R8)
+- `…/breadcrumb/ui/common/` and `…/breadcrumb/ui/home/HomeType.kt`: the screens' shared type,
+  glyphs and thumbnails (R6)
+- `…/breadcrumb/open/`: opening and sharing an original, and its `FileProvider` (R7)
 - `…/breadcrumb/data/`: your own DAOs (a `ReadingDao` for your queries, an `ImportDao` for
   `imported_sources`) and `FtsQuery`, registered in `BreadcrumbDatabase`
 - The line in `BreadcrumbApp.onCreate` that starts the OCR queue
@@ -136,6 +139,57 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
   - *Check:* import a screenshots folder → rows appear, get read, and (once sync exists) sync;
     import it again → nothing new; delete one and import again → it does not come back;
     Clear, then import again → everything comes back.
+- [ ] **R6. Shared pieces for the screens** (design §1 to §3; branch `ui/common`). **Do this first:
+  every screen, and capture's sheet, builds on it.**
+  - `ui/home/HomeType.kt`: `serif`, `sans`, `monoStyle`, `metaStyle` and `Quiet(title, hint)`
+    (§1), with the signatures written there. Every style in the screens goes through these.
+  - `ui/common/Glyphs.kt`:
+    - `CrumbTrail(modifier, walking = false)`, with an internal `stepLight(phase, i)`.
+    - `DocumentGlyph` and `NoteGlyph`.
+    - The small glyphs of §2 (picture, share, bin, leaves the app, clear ×, plus), each taking
+      `(modifier, color)`.
+    - The sheets' `Grabber()`: a 34×4dp pill in InkGrabber, top padding 12, bottom 10 (§11).
+  - `ui/common/Thumbnails.kt`: `object Thumbnails` (`load`, `cached`) and
+    `@Composable rememberThumbnail(memory, targetPx)` (§3). A PDF's first page is drawn through
+    `PdfRenderer` on white; no image library.
+  - Tests:
+    - `StepLightTest` (JVM): each crumb peaks in turn, and the last fifth of a lap is rest.
+    - `ThumbnailsTest` (on the phone): a picture decodes with both sides at least the target; a
+      PDF's first page draws on white; no file gives null.
+- [ ] **R7. Opening and sharing an original** (design §12; branch `open/originals`)
+  - In `open/`, `OriginalAction` (`ViewFile(file, mime)`, `ViewUrl(url)`, `CopyText(text)`,
+    `Missing`) and `ShareOut` are each **decided purely** from the memory and its stored file,
+    so the JVM can test them. A thin Android layer then carries them out:
+    - Open: ACTION_VIEW with a read grant; or the clipboard, toasting "Copied" below Android 13;
+      or "No app here can open this".
+    - Share: through `Intent.createChooser`, with Breadcrumb's own share receivers in
+      `EXTRA_EXCLUDE_COMPONENTS`.
+  - The `FileProvider`:
+    - authority `${applicationId}.originals`;
+    - `res/xml/originals_paths.xml`, exposing `<files-path name="originals" path="originals/" />`
+      and nothing else;
+    - not exported, with `grantUriPermissions="true"`.
+  - Suparno's detail (U5) calls these; name the entry points in your PR.
+  - Tests:
+    - `OriginalsTest` (JVM): the action and the share for each kind (a file, a link with and
+      without a URL, a note, a missing file), and the note on each share.
+    - `OriginalsProviderTest` (on the phone): a stored original reads back through its content
+      URI; the grant is read-only and one-off; the database and cache are unreachable through
+      the provider.
+- [ ] **R8. Bringing in, from the app** (design §14; branch `reading/import-ui`; after R6)
+  - `BulkImporter.forget()`: clears a finished or failed progress.
+  - `importLine(progress): String?`: pure; the bar's words for each state (§14).
+  - `@Composable fun ColumnScope.ImportPanel(onBack: () -> Unit, onPicked: () -> Unit)`: the
+    panel in the "+" sheet (§14), grabber included, with its three choices and their pickers.
+    The folder picker opens at `primary:Pictures/Screenshots`. `onPicked` closes the sheet; the
+    import runs on the application's scope.
+  - `@Composable ImportBar(progress, onDismiss)`: the pill over the search field, with its
+    walking crumbs, enter and exit. A tap forgets it, and it forgets itself 6 s after the import
+    finishes or fails.
+  - Suparno places both (U6).
+  - Tests:
+    - `ImportLineTest` (JVM): every state and its words.
+    - On the phone: the bar shows the line, and a tap forgets it.
 
 ## Rules and pitfalls
 
