@@ -122,7 +122,7 @@ what Suparno runs when he reviews.
     - `DraftStoreTest` (on the phone): a file whose grant is gone is dropped on load.
     - `WrittenCaptureTest` (on the phone): text alone gives one memory by the share rules, with
       no source; files give one memory each, with the text as their note.
-- [ ] **C8. The capture sheet's look** (design §15; branch `capture/sheet-design`; after R6)
+- [x] **C8. The capture sheet's look** (design §15; branch `capture/sheet-design`; after R6)
   - Restyle `ui/capture/CaptureSheet.kt` to §15: the layout, sizes, `CrumbMark`, buttons and
     words.
   - Keep every behaviour it has:
