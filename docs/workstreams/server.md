@@ -181,6 +181,14 @@ the Android build once (CLAUDE.md, "Setting up a machine").
     - a keystroke inside the pause abandons the server call;
     - the same phrase with different spacing starts nothing new.
 
+## Trying a search from the terminal
+
+`npm run search -- <phrase> [--limit N]` asks the running server (`npm run dev`) and prints how the
+phrase was taken apart (words, types, dates, source) and each result with its summary and where it
+placed by meaning and by words. It speaks HTTP to the server and opens no database of its own, so
+it costs one parse and one embedding on the free tier, like any search. The printing is
+`src/search_format.ts`, tested on its own.
+
 ## Testing rules
 
 - **`node --test` runs each test file in its own process, in parallel.** Two suites sharing a

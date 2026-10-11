@@ -389,6 +389,7 @@ cd server
 npm install
 npm run dev         # node --watch; restarts on save
 npm run reverse     # adb reverse tcp:3000 tcp:3000
+npm run search -- "that internship screenshot from april"   # the ranked list, in the terminal
 npm test
 npm run typecheck
 ```
