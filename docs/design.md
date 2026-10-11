@@ -545,8 +545,10 @@ All in strings.xml.
   28 characters before it, cut at a word and prefixed "…"; the tail the next 80, cut at a word
   with "…". Null when no word appears (a match by meaning).
 - **title(memory, summary)**: LINK: title ?: firstLine(rawText) ?: "Link". TEXT: firstLine(rawText)
-  ?: title ?: "Note". IMAGE: title ?: firstLine(rawText) ?: summary ?: "Image". PDF: title ?:
-  "Document".
+  ?: title ?: "Note". IMAGE: title ?: firstLine(rawText) ?: summary ?: headline ?: "Image". PDF: title ?: summary ?:
+  headline ?: "Document". **headline** (`Headline`, for when there is no summary): a picture's
+  first real line of OCR text, skipping the clock, network and battery lines, lone app words
+  ("Inbox", "to me") and lines mostly symbols; a PDF's first real line.
 - **firstLine(text, max = 90)**: the first non-blank line, trimmed; past 90 characters cut at a
   word with "…".
 - **opening(text, max)**: whole when short; else cut at a word with " …".
