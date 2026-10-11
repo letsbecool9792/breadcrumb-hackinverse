@@ -74,6 +74,10 @@ interface UploadDao {
     suspend fun markFailed(ids: List<String>)
 
     /** The debug list's button: refused memories go in the queue again. */
+    /** Cloud reading turned off and the server told to forget: everything is unsent again, so turning it on sends it all. */
+    @Query("UPDATE memories SET syncState = 'PENDING', remoteId = NULL, imageSentAt = NULL WHERE syncState != 'PENDING'")
+    suspend fun unsendAll(): Int
+
     @Query("UPDATE memories SET syncState = 'PENDING' WHERE syncState = 'FAILED'")
     suspend fun retryFailed(): Int
 
