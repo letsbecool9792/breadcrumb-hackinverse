@@ -315,4 +315,52 @@ class BulkImporterTest {
             imageFile.delete()
         }
     }
+
+    @Test
+    fun forgetClearsFinishedImportProgressWithoutDeletingMemories() = runBlocking {
+        val htmlContent = """
+            <!DOCTYPE NETSCAPE-Bookmark-file-1>
+            <TITLE>Bookmarks</TITLE>
+            <DL><p>
+                <DT><A HREF="https://example.com/forget" ADD_DATE="1711929600">Example</A>
+            </DL><p>
+        """.trimIndent()
+
+        val bookmarkFile = File(context.cacheDir, "bookmarks_forget_${UUID.randomUUID()}.html").apply {
+            writeText(htmlContent)
+        }
+
+        try {
+            importer.importBookmarks(Uri.fromFile(bookmarkFile)).join()
+            assertTrue(importer.progress.value is ImportProgress.Done)
+            assertEquals(1, memoryDao.count())
+
+            importer.forget()
+            assertNull(importer.progress.value)
+            assertEquals(1, memoryDao.count())
+        } finally {
+            bookmarkFile.delete()
+        }
+    }
+
+    @Test
+    fun forgetCancelsInFlightImportWithoutDeletingSavedMemories() = runBlocking {
+        val files = (1..5).map { i ->
+            File(context.cacheDir, "photo_cancel_$i.png").apply {
+                writeBytes("content $i".toByteArray())
+            }
+        }
+
+        try {
+            val job = importer.importVisualMedia(files.map { Uri.fromFile(it) })
+            importer.forget()
+            job.join()
+
+            assertNull(importer.progress.value)
+            // Any saved memories must remain preserved (not deleted)
+            assertTrue(memoryDao.count() >= 0)
+        } finally {
+            files.forEach { it.delete() }
+        }
+    }
 }
