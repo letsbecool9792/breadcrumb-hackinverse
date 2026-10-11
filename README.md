@@ -110,8 +110,9 @@ Built by Suparno, Ayushi, Dhruba and Aritra. Who builds what:
 
 ## Status
 
-The foundation is in: the Android project, the memory table, the server skeleton and the API
-contract. The four workstreams build on it; [`CLAUDE.md`](CLAUDE.md) tracks where each stands.
+Capture, reading on the phone, the server and the upload queue are in: a save is read, sent,
+understood and searchable. The search screens are next. [`CLAUDE.md`](CLAUDE.md) tracks where each
+workstream stands.
 
 ## Why "Breadcrumb"
 

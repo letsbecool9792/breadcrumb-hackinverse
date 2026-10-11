@@ -14,19 +14,26 @@ and what we are deliberately not building.** Read it before proposing work. Then
 
 ## Where things stand
 
-**The foundation is in**, on `main`:
+**On `main`**, each step checked as its brief says:
 
-- `android/`: the project (Compose, minSdk 29, Room, WorkManager, ML Kit, OkHttp and
-  serialization already in the dependencies), the brand icon, splash, fonts and theme, the
-  **whole database schema** at version 1 (`memories`, its word index `memories_fts`,
-  `pending_deletes`, `imported_sources`), the core `MemoryDao`, the store for originals, and a
-  debug list that shows every memory and its state.
-- `server/`: Express with `/health`, the Mongo connection, the memory document's shape, the
-  contract's types (`src/api.ts`), and every route of the contract as a stub answering 501.
-- `docs/`: the contract and the four briefs.
+- **Capture, C1 to C6.** The share sheet, the selection toolbar and the tile save in one tap,
+  with the source app and the capture sheet's note.
+- **Reading, R1 to R5.** OCR of pictures, PDFs' text, links' pages, local word search, and the
+  importer for seeding.
+- **The server, S1 to S7.** Gemini reads each memory once, embeds it and indexes it; search is
+  hybrid and filtered by the parsed phrase; the phone is kept in step.
+- **Sync, U1 and U2.** The phone sends its memories, pictures OCR could barely read, and deletes,
+  then copies the server's summaries back. A link's page is read before it goes.
 
-**Next:** the four workstreams, in parallel. Each brief holds its own checklist; tick a step in
-the PR that finishes it.
+The app's face is still the debug list: every memory, its state, and buttons to import, sync
+and clear.
+
+**Next:**
+- The search screens, U3 to U6 in [sync-and-search.md](docs/workstreams/sync-and-search.md):
+  home, search, the detail, and the way back to the original.
+- Then seeding the demo phone (below).
+
+Each brief holds its own checklist; tick a step in the PR that finishes it.
 
 ---
 
@@ -96,25 +103,36 @@ the server from the terminal, sync against the server.
 Things only a person at the phone, or the project owner, can do. Keep this list current: add to
 it whenever a change needs a manual check, and tick items off when done.
 
-- [ ] **Run the Android tests once.** They compile, but the machine that set the project up had
-      no memory left to start a test JVM. `cd android`, `./gradlew testDebugUnitTest` (4 JVM
-      tests), then on the phone `./gradlew installDebug installDebugAndroidTest` and
-      `adb shell am instrument -w com.lbc.breadcrumb.hackinverse.test/androidx.test.runner.AndroidJUnitRunner`
-      (6 tests: `MemoryDaoTest`).
-- [ ] **Install the foundation on the phone:** the debug list opens after the splash; **+** adds
-      sample memories; **Delete** and **Clear** remove them.
-- [ ] **Create the GitHub repo** `breadcrumb-hackinverse`, push `main`, and give AM2004legend,
+- [x] **Run the Android tests once**, JVM and on the phone (commands under "Dev workflow").
+- [x] **Install the foundation on the phone.**
+- [x] **Create the GitHub repo** `breadcrumb-hackinverse`, push `main`, and give AM2004legend,
       aeryxii and DhrubaIsha2006 write access.
-- [ ] **Confirm the owners** in the table above, and that each person is set up: JDK 21, the
-      Android SDK from the command line (see "Android"; no Android Studio) and an Android phone
-      with USB debugging for Aritra and Dhruba; for Ayushi, Node 22.18+, a free Atlas M0 cluster
-      and a free Gemini key (see the server brief).
+- [x] **Confirm the owners** in the table above, and that each person is set up. Dhruba's adb
+      connection was down for R3 and R4, so their phone checks ran on Suparno's phone.
+- [x] **Server tests against Atlas** (`cd server`, `npm test`, with `MONGODB_URI` set): passing
+      on the M0 cluster since 2026-10-10.
 - [ ] **Plan the seeding.** Search only impresses with a real corpus: put 500+ real items on the
       demo phone with the importer (reading R5) the day before the demo. Ingest costs one Flash
       Lite request per ten memories (500 a day), and embeddings take arrays (1,000 requests a
       day), so a few thousand items fit in a day.
-- [ ] **Server tests against Atlas** run only where `MONGODB_URI` is set; the skeleton's own
-      tests need nothing (`cd server`, `npm install`, `npm test`: 4 pass).
+- [ ] **Check U1, U2, R3 and R4 on the phone**, with the server running (`npm run dev`) and
+      the forward set (`npm run reverse`). The automated tests cannot cover these:
+  - **Server line:** says *reachable*. With the server stopped, a tap says *connection closed
+    without a reply*. After `adb reverse --remove-all`, a tap says *connection refused*.
+  - **Offline save:** save in airplane mode and it stays `pending`. Back online, it syncs,
+    nothing duplicated.
+  - **Killed mid-upload:** during an import, run
+    `adb shell am force-stop com.lbc.breadcrumb.hackinverse` while rows show `uploading`. On the
+    next launch they finish.
+  - **Photo with no text:** it syncs, its picture goes in one `POST /memories/images`, and it
+    gains a `summary:` line.
+  - **Delete:** deleting a synced memory sends `POST /memories/delete`.
+  - **PDFs:** a scanned PDF is read by OCR. A PDF behind a password shows *no text found*.
+  - **Links:** a bare link gets its page's description, and its title when it had none. A link
+    saved in airplane mode stays unread, and is read when the network is back.
+- [ ] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
+      in the workspace's VS Code settings. Its daemon keeps coming back and breaking command-line
+      builds with the jlink error (see "Android").
 
 ---
 
