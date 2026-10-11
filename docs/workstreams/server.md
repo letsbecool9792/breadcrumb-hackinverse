@@ -133,7 +133,7 @@ The server is done. These steps are the phone's half of search, with no screens:
 tested on the JVM, so they need no phone (Suparno runs anything that must run on one). Set up
 the Android build once (CLAUDE.md, "Setting up a machine").
 
-- [ ] **S8. The text rules** (design §17; branch `ui/result-text`). **Do this first: home (U3)
+- [x] **S8. The text rules** (design §17; branch `ui/result-text`). **Do this first: home (U3)
   uses them.**
   - `ui/home/ResultText.kt`: `object ResultText` with every rule of §17 (words, fragment,
     title, firstLine, opening, host, age, tileMeta, rowMeta, status, kept, counter, dates,
