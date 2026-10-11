@@ -35,6 +35,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
     // Reading workstream: bulk importer duplicate tracking
     abstract fun importDao(): ImportDao
 
+    // Sync workstream: the upload queue's claims and marks
+    abstract fun uploadDao(): UploadDao
+
     companion object {
         private const val DB_NAME = "breadcrumb.db"
 
