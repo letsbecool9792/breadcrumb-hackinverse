@@ -10,6 +10,7 @@
     "dev": "node --env-file-if-exists=.env --watch src/index.ts",
     "start": "node --env-file-if-exists=.env src/index.ts",
     "reverse": "adb reverse tcp:3000 tcp:3000",
+    "search": "node --env-file-if-exists=.env src/search_cli.ts",
     "test": "node --env-file-if-exists=.env --test \"src/**/*.test.ts\"",
     "typecheck": "tsc"
   },
