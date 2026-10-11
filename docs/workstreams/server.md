@@ -144,7 +144,7 @@ the Android build once (CLAUDE.md, "Setting up a machine").
       has it;
     - `enum class SearchStatus { RANKING, RANKED, OFFLINE, UNAVAILABLE }` in `ui/home/`.
   - Tests: `ResultTextTest`, covering every rule and its edges; §17's examples are test cases.
-- [ ] **S9. The search client, and the queries the screens need** (branch `sync/search-client`)
+- [x] **S9. The search client, and the queries the screens need** (branch `sync/search-client`)
   - `ServerClient.search(query, limit = 30): SearchOutcome`: GET /search on its own OkHttp
     client from the same base, with a 20 s call timeout. It returns `Found(hits, interpretation)`
     or `Unavailable(reason, offline)`:
