@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.litertlm.android)
     implementation(libs.coil.compose)
     testImplementation(libs.junit)
     testImplementation(libs.okhttp.mockwebserver)

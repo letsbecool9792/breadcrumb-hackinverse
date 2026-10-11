@@ -8,7 +8,7 @@ espressoCore = "3.5.1"
 # pull down another SDK platform.
 lifecycle = "2.10.0"
 activityCompose = "1.8.0"
-kotlin = "2.2.10"
+kotlin = "2.4.21"
 composeBom = "2026.02.01"
 coreSplashscreen = "1.0.1"
 # KSP 2.3.1+ supports AGP 9's built-in Kotlin; older <kotlin>-<ksp> versions
@@ -21,13 +21,16 @@ work = "2.11.2"
 mlkitTextRecognition = "16.0.1"
 # 5.5.0 requires compileSdk 37; 5.4.0 is the newest that builds against 36.1.
 okhttp = "5.4.0"
-# 1.10+ is built against Kotlin 2.3, and this project compiles with 2.2.10.
+# Pinned; 1.10+ wanted Kotlin 2.3, which the project now has, so it can move when there is a reason.
 kotlinxSerialization = "1.9.0"
-# Matches the coroutines version brought in transitively by lifecycle 2.10.0 and room 2.8.5
-kotlinxCoroutines = "1.10.2"
+# Matches the coroutines version LiteRT-LM brings in transitively (lifecycle and room bring 1.10.2).
+kotlinxCoroutines = "1.11.0"
 coil = "3.2.0"
+# Runs EmbeddingGemma 2 on the phone. Compiled with Kotlin 2.4, so the project is on 2.4 too.
+litertlm = "0.18.0"
 
 [libraries]
+litertlm-android = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 androidx-core-splashscreen = { group = "androidx.core", name = "core-splashscreen", version.ref = "coreSplashscreen" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
