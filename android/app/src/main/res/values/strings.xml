@@ -58,6 +58,19 @@
     <string name="copied">Copied</string>
     <string name="no_app_can_open">No app here can open this</string>
 
+    <!-- Sync workstream: the detail of a memory and the undo bar (design sections 11, 12, 16). -->
+    <string name="detail_saved">saved</string>
+    <string name="detail_from">from</string>
+    <string name="detail_taken">taken</string>
+    <string name="detail_status">status</string>
+    <string name="detail_text_found">text found</string>
+    <string name="detail_from_the_page">from the page</string>
+    <string name="detail_what_it_shows">what it shows</string>
+    <string name="detail_your_note">your note</string>
+    <string name="detail_edit">edit</string>
+    <string name="detail_delete">Delete</string>
+    <string name="undo_deleted">deleted</string>
+
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
          serif, the app's own voice; the rest is chrome. -->
     <string name="capture_saving">Saving…</string>
