@@ -54,6 +54,42 @@ class ServerClient(
         .callTimeout(UPLOAD_TIMEOUT_SECONDS + 30, TimeUnit.SECONDS)
         .build()
 
+    internal val searchClient = base.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(SEARCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .callTimeout(SEARCH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        .build()
+
+    /**
+     * GET /search?q=...&limit=...
+     * 20 s call timeout. Returns Found or Unavailable.
+     */
+    suspend fun search(query: String, limit: Int = 30): SearchOutcome {
+        val url = root.newBuilder()
+            .addPathSegment("search")
+            .addQueryParameter("q", query)
+            .addQueryParameter("limit", limit.toString())
+            .build()
+        val request = Request.Builder().url(url).get().build()
+        return try {
+            searchClient.newCall(request).await().use { response ->
+                val body = response.body.string()
+                if (response.isSuccessful) {
+                    val reply = runCatching { json.decodeFromString<SearchReply>(body) }.getOrNull()
+                    if (reply != null) {
+                        SearchOutcome.Found(reply.results, reply.interpretation)
+                    } else {
+                        SearchOutcome.Unavailable("Malformed search response", offline = false)
+                    }
+                } else {
+                    SearchOutcome.Unavailable("HTTP ${response.code}", offline = false)
+                }
+            }
+        } catch (error: IOException) {
+            SearchOutcome.Unavailable(statusOf(error).toString(), offline = true)
+        }
+    }
+
     /** Whether Breadcrumb's server is there, and if not, which of the ways it is not. */
     suspend fun checkHealth(): ServerStatus {
         val request = Request.Builder().url(root.resolve("health")!!).get().build()
@@ -110,6 +146,7 @@ class ServerClient(
     internal companion object {
         const val SERVICE = "breadcrumb"
         const val UPLOAD_TIMEOUT_SECONDS = 100L
+        const val SEARCH_TIMEOUT_SECONDS = 20L
         val JSON_TYPE = "application/json".toMediaType()
         val json = Json { ignoreUnknownKeys = true }
     }

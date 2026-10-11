@@ -91,4 +91,102 @@ class ServerClientTest {
         assertTrue(uploads.readTimeoutMillis >= 90_000)
         assertTrue(uploads.callTimeoutMillis >= 90_000)
     }
+
+    @Test
+    fun `search returns found with hits and interpretation`() = runBlocking {
+        val jsonBody = """
+            {
+              "query": "internship",
+              "interpretation": {
+                "query": "internship",
+                "types": ["IMAGE"],
+                "from": "2026-04-01",
+                "to": "2026-04-30",
+                "sourceApp": null
+              },
+              "results": [
+                {
+                  "id": "mem-1",
+                  "score": 0.0325,
+                  "ranks": { "vector": 1, "text": 2 },
+                  "type": "IMAGE",
+                  "hasLink": false,
+                  "summary": "Qualcomm SWE internship"
+                }
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse.Builder().body(jsonBody).build())
+
+        val outcome = client().search("internship screenshot from april", limit = 20)
+        assertTrue(outcome is SearchOutcome.Found)
+        val found = outcome as SearchOutcome.Found
+        assertEquals("internship", found.interpretation?.query)
+        assertEquals(listOf("IMAGE"), found.interpretation?.types)
+        assertEquals(1, found.hits.size)
+        assertEquals("mem-1", found.hits[0].id)
+        assertEquals(1, found.hits[0].ranks?.vector)
+        assertEquals(2, found.hits[0].ranks?.text)
+
+        val recorded = server.takeRequest()
+        assertEquals("/search", recorded.url.encodedPath)
+        assertEquals("internship screenshot from april", recorded.url.queryParameter("q"))
+        assertEquals("20", recorded.url.queryParameter("limit"))
+    }
+
+    @Test
+    fun `search handles null interpretation`() = runBlocking {
+        val jsonBody = """
+            {
+              "query": "qualcomm",
+              "interpretation": null,
+              "interpretationError": "model parse error",
+              "results": [
+                {
+                  "id": "mem-2"
+                }
+              ]
+            }
+        """.trimIndent()
+        server.enqueue(MockResponse.Builder().body(jsonBody).build())
+
+        val outcome = client().search("qualcomm")
+        assertTrue(outcome is SearchOutcome.Found)
+        val found = outcome as SearchOutcome.Found
+        assertEquals(null, found.interpretation)
+        assertEquals(1, found.hits.size)
+        assertEquals("mem-2", found.hits[0].id)
+    }
+
+    @Test
+    fun `a non-2xx is unavailable, not offline`() = runBlocking {
+        server.enqueue(MockResponse.Builder().code(503).body("""{"error":"could not read the search"}""").build())
+
+        val outcome = client().search("query")
+        assertTrue(outcome is SearchOutcome.Unavailable)
+        val unavail = outcome as SearchOutcome.Unavailable
+        assertEquals("HTTP 503", unavail.reason)
+        assertEquals(false, unavail.offline)
+    }
+
+    @Test
+    fun `a malformed 200 body is unavailable, not offline`() = runBlocking {
+        server.enqueue(MockResponse.Builder().code(200).body("not valid json").build())
+
+        val outcome = client().search("query")
+        assertTrue(outcome is SearchOutcome.Unavailable)
+        val unavail = outcome as SearchOutcome.Unavailable
+        assertEquals(false, unavail.offline)
+    }
+
+    @Test
+    fun `a refused connection is offline`() = runBlocking {
+        val port = server.port
+        server.close()
+
+        val outcome = ServerClient("http://127.0.0.1:$port/").search("query")
+        assertTrue(outcome is SearchOutcome.Unavailable)
+        val unavail = outcome as SearchOutcome.Unavailable
+        assertEquals(true, unavail.offline)
+    }
 }

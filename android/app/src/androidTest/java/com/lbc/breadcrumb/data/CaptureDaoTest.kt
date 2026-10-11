@@ -103,6 +103,26 @@ class CaptureDaoTest {
         assertEquals(1, matches("brewery"))
     }
 
+    @Test
+    fun aNullNoteClearsAnExistingNoteAndRequeuesIt() = runBlocking {
+        memories.upsert(
+            Memory(
+                id = "clear1",
+                type = MemoryType.TEXT,
+                rawText = "note content",
+                note = "existing note",
+                syncState = SyncState.SYNCED,
+            ),
+        )
+
+        val changed = capture.setNote(listOf("clear1"), null)
+
+        assertEquals(1, changed)
+        val after = memories.getById("clear1")
+        assertEquals(null, after?.note)
+        assertEquals(SyncState.PENDING, after?.syncState)
+    }
+
     private fun matches(word: String): Int =
         db.openHelper.readableDatabase
             .query("SELECT COUNT(*) FROM memories_fts WHERE memories_fts MATCH ?", arrayOf<Any?>("\"$word*\""))
