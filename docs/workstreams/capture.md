@@ -135,7 +135,7 @@ what Suparno runs when he reviews.
   - `CaptureSheetTest` keeps passing, with its text lookups moved to the new words.
   - *Check:* share a screenshot, a PDF, several pictures and a link. Each preview looks as §15
     has it, the crumbs drop in on "Saved", and Undo and Done work as before.
-- [ ] **C9. The "+" composer** (design §13's sheet, and the "+" button of §8; branch
+- [x] **C9. The "+" composer** (design §13's sheet, and the "+" button of §8; branch
   `capture/keep-sheet`; after R6 and C7)
   - `ui/keep/KeepComposer.kt`:
     - `@Composable fun ColumnScope.KeepComposer(state: KeepState, onBringIn: () -> Unit,
