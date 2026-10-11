@@ -10,11 +10,17 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
+/**
+ * One picked file. The uri is kept as text, so the draft's codec needs nothing
+ * from Android and the JVM can test it; [contentUri] is the Uri to use.
+ */
 data class DraftFile(
-    val uri: Uri,
+    val uri: String,
     val name: String?,
     val isPdf: Boolean,
-)
+) {
+    val contentUri: Uri get() = Uri.parse(uri)
+}
 
 data class Draft(
     val text: String = "",
@@ -45,7 +51,7 @@ object DraftCodec {
             text = draft.text,
             attachments = draft.attachments.map { file ->
                 DraftFileDto(
-                    uri = file.uri.toString(),
+                    uri = file.uri,
                     name = file.name,
                     isPdf = file.isPdf,
                 )
@@ -60,16 +66,8 @@ object DraftCodec {
             val dto = json.decodeFromString(DraftDto.serializer(), raw)
             Draft(
                 text = dto.text,
-                attachments = dto.attachments.mapNotNull { fileDto ->
-                    try {
-                        DraftFile(
-                            uri = Uri.parse(fileDto.uri),
-                            name = fileDto.name,
-                            isPdf = fileDto.isPdf,
-                        )
-                    } catch (_: Exception) {
-                        null
-                    }
+                attachments = dto.attachments.map { fileDto ->
+                    DraftFile(uri = fileDto.uri, name = fileDto.name, isPdf = fileDto.isPdf)
                 },
             )
         } catch (_: Exception) {
@@ -92,7 +90,7 @@ class DraftStore(
         }
 
         val validAttachments = draft.attachments.filter { file ->
-            hasGrant(file.uri)
+            hasGrant(file.contentUri)
         }
         val filtered = draft.copy(attachments = validAttachments)
         if (filtered.attachments.size != draft.attachments.size) {
@@ -118,7 +116,7 @@ class DraftStore(
         if (raw != null) {
             val draft = DraftCodec.decode(raw)
             for (file in draft.attachments) {
-                releasePermission(file.uri)
+                releasePermission(file.contentUri)
             }
         }
         prefs.edit().remove(KEY_DRAFT).apply()

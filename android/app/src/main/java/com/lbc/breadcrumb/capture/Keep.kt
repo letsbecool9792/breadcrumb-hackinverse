@@ -20,7 +20,7 @@ const val ACTION_KEEP = "com.lbc.breadcrumb.action.KEEP"
 object Keep {
 
     suspend fun keep(context: Context, draft: Draft): Int =
-        keep(context, draft.text, draft.attachments.map { it.uri })
+        keep(context, draft.text, draft.attachments.map { it.contentUri })
 
     suspend fun keep(
         context: Context,

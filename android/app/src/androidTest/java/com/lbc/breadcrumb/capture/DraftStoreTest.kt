@@ -57,8 +57,8 @@ class DraftStoreTest {
         val draft = Draft(
             text = "Draft with mixed grants",
             attachments = listOf(
-                DraftFile(uri = validUri, name = "valid.jpg", isPdf = false),
-                DraftFile(uri = revokedUri, name = "revoked.jpg", isPdf = false),
+                DraftFile(uri = validUri.toString(), name = "valid.jpg", isPdf = false),
+                DraftFile(uri = revokedUri.toString(), name = "revoked.jpg", isPdf = false),
             ),
         )
 
@@ -68,7 +68,7 @@ class DraftStoreTest {
 
         assertEquals("Draft with mixed grants", loaded.text)
         assertEquals(1, loaded.attachments.size)
-        assertEquals(validUri, loaded.attachments[0].uri)
+        assertEquals(validUri.toString(), loaded.attachments[0].uri)
     }
 
     @Test
@@ -87,7 +87,7 @@ class DraftStoreTest {
         val draft = Draft(
             text = "Saved draft",
             attachments = listOf(
-                DraftFile(uri = validUri, name = "valid.jpg", isPdf = false),
+                DraftFile(uri = validUri.toString(), name = "valid.jpg", isPdf = false),
             ),
         )
 
