@@ -139,7 +139,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
   - *Check:* import a screenshots folder → rows appear, get read, and (once sync exists) sync;
     import it again → nothing new; delete one and import again → it does not come back;
     Clear, then import again → everything comes back.
-- [ ] **R6. Shared pieces for the screens** (design §1 to §3; branch `ui/common`). **Do this first:
+- [x] **R6. Shared pieces for the screens** (design §1 to §3; branch `ui/common`). **Do this first:
   every screen, and capture's sheet, builds on it.**
   - `ui/home/HomeType.kt`: `serif`, `sans`, `monoStyle`, `metaStyle` and `Quiet(title, hint)`
     (§1), with the signatures written there. Every style in the screens goes through these.
