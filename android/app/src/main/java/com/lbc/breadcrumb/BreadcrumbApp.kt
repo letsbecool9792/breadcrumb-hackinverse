@@ -6,10 +6,13 @@ import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.net.ServerClient
 import com.lbc.breadcrumb.ocr.OcrQueue
+import com.lbc.breadcrumb.ocr.uploadScheduler
+import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 
 class BreadcrumbApp : Application() {
 
@@ -53,10 +56,15 @@ class BreadcrumbApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Before the OCR queue starts: a read landing first would call the
+        // no-op, and nothing would be scheduled.
+        uploadScheduler = { UploadWorker.schedule(it) }
         // Work that runs in every process starts here, inside applicationScope
         // so none of it touches the main thread during a capture's cold start:
         // the OCR queue (reading workstream), and the upload queue's first
-        // schedule (sync workstream). Building the queue builds the database.
+        // schedule (sync workstream), which sends whatever a killed process
+        // left. Building the queue builds the database.
         OcrQueue.launchIn(applicationScope, readingOriginals) { OcrQueue(this) }
+        applicationScope.launch { UploadWorker.schedule(this@BreadcrumbApp) }
     }
 }

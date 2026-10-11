@@ -7,6 +7,8 @@ import android.content.Context
  * read, including one that found nothing: an empty read is exactly the case
  * whose picture gets sent.
  *
- * A no-op until the sync workstream points it at `UploadWorker.schedule` (U2).
+ * [com.lbc.breadcrumb.BreadcrumbApp.onCreate] points it at
+ * [com.lbc.breadcrumb.sync.UploadWorker.schedule] before the OCR queue starts;
+ * a no-op until then, and in tests that build the queue alone.
  */
 var uploadScheduler: (Context) -> Unit = {}
