@@ -16,7 +16,9 @@ import java.util.concurrent.TimeUnit
  * - Stop at </head> OR after 512 KB, whichever comes first.
  * - Enforces http -> https and blocks localhost / bare IP addresses.
  * - Extracts <title> and meta description via [LinkRules].
- * - Network or read errors return [LinkReadResult.EMPTY].
+ * - An answer that is not a page (an error, another content type) returns
+ *   [LinkReadResult.EMPTY]. A network failure throws [IOException]:
+ *   [LinkReading] tells losing the network from a dead link.
  */
 class HttpLinkReader(
     private val client: OkHttpClient = defaultHttpClient(),
@@ -85,8 +87,6 @@ class HttpLinkReader(
                     description = description,
                 )
             }
-        } catch (_: IOException) {
-            LinkReadResult.EMPTY
         } catch (_: IllegalArgumentException) {
             LinkReadResult.EMPTY
         } catch (_: SecurityException) {
@@ -102,8 +102,12 @@ class HttpLinkReader(
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .followRedirects(true)
-            .followSslRedirects(true)
-            .addInterceptor { chain ->
+            // Plain http goes as https, and a redirect never takes it back down.
+            .followSslRedirects(false)
+            // A network interceptor sees every hop, redirects included; an
+            // application interceptor sees only the first request, so a
+            // redirect to localhost or a bare IP would get through.
+            .addNetworkInterceptor { chain ->
                 val requestUrl = chain.request().url.toString()
                 if (!LinkRules.isAllowedUrl(requestUrl)) {
                     throw IOException("Target URL is not allowed: $requestUrl")

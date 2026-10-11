@@ -40,11 +40,9 @@ class LinkReadingTest {
                 LinkReadResult(title = "Fetched Web Title", description = "Fetched web description")
         }
 
-        var uploadCalls = 0
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = fakeReader,
-            scheduleUpload = { uploadCalls++ },
         )
 
         val processed = linkReading.processMemory(memory)
@@ -55,7 +53,6 @@ class LinkReadingTest {
         assertEquals("Existing Chrome Share Title", after.title)
         assertEquals("Fetched web description", after.extractedText)
         assertEquals(SyncState.PENDING, after.syncState)
-        assertEquals(1, uploadCalls)
     }
 
     @Test
@@ -77,7 +74,6 @@ class LinkReadingTest {
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = fakeReader,
-            scheduleUpload = {},
         )
 
         val processed = linkReading.processMemory(memory)
@@ -90,7 +86,7 @@ class LinkReadingTest {
     }
 
     @Test
-    fun networkOrReadFailureBecomesFinalEmptyTextAndPreservesTitle() = runBlocking {
+    fun aNetworkFailureWhileOnlineIsFinalEmptyTextAndPreservesTitle() = runBlocking {
         val memory = Memory(
             id = "m3",
             type = MemoryType.LINK,
@@ -106,11 +102,10 @@ class LinkReadingTest {
             }
         }
 
-        var uploadCalls = 0
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = failingReader,
-            scheduleUpload = { uploadCalls++ },
+            isOnline = { true },
         )
 
         val processed = linkReading.processMemory(memory)
@@ -120,7 +115,34 @@ class LinkReadingTest {
         assertEquals("My Preserved Title", after.title)
         // Failure must result in empty string, not null, so it does not endlessly retry
         assertEquals("", after.extractedText)
-        assertEquals(1, uploadCalls)
+    }
+
+    @Test
+    fun aNetworkFailureWhileOfflineLeavesTheLinkForTheNextPass() = runBlocking {
+        val memory = Memory(id = "offline", type = MemoryType.LINK, rawText = "https://example.com/later", extractedText = null)
+        fakeDao.memories[memory.id] = memory
+        var online = false
+        var reads = 0
+        val linkReading = LinkReading(
+            readingDao = fakeDao,
+            reader = object : LinkReader {
+                override suspend fun readLink(url: String): LinkReadResult {
+                    reads++
+                    if (!online) throw java.io.IOException("Unable to resolve host")
+                    return LinkReadResult(title = "Later", description = "Read once the network came back")
+                }
+            },
+            isOnline = { online },
+        )
+
+        assertEquals(0, linkReading.readAllPending())
+        assertNull(fakeDao.getById("offline")!!.extractedText)
+        // Tried once in the pass, not again and again.
+        assertEquals(1, reads)
+
+        online = true
+        assertEquals(1, linkReading.readAllPending())
+        assertEquals("Read once the network came back", fakeDao.getById("offline")!!.extractedText)
     }
 
     @Test
@@ -146,7 +168,6 @@ class LinkReadingTest {
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = fakeReader,
-            scheduleUpload = {},
         )
 
         // Process first batch of 4
@@ -186,7 +207,6 @@ class LinkReadingTest {
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = fakeReader,
-            scheduleUpload = {},
         )
 
         val total = linkReading.readAllPending(batchSize = 4)
@@ -215,7 +235,6 @@ class LinkReadingTest {
         val linkReading = LinkReading(
             readingDao = fakeDao,
             reader = fakeReader,
-            scheduleUpload = {},
         )
 
         val processed = linkReading.processMemory(memory)
@@ -249,9 +268,6 @@ class LinkReadingTest {
                 .filter { (it.type == MemoryType.IMAGE || it.type == MemoryType.PDF) && it.extractedText == null }
                 .sortedByDescending { it.capturedAt }
                 .take(limit)
-
-        override fun observeUnreadLinks(): Flow<List<Memory>> =
-            flowOf(memories.values.filter { (it.type == MemoryType.LINK || (it.hasLink && it.type == MemoryType.TEXT)) && it.extractedText == null })
 
         override suspend fun getNewestUnreadLinks(limit: Int): List<Memory> =
             memories.values

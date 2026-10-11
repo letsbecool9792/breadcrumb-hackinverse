@@ -5,6 +5,9 @@
     <!-- The backend, and saved links' pages. Capture never waits on either
          (architecture rule 2). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Reading R4: whether the phone is online when a link's page fails to load.
+         Offline, the link waits for the next pass; online, the answer is final. -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- Each workstream adds its own entries here: capture its activities, its
          Quick Settings tile and the <queries> block for source apps; search the

@@ -266,8 +266,7 @@ class ReadingDaoTest {
         assertEquals(1, newest.size)
         assertEquals("l2", newest[0].id)
 
-        val unread = readingDao.observeUnreadLinks().first()
-        assertEquals(listOf("l2", "l1"), unread.map { it.id })
+        assertEquals(listOf("l2", "l1"), readingDao.getNewestUnreadLinks(10).map { it.id })
     }
 
     @Test
