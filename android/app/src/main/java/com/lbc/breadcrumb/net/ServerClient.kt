@@ -8,8 +8,10 @@ import okhttp3.Call
 import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 import java.io.EOFException
 import java.io.IOException
@@ -32,7 +34,7 @@ class ServerClient(
     baseUrl: String = BuildConfig.SERVER_URL,
     base: OkHttpClient = OkHttpClient(),
     healthTimeoutMillis: Long = 5_000,
-) {
+) : UploadApi {
     internal val root: HttpUrl = baseUrl.toHttpUrl()
 
     private val healthClient = base.newBuilder()
@@ -43,7 +45,6 @@ class ServerClient(
         .retryOnConnectionFailure(false)
         .build()
 
-    /** For the upload queue (U2). */
     internal val uploadClient = base.newBuilder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(60, TimeUnit.SECONDS)
@@ -68,9 +69,46 @@ class ServerClient(
         }
     }
 
+    override suspend fun sendMemories(memories: List<UploadMemory>) =
+        post("memories", json.encodeToString(memories)) { json.decodeFromString<Results<IngestResult>>(it).results }
+
+    override suspend fun sendPictures(pictures: List<UploadPicture>) =
+        post("memories/images", json.encodeToString(pictures)) { json.decodeFromString<Results<IngestResult>>(it).results }
+
+    override suspend fun askEnrichment(ids: List<String>) =
+        post("memories/enrichment", json.encodeToString(Ids(ids))) { json.decodeFromString<Results<EnrichmentReply>>(it).results }
+
+    override suspend fun sendDeletes(ids: List<String>) =
+        post("memories/delete", json.encodeToString(Ids(ids))) { json.decodeFromString<Deleted>(it).deleted }
+
+    /**
+     * Posts [body] and sorts the answer into the three ways the phone acts on.
+     * A 503's body is read too: it still says which memories were finished.
+     */
+    private suspend fun <T> post(path: String, body: String, read: (String) -> T): Reply<T> {
+        val request = Request.Builder().url(root.resolve(path)!!).post(body.toRequestBody(JSON_TYPE)).build()
+        return try {
+            uploadClient.newCall(request).await().use { response ->
+                val text = response.body.string()
+                val answer = runCatching { read(text) }.getOrNull()
+                when {
+                    response.code == 200 && answer != null -> Reply.Done(answer)
+                    response.code == 400 || response.code == 413 -> Reply.Refused(
+                        response.code,
+                        runCatching { json.decodeFromString<Refusal>(text).invalid.map { it.index } }.getOrDefault(emptyList()),
+                    )
+                    else -> Reply.Later(answer, "HTTP ${response.code}")
+                }
+            }
+        } catch (error: IOException) {
+            Reply.Later(null, statusOf(error).toString())
+        }
+    }
+
     internal companion object {
         const val SERVICE = "breadcrumb"
         const val UPLOAD_TIMEOUT_SECONDS = 100L
+        val JSON_TYPE = "application/json".toMediaType()
         val json = Json { ignoreUnknownKeys = true }
     }
 }
