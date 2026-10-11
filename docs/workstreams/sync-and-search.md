@@ -41,11 +41,11 @@ app. Also: reviewing everyone's PRs on the phone.
   - *Check:* the line says *reachable* with `npm run dev` and `npm run reverse`; *connection
     closed without a reply* with the server stopped; *connection refused* after
     `adb reverse --remove-all`. A tap checks again.
-- [ ] **U2. The upload queue**
+- [x] **U2. The upload queue**
   - Unique WorkManager work, with a network constraint, scheduled after every save and every
     read (`UploadWorker.schedule(context)`, which capture and reading call).
   - `BreadcrumbApp.onCreate` sets `uploadScheduler` (capture's and reading's hook, a no-op until
-    now) to `UploadWorker.schedule` **before the OCR queue starts**: a read landing first would
+    then) to `UploadWorker.schedule` **before the OCR queue starts**: a read landing first would
     call the no-op, and nothing would be scheduled. Uploads use the 90 s read timeout (U1).
   - Each pass: pending deletes first; then reading's link step; then memories, **oldest first,
     ten per request**; then pictures; then enrichment.
@@ -71,6 +71,22 @@ app. Also: reviewing everyone's PRs on the phone.
     it again.
   - *Check:* save in airplane mode → it stays PENDING; reconnect → it syncs, nothing duplicated;
     kill the app mid-upload → it recovers on the next pass.
+  - Built as `sync/UploadPass` (one pass, over `UploadDao` and `UploadApi`, tested on the phone
+    with a fake server) and `sync/UploadWorker` (unique work `upload`, `KEEP`, backoff
+    exponential from 30 s).
+    - A 400 that names memories (`invalid[].index`) fails only those; the rest go again.
+    - A 503 still marks the memories it finished.
+    - A pass scheduled again while it ran runs once more, so a save that lands after a step has
+      looked still goes.
+    - Held-back unread originals get an `upload-recheck` job for when their grace ends, since a
+      failed read schedules nothing.
+    - `onCreate` also schedules once, for whatever a killed process left.
+  - **A run in backoff stays in backoff:** a save while the server is down does not cut it short.
+    After starting the server or running `adb reverse`, the debug list's **sync now** runs the
+    queue at once; **retry refused** puts FAILED memories back.
+  - WorkManager stops a run after 10 minutes; the next one picks up where it stopped (UPLOADING
+    rows go back to PENDING). A large import syncs across several runs.
+  - The link step (reading R4) slots in at the start of `UploadPass.run` once it exists.
 - [ ] **U3. Home: the mosaic**
   - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
     picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
