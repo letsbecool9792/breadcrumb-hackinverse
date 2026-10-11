@@ -22,6 +22,7 @@ import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.OriginalStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import java.io.File
 import kotlin.math.roundToInt
@@ -42,6 +43,11 @@ object Thumbnails {
             return maxOf(1, (value.width * value.height * 4) / 1024)
         }
     }
+
+    /** Where thumbnails are decoded: at most [DECODES_AT_ONCE] at a time. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    internal val decoding = Dispatchers.IO.limitedParallelism(DECODES_AT_ONCE)
+    private const val DECODES_AT_ONCE = 3
 
     /** Cache key format: "$id@$targetPx:$localUri" */
     fun key(memory: Memory, targetPx: Int): String = "${memory.id}@$targetPx:${memory.localUri}"
@@ -199,7 +205,10 @@ fun rememberThumbnail(memory: Memory, targetPx: Int): ImageBitmap? {
 
     LaunchedEffect(memory.id, memory.localUri, targetPx) {
         if (Thumbnails.cachedExact(memory, targetPx) == null) {
-            val loaded = withContext(Dispatchers.IO) {
+            // A few at a time: a decode cannot be cancelled once begun, so a fast
+            // scroll would otherwise start dozens at once. A tile that has left by
+            // its turn is cancelled before it starts.
+            val loaded = withContext(Thumbnails.decoding) {
                 Thumbnails.load(context, memory, targetPx)
             }
             if (loaded != null) {
