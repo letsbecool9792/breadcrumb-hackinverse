@@ -85,4 +85,17 @@
     <!-- Capture workstream: launcher shortcut (design §13, §16) -->
     <string name="shortcut_keep_short">Keep</string>
     <string name="shortcut_keep_long">Keep something</string>
+
+    <!-- Capture workstream C9: the "+" composer and button (design §8, §13, §16) -->
+    <string name="keep_title">Keep something</string>
+    <string name="keep_button_description">Keep something</string>
+    <string name="keep_button_description_draft">Keep something — a draft is waiting</string>
+    <string name="keep_hint_empty">a thought, a link, anything…</string>
+    <string name="keep_hint_files">a note about it — who sent it, what it\'s for…</string>
+    <string name="keep_chip_photo">photo</string>
+    <string name="keep_chip_pdf">pdf</string>
+    <string name="keep_action">Keep</string>
+    <string name="keep_remove">Remove</string>
+    <string name="keep_failed">couldn\'t keep that — try again?</string>
+    <string name="keep_bring_in">bring in what\'s already on the phone</string>
 </resources>
