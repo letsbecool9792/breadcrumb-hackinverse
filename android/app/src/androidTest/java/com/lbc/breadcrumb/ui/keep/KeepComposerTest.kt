@@ -89,7 +89,9 @@ class KeepComposerTest {
     @Test
     fun textAloneKeepsOneMemoryAndEmptiesTheDraft() {
         var keptCount = 0
-        val state = KeepState(context, testScope, draftStore)
+        // A fake Keep: the real one writes the phone's real database (WrittenCaptureTest covers it, and cleans up).
+        val kept = mutableListOf<String>()
+        val state = KeepState(context, testScope, draftStore) { _, draft -> kept += draft.text; 1 }
         show(state, onKept = { keptCount++ })
 
         compose.onNode(hasSetTextAction()).performTextInput("Indiranagar brewery burger")
@@ -100,6 +102,7 @@ class KeepComposerTest {
         compose.waitForIdle()
 
         assertEquals(1, keptCount)
+        assertEquals(listOf("Indiranagar brewery burger"), kept)
         assertEquals("", state.text)
         assertTrue(state.attachments.isEmpty())
         assertFalse(state.lastFailed)
