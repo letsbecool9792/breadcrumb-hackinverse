@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="keep"
+        android:enabled="true"
+        android:icon="@drawable/ic_shortcut_keep"
+        android:shortcutShortLabel="@string/shortcut_keep_short"
+        android:shortcutLongLabel="@string/shortcut_keep_long">
+        <intent
+            android:action="com.lbc.breadcrumb.action.KEEP"
+            android:targetPackage="com.lbc.breadcrumb.hackinverse"
+            android:targetClass="com.lbc.breadcrumb.MainActivity" />
+    </shortcut>
+</shortcuts>

@@ -98,7 +98,7 @@ what Suparno runs when he reviews.
     `ConcurrentHashMap.newKeySet()`) to `BreadcrumbApp`; the sync workstream's queue skips those
     ids. Release on dismiss, on leaving for another app, and in `onDestroy`: a hold never
     released strands a memory until the process dies.
-- [ ] **C7. Keeping from inside the app: what Keep does, the draft, the shortcut** (design §13;
+- [x] **C7. Keeping from inside the app: what Keep does, the draft, the shortcut** (design §13;
   branch `capture/keep`; no UI yet)
   - `capture/Keep.kt`: `const val ACTION_KEEP = "com.lbc.breadcrumb.action.KEEP"`, and what Keep
     does, on the application's scope:
