@@ -7,8 +7,11 @@ import mockwebserver3.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
+import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 class HttpLinkReaderTest {
@@ -108,15 +111,35 @@ class HttpLinkReaderTest {
     }
 
     @Test
-    fun networkFailureReturnsEmptyResult() = runBlocking {
+    fun aNetworkFailureThrowsSoLinkReadingCanTellOfflineFromDead() {
         // Close server immediately so request fails with network error
+        val port = server.port
         server.close()
 
         val reader = HttpLinkReader(client = client, allowLocalhostForTesting = true)
-        val result = reader.readLink("http://localhost:59999/failed")
+        assertThrows(IOException::class.java) {
+            runBlocking { reader.readLink("http://127.0.0.1:$port/failed") }
+        }
+    }
 
-        assertNull(result.title)
-        assertEquals("", result.description)
+    @Test
+    fun aRedirectToLocalhostIsRefusedAtTheHop() {
+        // A public-looking host that resolves to this machine, as a real site would to its own server.
+        val client = HttpLinkReader.defaultHttpClient().newBuilder()
+            .dns { listOf(InetAddress.getByName("127.0.0.1")) }
+            .build()
+        server.enqueue(
+            MockResponse.Builder()
+                .code(302)
+                .addHeader("Location", "http://localhost:${server.port}/admin")
+                .build(),
+        )
+
+        val reader = HttpLinkReader(client = client, allowLocalhostForTesting = true)
+        assertThrows(IOException::class.java) {
+            runBlocking { reader.readLink("http://allowed.example:${server.port}/start") }
+        }
+        assertEquals(1, server.requestCount)
     }
 
     @Test

@@ -44,13 +44,7 @@ interface ReadingDao {
     @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT :limit")
     suspend fun getNewestUnreadMedia(limit: Int): List<Memory>
 
-    /**
-     * Unread links, newest first, for [com.lbc.breadcrumb.ocr.LinkReading].
-     */
-    @Query("SELECT * FROM memories WHERE (type = 'LINK' OR (hasLink = 1 AND type = 'TEXT')) AND extractedText IS NULL ORDER BY capturedAt DESC")
-    fun observeUnreadLinks(): Flow<List<Memory>>
-
-    /** The links the reading queue reads next: the newest [limit] still unread. */
+    /** The links [com.lbc.breadcrumb.ocr.LinkReading] reads next: the newest [limit] still unread. */
     @Query("SELECT * FROM memories WHERE (type = 'LINK' OR (hasLink = 1 AND type = 'TEXT')) AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT :limit")
     suspend fun getNewestUnreadLinks(limit: Int): List<Memory>
 
