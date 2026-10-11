@@ -40,16 +40,24 @@ the server reads memories only when the person turns it on; what goes is strippe
   - Add `com.google.ai.edge.litertlm:litertlm-android:0.18.0`.
   - **Done:** Kotlin 2.4.21, coroutines 1.11.0 to match what LiteRT-LM brings in. All 275 JVM
     tests pass, and the home screen's and `MemoryDaoTest`'s on the phone.
-- [ ] **L1. Embeddings on the phone** (Suparno; after L0)
-  - `Embedder`: one `EmbeddingEngine` for the app, on the CPU, started lazily and closed when idle.
-    Documents take `title: none | text: …`, queries take `task: search result | query: …`, and the
-    output is normalised. Input is capped at 1,024 tokens, so cut long text (2,000 characters).
-  - The model (`embeddinggemma-2-text-vision-440m.litertlm`, 388 MB, Apache 2.0, not gated):
-    downloaded once over Wi-Fi into app storage, never in the APK. `adb push` for development.
-  - Schema: `embedding` (BLOB) and `embeddedWith` (the model's name) on `memories`, by
-    AutoMigration. Back up the phone's database before installing.
-  - A WorkManager job embeds what reading has finished, newest first. A picture is embedded as a
-    picture only when OCR found under 80 characters, and only while charging.
+- [x] **L1. Embeddings on the phone** (Suparno; after L0)
+  - `embed/Embedder`: one `EmbeddingEngine` for the app, on the CPU, started on first use and
+    closed after two idle minutes, or after a pass over pictures. Documents take
+    `title: none | text: …` and queries `task: search result | query: …` (`EmbedText`), and the
+    output is normalised. Input is capped at 1,024 tokens, so text is cut at 2,000 characters.
+  - `embed/ModelStore`: the model (`embeddinggemma-2-text-vision-440m.litertlm`, 388 MB,
+    Apache 2.0, not gated) is downloaded once on an unmetered network into app storage, pinned to
+    one revision and checked against its SHA-256; never in the APK. During development,
+    `adb push` it to `/sdcard/Android/data/com.lbc.breadcrumb.hackinverse/files/`.
+  - Schema version 2: an `embeddings` table of its own (`memoryId`, `key`, `vector`,
+    `embeddedAt`), deleted with its memory, so the memories' own reads don't carry the floats.
+    The key names the model and a hash of what was embedded, so a finished read or a changed
+    note is embedded again.
+  - `embed/EmbedWorker` runs `EmbedPass` wherever the upload is scheduled (a save, a read, a
+    note, an Undo, a link's page read). A picture OCR could barely read is embedded as a picture
+    on the charger; meanwhile its few words stand in.
+  - Tests: `EmbedTextTest` and `EmbedPassTest` (JVM). `EmbedOnPhoneTest` uses the real model and
+    an in-memory database: a vague phrase finds its memory, and a vector goes with its memory.
 - [ ] **L2. Ranking on the phone** (Suparno; after L1, with L3's client)
   - Every vector in memory, kept current from Room; a query scores against all of them by dot
     product. No vector database: 5,000 memories is 15 MB.
@@ -77,6 +85,8 @@ the server reads memories only when the person turns it on; what goes is strippe
     catch OTPs, Aadhaar and PAN numbers, and API keys and long tokens. Each match becomes its type
     (`[phone]`). Dates and URLs stay. The phone's own copy is never changed.
   - Pictures never go, setting or not.
+  - Links' pages are read inside the upload pass today (`LinkReading`): keep them read with the
+    setting off, since search on the phone embeds what they say.
   - Saves from banking, UPI and password-manager apps never go, by package name.
   - Tests: `RedactorTest` (JVM, the regexes, with real-looking samples), and the upload pass
     sending nothing while the setting is off.

@@ -11,6 +11,7 @@ import androidx.work.WorkManager
 import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.lbc.breadcrumb.BreadcrumbApp
+import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.ocr.LinkReading
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -43,6 +44,8 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             } while (outcome is UploadPass.Outcome.Done && requests.get() != asked)
             outcome
         }
+        // The pass reads links' pages, and a page read changes what a link is embedded from.
+        EmbedWorker.schedule(applicationContext)
         return when (outcome) {
             is UploadPass.Outcome.Done -> {
                 outcome.recheckAt?.let { recheckAt(applicationContext, it - System.currentTimeMillis()) }
