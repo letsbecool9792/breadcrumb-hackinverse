@@ -145,7 +145,7 @@ the design wins.
     lands; "that internship screenshot from april" shows `1 of N · internship · images · apr`;
     stop the server and type: "offline · words only"; Back clears the field; a drag on the
     results puts the keyboard away.
-- [ ] **U5. The detail of a memory, and the way back to the original**
+- [x] **U5. The detail of a memory, and the way back to the original**
   - Design §10 to §12: `SheetLayer`, the detail, and delete with Undo and the undo bar.
     Opening and sharing come from R7.
   - **`SheetLayer` and the travelling picture are built** (`ui/home/SheetLayer.kt`,
@@ -176,6 +176,18 @@ the design wins.
   - Delete with five seconds of Undo instead of a confirmation (`deleteEverywhere`, `restore`).
   - *Check:* a screenshot opens in the gallery, a PDF in a PDF viewer, a link in the browser,
     a note's text copies.
+  - Built as `ui/home/`: `MemoryDetail` (the sheet's content: artifact, heading, note,
+    provenance, found text, actions), `DetailText` (its words, pure), `UndoBar`, and the opening
+    and delete wiring in `HomeScreen` and `HomeViewModel`. Opening and sharing are reading's
+    `Originals` (R7). The row is live, so a summary copied back appears while it is open.
+  - A note is written through `CaptureDao.setNote` (blank clears it, the same words change
+    nothing), and the sheet closing mid-edit still writes it.
+  - A delete closes the sheet and takes the row at once; the undo bar is over the search field.
+    The view model being cleared mid-undo makes the delete final.
+  - *Check on the phone:* tap a tile: the picture flies into the sheet and back out; open a
+    screenshot, a PDF, a link and a note, each with its one action; add, edit and clear a note
+    and see it upload; share a picture, and Breadcrumb is not in the chooser; delete, then Undo
+    within five seconds brings it back, and without it the memory is gone from the server too.
 - [ ] **U6. The "+" and the polish** (nice to have, in this order)
   - Design §13, §14 and §18: the "+" sheet, hosting C9's composer and R8's import panel; the
     import bar; the shortcut's request count in `MainActivity`; and the haptics.
