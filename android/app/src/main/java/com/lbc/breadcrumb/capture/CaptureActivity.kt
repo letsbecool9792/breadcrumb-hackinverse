@@ -121,7 +121,7 @@ abstract class CaptureActivity : ComponentActivity() {
             val files = uris
                 .filter { it.scheme == ContentResolver.SCHEME_CONTENT }
                 .mapNotNull { uri ->
-                    val mime = MediaRules.mimeOf(providerType(uri), declaredType)
+                    val mime = MediaRules.mimeOf(CaptureStorage.providerType(app, uri), declaredType)
                     MediaRules.kindOf(mime)?.let { kind -> Triple(uri, mime, kind) }
                 }
             if (files.isEmpty()) {
@@ -131,39 +131,23 @@ abstract class CaptureActivity : ComponentActivity() {
 
             val caption = MediaRules.captionFor(text, files.size)
             val hasLink = caption?.let { TextRules.parseText(it).second } ?: false
-            for ((uri, mime, kind) in files) {
-                try {
-                    val id = UUID.randomUUID().toString()
-                    val name = MediaHelper.getDisplayName(app, uri)
-                    val stored = app.originals.copyIn(uri, id, MediaRules.extensionFor(mime))
-                    val memory = Memory(
-                        id = id,
-                        type = kind,
-                        hasLink = hasLink,
-                        rawText = caption,
-                        title = MediaRules.titleFor(subject, name, kind),
-                        contentCreatedAt = MediaHelper.contentDate(app, uri, stored, kind),
-                        sourceApp = source.first,
-                        sourceAppLabel = source.second,
-                        localUri = app.originals.uriFor(stored),
-                    )
-                    app.database.memoryDao().upsert(memory)
+            for ((uri, _, _) in files) {
+                val memory = CaptureStorage.saveFile(
+                    app = app,
+                    uri = uri,
+                    declaredType = declaredType,
+                    rawText = caption,
+                    hasLink = hasLink,
+                    subject = subject,
+                    sourceApp = source.first,
+                    sourceAppLabel = source.second,
+                )
+                if (memory != null) {
                     keep(memory)
-                } catch (e: CancellationException) {
-                    throw e
-                } catch (_: Exception) {
-                    // Unreadable, or its grant ended when the person left: not saved.
                 }
             }
         }
     }
-
-    private fun providerType(uri: Uri): String? =
-        try {
-            app.contentResolver.getType(uri)
-        } catch (_: Exception) {
-            null
-        }
 
     private fun startSaving(total: Int, work: suspend () -> Unit) {
         saving = app.applicationScope.launch {

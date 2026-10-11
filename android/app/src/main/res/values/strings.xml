@@ -57,4 +57,8 @@ or copy it and tap the breadcrumb tile</string>
     <string name="capture_clipboard_empty">Clipboard is empty</string>
     <string name="capture_clipboard_sensitive">Not saved: clipboard is marked sensitive</string>
     <string name="capture_clipboard_unreadable">Couldn\'t read the clipboard</string>
+
+    <!-- Capture workstream: launcher shortcut (design §13, §16) -->
+    <string name="shortcut_keep_short">Keep</string>
+    <string name="shortcut_keep_long">Keep something</string>
 </resources>

@@ -22,14 +22,11 @@ class ShareReceiverActivity : CaptureActivity() {
         }
 
         val subject = intent.getCharSequenceExtra(Intent.EXTRA_SUBJECT)?.toString()
-        val (type, hasLink) = TextRules.parseText(text)
         val (sourceApp, sourceAppLabel) = SourceHelper.getSource(this)
         saveText(
-            Memory(
-                type = type,
-                hasLink = hasLink,
-                rawText = text,
-                title = TextRules.titleFor(subject, text),
+            CaptureStorage.createTextMemory(
+                text = text,
+                subject = subject,
                 sourceApp = sourceApp,
                 sourceAppLabel = sourceAppLabel,
             ),
