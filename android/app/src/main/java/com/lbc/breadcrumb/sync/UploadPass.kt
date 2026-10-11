@@ -25,6 +25,8 @@ import java.util.Base64
 class UploadPass(
     private val dao: UploadDao,
     private val api: UploadApi,
+    /** Whether memories may leave the phone (local-first L4 setting). */
+    private val cloudAllowed: () -> Boolean = { false },
     /** Ids the capture sheet holds while its note field is open. */
     private val held: () -> Collection<String> = { emptyList() },
     /** True while the OCR queue is working through unread pictures. */
@@ -50,10 +52,12 @@ class UploadPass(
         // Nothing is in flight when a pass starts: an UPLOADING row is one a killed process left.
         dao.releaseStale()
         sendDeletes()?.let { return it }
-        // A link's page is read before its memory goes, so it is sent once, with its words.
+        // A link's page is read on the phone even with the setting off, since local search embeds its words (local-first L4).
         readLinks()
+        // While the setting is off, send no memories and no pictures; deletes still go (local-first L4).
+        if (!cloudAllowed()) return Outcome.Done(null)
+        // Pictures never go, setting or not (local-first L4): skips sendPictures().
         return sendMemories()
-            ?: sendPictures()
             ?: copyEnrichment()
             ?: Outcome.Done(recheckAt())
     }
@@ -77,8 +81,18 @@ class UploadPass(
         while (true) {
             val batch = dao.claimNext(held().toList(), reading(), unreadSince(), MEMORIES_PER_REQUEST)
             if (batch.isEmpty()) return null
-            val ids = batch.map { it.id }
-            when (val reply = api.sendMemories(batch.map { it.toUpload() })) {
+
+            // Banking, UPI, and password manager saves never go (local-first L4).
+            val (sensitive, allowed) = batch.partition { com.lbc.breadcrumb.net.SensitiveApps.isSensitive(it.sourceApp) }
+            if (sensitive.isNotEmpty()) {
+                val sensitiveIds = sensitive.map { it.id }
+                dao.markSynced(sensitiveIds)
+                dao.markEnriched(sensitiveIds, now())
+            }
+            if (allowed.isEmpty()) continue
+
+            val ids = allowed.map { it.id }
+            when (val reply = api.sendMemories(allowed.map { it.toUpload() })) {
                 is Reply.Done -> if (!settle(ids, reply.body)) return Outcome.Later("not every memory was finished")
                 is Reply.Later -> {
                     settle(ids, reply.body.orEmpty())

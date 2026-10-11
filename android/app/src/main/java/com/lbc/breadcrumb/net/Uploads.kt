@@ -63,7 +63,7 @@ data class UploadMemory(
     val updatedAt: Long,
 )
 
-fun Memory.toUpload() = UploadMemory(
+fun Memory.toUpload(redact: (String) -> String = Redactor::redact) = UploadMemory(
     id = id,
     type = type.name,
     hasLink = hasLink,
@@ -71,10 +71,10 @@ fun Memory.toUpload() = UploadMemory(
     contentCreatedAt = contentCreatedAt,
     sourceApp = sourceApp,
     sourceAppLabel = sourceAppLabel,
-    title = title,
-    rawText = rawText,
-    extractedText = extractedText,
-    note = note,
+    title = title?.let(redact),
+    rawText = rawText?.let(redact),
+    extractedText = extractedText?.let(redact),
+    note = note?.let(redact),
     updatedAt = updatedAt,
 )
 

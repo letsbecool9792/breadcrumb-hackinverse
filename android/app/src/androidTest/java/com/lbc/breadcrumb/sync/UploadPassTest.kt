@@ -48,12 +48,14 @@ class UploadPassTest {
     fun close() = db.close()
 
     private fun pass(
+        cloudAllowed: Boolean = true,
         held: Collection<String> = emptyList(),
         reading: Boolean = false,
         readLinks: suspend () -> Unit = {},
     ) = UploadPass(
         dao = db.uploadDao(),
         api = api,
+        cloudAllowed = { cloudAllowed },
         held = { held },
         reading = { reading },
         pictureOf = { PICTURE },
@@ -188,7 +190,7 @@ class UploadPassTest {
     }
 
     @Test
-    fun aPictureGoesOnlyWhenOcrReadLittleAndOnlyOnce() = runBlocking {
+    fun picturesNeverGoSettingOrNot() = runBlocking {
         memoryDao.upsertAll(
             listOf(
                 Memory(id = "photo", type = MemoryType.IMAGE, localUri = "file:///p.jpg", extractedText = "", capturedAt = 1),
@@ -198,17 +200,51 @@ class UploadPassTest {
 
         pass().run()
 
-        assertEquals(listOf("photo"), api.pictures.map { it.id })
-        assertEquals("image/jpeg", api.pictures.single().mimeType)
-        assertEquals(Base64.getEncoder().encodeToString(PICTURE), api.pictures.single().data)
-        // The picture went after its memory, and its summary was asked for after the picture.
-        assertEquals(listOf("memories", "pictures", "enrichment"), api.calls.map { it.substringBefore(' ') })
-        assertNotNull(memoryDao.getById("photo")!!.imageSentAt)
+        // Memories and enrichment go, but pictures never go (local-first L4)
+        assertEquals(emptyList<UploadPicture>(), api.pictures)
+        assertEquals(listOf("memories", "enrichment"), api.calls.map { it.substringBefore(' ') })
+        assertNull(memoryDao.getById("photo")!!.imageSentAt)
+    }
 
-        api.calls.clear()
+    @Test
+    fun whileSettingIsOffUploadPassSendsNoMemoriesNoPicturesAndDeletesStillGo() = runBlocking {
+        val gone = text("gone", 0)
+        memoryDao.upsert(gone)
+        memoryDao.deleteEverywhere(gone, now = 1)
+        memoryDao.upsertAll(listOf(text("m1", 1), text("m2", 2)))
+        var linksRead = false
+
+        val outcome = pass(cloudAllowed = false, readLinks = { linksRead = true }).run()
+
+        assertTrue(outcome is UploadPass.Outcome.Done)
+        assertTrue(linksRead)
+        // Deletes still go, but memories, pictures, and enrichment are never sent
+        assertEquals(listOf("delete"), api.calls.map { it.substringBefore(' ') })
+        assertEquals(0, memoryDao.pendingDeleteCount())
+        assertEquals(emptyList<UploadMemory>(), api.sent)
+        assertEquals(emptyList<UploadPicture>(), api.pictures)
+        assertEquals(SyncState.PENDING, state("m1"))
+        assertEquals(SyncState.PENDING, state("m2"))
+    }
+
+    @Test
+    fun savesFromSensitiveAppsNeverGo() = runBlocking {
+        memoryDao.upsertAll(
+            listOf(
+                Memory(id = "gpay", type = MemoryType.TEXT, sourceApp = "com.google.android.apps.nbu.paisa.user", rawText = "paid 500", capturedAt = 1),
+                Memory(id = "pass", type = MemoryType.TEXT, sourceApp = "com.onepassword.android", rawText = "login creds", capturedAt = 2),
+                Memory(id = "safe", type = MemoryType.TEXT, sourceApp = "com.whatsapp", rawText = "hello", capturedAt = 3),
+            ),
+        )
+
         pass().run()
 
-        assertEquals(emptyList<String>(), api.calls)
+        // Only safe memory was sent over network
+        assertEquals(listOf("safe"), api.sent.map { it.id })
+        // Sensitive memories are marked synced locally so they don't block the queue
+        assertEquals(SyncState.SYNCED, state("gpay"))
+        assertEquals(SyncState.SYNCED, state("pass"))
+        assertEquals(SyncState.SYNCED, state("safe"))
     }
 
     @Test
