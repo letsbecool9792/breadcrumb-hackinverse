@@ -23,6 +23,8 @@ mlkitTextRecognition = "16.0.1"
 okhttp = "5.4.0"
 # 1.10+ is built against Kotlin 2.3, and this project compiles with 2.2.10.
 kotlinxSerialization = "1.9.0"
+# Matches the coroutines version brought in transitively by lifecycle 2.10.0 and room 2.8.5
+kotlinxCoroutines = "1.10.2"
 coil = "3.2.0"
 
 [libraries]
@@ -51,6 +53,8 @@ mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition"
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 okhttp-mockwebserver = { group = "com.squareup.okhttp3", name = "mockwebserver3", version.ref = "okhttp" }
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerialization" }
+# Added for virtual time testing in TwoStageSearchTest, matching the 1.10.2 version used transitively
+kotlinx-coroutines-test = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
