@@ -27,6 +27,13 @@
     <string name="debug_sync_now">sync now</string>
     <string name="debug_retry_refused">retry refused</string>
 
+    <!-- Sync workstream: the home screen (design section 16). -->
+    <string name="home_wordmark">breadcrumb</string>
+    <string name="home_nothing_title">Nothing kept yet</string>
+    <string name="home_nothing_start">Start here: the + brings in the screenshots and PDFs already on your phone.</string>
+    <string name="home_nothing_or">or share anything to breadcrumb from any app,
+or copy it and tap the breadcrumb tile</string>
+
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
          serif, the app's own voice; the rest is chrome. -->
     <string name="capture_saving">Saving…</string>
