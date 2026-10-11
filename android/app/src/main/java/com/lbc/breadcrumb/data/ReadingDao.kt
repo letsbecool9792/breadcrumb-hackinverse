@@ -40,24 +40,9 @@ interface ReadingDao {
     @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC")
     fun observeUnreadMedia(): Flow<List<Memory>>
 
-    /** The one picture or PDF the queue reads next: the newest still unread. */
-    @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT 1")
-    suspend fun getNewestUnreadMedia(): Memory?
-
-    @Query("SELECT COUNT(*) FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL")
-    suspend fun countUnreadMedia(): Int
-
-    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC")
-    fun observeUnreadPdfs(): Flow<List<Memory>>
-
-    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC")
-    suspend fun getUnreadPdfs(): List<Memory>
-
-    @Query("SELECT * FROM memories WHERE type = 'PDF' AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT 1")
-    suspend fun getNewestUnreadPdf(): Memory?
-
-    @Query("SELECT COUNT(*) FROM memories WHERE type = 'PDF' AND extractedText IS NULL")
-    suspend fun countUnreadPdfs(): Int
+    /** The pictures and PDFs the OCR queue reads next: the newest [limit] still unread. */
+    @Query("SELECT * FROM memories WHERE type IN ('IMAGE', 'PDF') AND extractedText IS NULL ORDER BY capturedAt DESC LIMIT :limit")
+    suspend fun getNewestUnreadMedia(limit: Int): List<Memory>
 
     @Query("SELECT * FROM memories WHERE id = :id")
     suspend fun getById(id: String): Memory?

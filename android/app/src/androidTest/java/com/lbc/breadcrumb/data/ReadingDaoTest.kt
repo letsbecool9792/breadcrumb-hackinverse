@@ -244,30 +244,11 @@ class ReadingDaoTest {
             ),
         )
 
-        assertEquals(2, readingDao.countUnreadMedia())
-        val newest = readingDao.getNewestUnreadMedia()
-        assertEquals("pdf1", newest?.id)
+        assertEquals(listOf("pdf1"), readingDao.getNewestUnreadMedia(1).map { it.id })
+        assertEquals(listOf("pdf1", "img1"), readingDao.getNewestUnreadMedia(10).map { it.id })
 
         val unread = readingDao.observeUnreadMedia().first()
         assertEquals(listOf("pdf1", "img1"), unread.map { it.id })
-    }
-
-    @Test
-    fun unreadPdfsQueriesReturnOnlyPdfs() = runBlocking {
-        memoryDao.upsertAll(
-            listOf(
-                Memory(id = "img1", type = MemoryType.IMAGE, capturedAt = 1_000, extractedText = null),
-                Memory(id = "pdf_old", type = MemoryType.PDF, capturedAt = 2_000, extractedText = null),
-                Memory(id = "pdf_new", type = MemoryType.PDF, capturedAt = 3_000, extractedText = null),
-            ),
-        )
-
-        assertEquals(2, readingDao.countUnreadPdfs())
-        val newest = readingDao.getNewestUnreadPdf()
-        assertEquals("pdf_new", newest?.id)
-
-        val unread = readingDao.getUnreadPdfs()
-        assertEquals(listOf("pdf_new", "pdf_old"), unread.map { it.id })
     }
 
     private fun matchesFts(word: String): Int =
