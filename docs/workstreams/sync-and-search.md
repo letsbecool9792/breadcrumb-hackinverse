@@ -188,7 +188,7 @@ the design wins.
     screenshot, a PDF, a link and a note, each with its one action; add, edit and clear a note
     and see it upload; share a picture, and Breadcrumb is not in the chooser; delete, then Undo
     within five seconds brings it back, and without it the memory is gone from the server too.
-- [ ] **U6. The "+" and the polish** (nice to have, in this order)
+- [x] **U6. The "+" and the polish** (nice to have, in this order)
   - Design §13, §14 and §18: the "+" sheet, hosting C9's composer and R8's import panel; the
     import bar; the shortcut's request count in `MainActivity`; and the haptics.
   - An amber "+" beside the search field opens a sheet for keeping something from inside the
@@ -199,6 +199,14 @@ the design wins.
     released once the file is kept or removed from the draft, since an app may hold only 512.
     A launcher shortcut, "Keep something", opens it from the app icon.
   - The import's way in (reading's R5) lives in this sheet, as a quiet line.
+  - **Built** (branch `sync/u6-plus`): `PlusSheet` hosts capture's composer and reading's
+    import panel in a `SheetLayer`; `SearchRow` puts the "+" beside the field; `ImportBar` sits
+    over the undo bar; `MainActivity` counts the shortcut's requests. The motion and haptics
+    came with U3 to U5.
+  - *Check:* the "+" hides while the field is focused or holds a query, and shows a dot while a
+    draft waits. Write something and Keep: it drops into the mosaic. "bring in what's already on
+    the phone", pick a folder: the sheet closes and the import bar counts. Long-press the app
+    icon, "Keep something": the composer opens, over a memory open or the debug list.
   - Motion: the mosaic rising in on launch, results staggering in, a new save dropping in, the
     picture travelling from its tile into the detail and back. Haptics on results landing and on
     a delete.

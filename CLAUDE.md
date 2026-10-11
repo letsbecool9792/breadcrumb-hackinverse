@@ -26,18 +26,14 @@ and what we are deliberately not building.** Read it before proposing work. Then
   hybrid and filtered by the parsed phrase; the phone is kept in step.
 - **Sync, U1 and U2.** The phone sends its memories, pictures OCR could barely read, and deletes,
   then copies the server's summaries back. A link's page is read before it goes.
-
-The app's face is still the debug list: every memory, its state, and buttons to import, sync
-and clear.
+- **The screens**, built to [`docs/design.md`](docs/design.md): R6 to R8, S8 to S10, C7 to C9 and
+  U3 to U6. Home is the mosaic with search under it; a memory opens in a sheet that opens its
+  original; the "+" keeps something or brings in what's on the phone, and the launcher
+  shortcut opens it. The debug list sits behind a long press on the wordmark, in debug builds.
 
 **Next:**
-- The screens, built to [`docs/design.md`](docs/design.md) and split four ways:
-  - Dhruba: R6 to R8.
-  - Ayushi: S8 to S10.
-  - Aritra: C7 to C9.
-  - Suparno: U3 to U6, stitching the others' pieces in.
-- **R6 and S8 come first:** the screens build on them.
-- Then seeding the demo phone (below).
+- Seeding the demo phone (below).
+- Deciding how much stays on the phone: the judges asked about personal data on the server.
 
 Each brief holds its own checklist; tick a step in the PR that finishes it.
 
