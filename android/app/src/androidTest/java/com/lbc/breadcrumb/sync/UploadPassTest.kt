@@ -47,12 +47,17 @@ class UploadPassTest {
     @After
     fun close() = db.close()
 
-    private fun pass(held: Collection<String> = emptyList(), reading: Boolean = false) = UploadPass(
+    private fun pass(
+        held: Collection<String> = emptyList(),
+        reading: Boolean = false,
+        readLinks: suspend () -> Unit = {},
+    ) = UploadPass(
         dao = db.uploadDao(),
         api = api,
         held = { held },
         reading = { reading },
         pictureOf = { PICTURE },
+        readLinks = readLinks,
     )
 
     private suspend fun state(id: String) = memoryDao.getById(id)!!.syncState
@@ -74,6 +79,24 @@ class UploadPassTest {
         assertEquals(0, memoryDao.pendingDeleteCount())
         assertEquals(SyncState.SYNCED, state("m23"))
         assertEquals("summary of m01", memoryDao.getById("m01")!!.summary)
+    }
+
+    @Test
+    fun aLinksPageIsReadAfterDeletesAndBeforeItsMemoryGoes() = runBlocking {
+        val gone = text("gone", 0)
+        memoryDao.upsert(gone)
+        memoryDao.deleteEverywhere(gone, now = 1)
+        memoryDao.upsert(Memory(id = "link", type = MemoryType.LINK, rawText = "https://example.com/job", capturedAt = 1))
+
+        pass(readLinks = {
+            api.calls += "links"
+            db.readingDao().updateLinkReading("link", "Apply by April 30", "Intern, Qualcomm")
+        }).run()
+
+        assertEquals(listOf("delete", "links", "memories"), api.calls.map { it.substringBefore(' ') }.take(3))
+        // Sent once, with its page's words.
+        assertEquals(listOf("Apply by April 30"), api.sent.map { it.extractedText })
+        assertEquals("Intern, Qualcomm", api.sent.single().title)
     }
 
     @Test

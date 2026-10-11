@@ -12,7 +12,8 @@ import java.util.Base64
 
 /**
  * One run of the upload queue, in the contract's order (docs/api.md, "What
- * the phone sends"): pending deletes; then memories, oldest first, ten per
+ * the phone sends"): pending deletes; then links' pages, read on the phone
+ * (reading R4); then memories, oldest first, ten per
  * request; then pictures OCR could barely read, four per request; then a
  * copy of what the server made of them. Each step goes until it has nothing
  * left, asking Room again after every request, so a save made meanwhile goes
@@ -30,6 +31,8 @@ class UploadPass(
     private val reading: () -> Boolean = { false },
     /** A picture as it is sent ([Pictures.jpeg]), or null when there is none to send. */
     private val pictureOf: suspend (Memory) -> ByteArray? = { null },
+    /** Reads unread links' pages ([com.lbc.breadcrumb.ocr.LinkReading]), so each goes with its page's words. */
+    private val readLinks: suspend () -> Unit = {},
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     sealed interface Outcome {
@@ -46,9 +49,10 @@ class UploadPass(
     suspend fun run(): Outcome {
         // Nothing is in flight when a pass starts: an UPLOADING row is one a killed process left.
         dao.releaseStale()
-        return sendDeletes()
-            // Reading's link step (R4) runs here, once it exists: a link's page is read before its memory goes.
-            ?: sendMemories()
+        sendDeletes()?.let { return it }
+        // A link's page is read before its memory goes, so it is sent once, with its words.
+        readLinks()
+        return sendMemories()
             ?: sendPictures()
             ?: copyEnrichment()
             ?: Outcome.Done(recheckAt())
