@@ -96,7 +96,19 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     **except losing the network**, which leaves the link for the next pass.
   - Expose it as one step the upload queue runs first on each pass (`LinkReading`), four pages
     at a time.
-  - *Check:* a bare link copied from a chat gets its page's title and description.
+  - Built so:
+    - `UploadPass` runs `LinkReading.readAllPending()` after deletes and before memories, so a
+      link goes once, with its page's words. It runs only with a network, as the upload queue
+      does, and not in the OCR queue: a bookmarks import would hold every picture behind its
+      pages.
+    - **Offline is told from dead by asking Android**, not by the error. `HttpLinkReader` throws
+      on a network failure, and `LinkReading` writes the empty, final answer only while the
+      phone has a validated network. Otherwise the link is left unread for the next pass.
+    - **Every hop is checked**, redirects included (a network interceptor; an application
+      interceptor sees only the first request), and a redirect from https to http is not
+      followed.
+  - *Check:* a bare link copied from a chat gets its page's title and description; a link saved
+    in airplane mode stays unread, and is read once the network is back.
 - [x] **R5. Bring in what is already on the phone** (needed to seed the demo)
   - Through pickers only, so no storage permission: a whole folder
     (`ACTION_OPEN_DOCUMENT_TREE`, for `Pictures/Screenshots` or `DCIM`); only some pictures (the

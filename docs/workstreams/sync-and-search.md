@@ -86,7 +86,8 @@ app. Also: reviewing everyone's PRs on the phone.
     queue at once; **retry refused** puts FAILED memories back.
   - WorkManager stops a run after 10 minutes; the next one picks up where it stopped (UPLOADING
     rows go back to PENDING). A large import syncs across several runs.
-  - The link step (reading R4) slots in at the start of `UploadPass.run` once it exists.
+  - The link step (reading R4) runs after deletes and before memories, so a link goes once, with
+    its page's words.
 - [ ] **U3. Home: the mosaic**
   - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
     picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
