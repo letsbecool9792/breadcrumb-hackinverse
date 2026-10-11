@@ -68,9 +68,9 @@ the server reads memories only when the person turns it on; what goes is strippe
     link's site.
   - It is the second stage of `twoStageSearch`, with the same `SearchState`, so the screens didn't
     change. Until the model is on the phone, the server still ranks.
-  - **The parse:** until L3 lands, the server's `GET /search` carries it (its interpretation
-    only); then `HomeViewModel` switches to `ServerClient.parse`. A parse that fails, or takes
-    over 2.5 s, costs only the filters.
+  - **The parse:** `ServerClient.parse` (L3), sending the phrase with the names it may mean: the
+    apps things were shared from and the most-saved sites, named as the server names them
+    (`embed/Sites`). A parse that fails, or takes over 2.5 s, costs only the filters.
   - Tests: `LocalSearchTest` (JVM): fusion, the meaning window, each filter, a failed or slow
     parse, no model. `EmbedOnPhoneTest` runs the whole search with the real model.
 - [x] **L3. Parsing on its own, and forgetting** (Ayushi; server and client)
