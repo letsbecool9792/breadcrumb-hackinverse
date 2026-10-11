@@ -210,6 +210,7 @@ fun MemoryListScreen() {
                     app.syncSettings.geminiReadsMemories = checked
                     if (!checked) {
                         app.applicationScope.launch {
+                            app.database.uploadDao().unsendAll()
                             app.server.forgetAll()
                         }
                     } else {

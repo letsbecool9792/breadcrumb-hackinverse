@@ -559,7 +559,8 @@ All in strings.xml.
   lowercase ("2d · whatsapp · image + link").
 - **status(memory)**: reading: extractedText null and a LINK → "page not read yet"; null and an
   IMAGE or PDF with a stored file → "still reading it". Sending: FAILED → "the server refused
-  it"; PENDING or UPLOADING → "not sent yet · words only"; SYNCED → nothing. Joined " · "; null
+  it"; PENDING or UPLOADING → "not sent yet", and nothing while Gemini doesn't read memories
+  (local first); SYNCED → nothing. Joined " · "; null
   when empty.
 - **kept(total, unsent)**: "17 kept", or "17 kept · 2 unsent".
 - **counter(shown, total, typed, interpretation, today, status)**: "{shown} of {total}", then the
