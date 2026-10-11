@@ -48,6 +48,7 @@ import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.imports.ImportProgress
+import com.lbc.breadcrumb.sync.UploadWorker
 import com.lbc.breadcrumb.ui.theme.Mono
 import com.lbc.breadcrumb.ui.theme.Sans
 import kotlinx.coroutines.launch
@@ -129,6 +130,7 @@ fun MemoryListScreen() {
                     app.originals.clear()
                     // Or importing again after a Clear would skip everything as seen.
                     app.database.importDao().clear()
+                    UploadWorker.schedule(app)
                 }
             }) { Text(stringResource(R.string.debug_clear), style = chrome) }
             TextButton(onClick = {
@@ -191,6 +193,28 @@ fun MemoryListScreen() {
             }
         }
 
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(stringResource(R.string.debug_upload), style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // Out of any backoff: after starting the server, or running adb reverse.
+            TextButton(onClick = { UploadWorker.runNow(app) }) {
+                Text(stringResource(R.string.debug_sync_now), style = chrome)
+            }
+            // Refused memories are not retried on their own: the same bytes would be refused again.
+            TextButton(onClick = {
+                app.applicationScope.launch {
+                    if (app.database.uploadDao().retryFailed() > 0) UploadWorker.runNow(app)
+                }
+            }) {
+                Text(stringResource(R.string.debug_retry_refused), style = chrome)
+            }
+        }
+
         val progressText = when (val p = importProgress) {
             is ImportProgress.Scanning -> p.message
             is ImportProgress.Running -> "importing ${p.current}/${p.total} · ${p.imported} added · ${p.skipped} skipped"
@@ -222,6 +246,7 @@ fun MemoryListScreen() {
                         app.applicationScope.launch {
                             memoryDao.deleteEverywhere(memory, System.currentTimeMillis())
                             app.originals.delete(memory)
+                            UploadWorker.schedule(app)
                         }
                     })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
