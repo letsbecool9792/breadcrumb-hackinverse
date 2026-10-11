@@ -340,6 +340,12 @@ indexes per cluster**; one vector index plus one text index fits.
   and originals. Install and instrument directly instead (commands below). The test APK runs in
   the app's process, so once `BreadcrumbApp.onCreate` opens the real database, running tests
   migrates it: back up first.
+- **An on-phone test never clears, or lists-and-deletes, the real database or `originals/`.** The
+  test APK runs in the app's process, so `app.database` is the person's real one. Use an
+  in-memory Room database; where a test must go through `app.database` (it exercises code that
+  does), have it note what existed before, look only at what it created, and remove only that.
+  `WrittenCaptureTest` once deleted everything, and a test run wiped the phone's saved memories
+  and, through the upload queue, the server's.
 - **Cleartext HTTP is blocked by default.** The debug build permits it to `localhost` only
   (`src/debug/res/xml/network_security_config.xml`); release gets nothing.
 - **"The paging file is too small"** (or a JVM `hs_err_pid` crash log in `android/`): the machine
