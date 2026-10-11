@@ -12,7 +12,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import java.net.URI
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -73,15 +72,10 @@ class LocalSearch(
         }
         interpretation.sourceApp?.let { source ->
             val app = memory.sourceAppLabel.equals(source, ignoreCase = true)
-            val site = hostOf(memory)?.contains(source.lowercase().replace(" ", "")) == true
+            val site = Sites.of(memory.rawText).any { it.equals(source, ignoreCase = true) }
             if (!app && !site) return false
         }
         return true
-    }
-
-    private fun hostOf(memory: Memory): String? {
-        val url = memory.rawText?.let { URL.find(it)?.value } ?: return null
-        return runCatching { URI(url).host?.lowercase() }.getOrNull()
     }
 
     companion object {
@@ -92,8 +86,6 @@ class LocalSearch(
         const val MEANING_WINDOW = 0.12f
 
         const val PARSE_WAIT_MILLIS = 2_500L
-
-        private val URL = Regex("https?://\\S+")
 
         /** Reciprocal rank fusion, equal weights, ranks 1-based: the server's `fuse`, on the phone. */
         fun fuse(byMeaning: List<String>, byWords: List<String>, limit: Int): List<Triple<String, Double, Ranks>> {

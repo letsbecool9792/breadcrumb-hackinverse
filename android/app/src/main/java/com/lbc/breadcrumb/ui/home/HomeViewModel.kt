@@ -8,7 +8,8 @@ import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.LocalSearch
 import com.lbc.breadcrumb.embed.VectorIndex
-import com.lbc.breadcrumb.net.SearchOutcome
+import com.lbc.breadcrumb.embed.Sites
+import com.lbc.breadcrumb.net.Reply
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -56,8 +57,11 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         embed = { app.embedder.text(it) },
         vectors = VectorIndex(app.database.embeddingDao())::current,
         words = { query, limit -> app.database.readingDao().search(query, limit) },
-        // Until the server has its parse-only call (L3), its search carries the parse.
-        parse = { (app.server.search(it, 1) as? SearchOutcome.Found)?.interpretation },
+        // Only the phrase leaves the phone, with the names it may mean (L3).
+        parse = { phrase ->
+            val sources = Sites.sourcesOf(app.database.memoryDao().getAll())
+            (app.server.parse(phrase, sources) as? Reply.Done)?.body
+        },
         memories = { app.database.memoryDao().getAll() },
     )
 
