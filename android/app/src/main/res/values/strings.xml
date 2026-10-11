@@ -22,6 +22,10 @@
     <string name="server_other">server · another server on the port (%1$s)</string>
     <string name="server_timed_out">server · no answer in time</string>
     <string name="server_unreachable">server · unreachable: %1$s</string>
+    <!-- The upload queue's buttons: a run at once, out of any backoff; refused memories queued again. -->
+    <string name="debug_upload">upload:</string>
+    <string name="debug_sync_now">sync now</string>
+    <string name="debug_retry_refused">retry refused</string>
 
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
          serif, the app's own voice; the rest is chrome. -->
