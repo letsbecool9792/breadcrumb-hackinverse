@@ -22,6 +22,8 @@ their own cluster.
 ## What you own
 
 `server/src/`, all of it, apart from the `/health` contract and `db.ts`, which are shared.
+On the phone (S8 to S10): `ui/home/ResultText.kt`, `SearchJoin.kt`, `TwoStageSearch.kt`,
+`net/Search.kt`, and `ServerClient.search`.
 
 ## Steps
 
@@ -124,6 +126,60 @@ workstream sends.
     sent on WhatsApp.
 - [x] **S7. Keeping the phone in step**: `POST /memories/enrichment` and `POST /memories/delete`,
   as in the contract. A delete removes the text, the enrichment and the vector; idempotent.
+
+### On the phone: the search's logic (Kotlin, tested on the JVM)
+
+The server is done. These steps are the phone's half of search, with no screens: pure Kotlin
+tested on the JVM, so they need no phone (Suparno runs anything that must run on one). Set up
+the Android build once (CLAUDE.md, "Setting up a machine").
+
+- [ ] **S8. The text rules** (design §17; branch `ui/result-text`). **Do this first: home (U3)
+  uses them.**
+  - `ui/home/ResultText.kt`: `object ResultText` with every rule of §17 (words, fragment,
+    title, firstLine, opening, host, age, tileMeta, rowMeta, status, kept, counter, dates,
+    saved, taken, monthOf). `fragment` returns the lead-in, the hit and the tail separately, so
+    the screen can light the hit.
+  - `counter` needs two types the next steps share, so make them here:
+    - `Interpretation(query, types, from, to, sourceApp)` in `net/Search.kt`, as docs/api.md
+      has it;
+    - `enum class SearchStatus { RANKING, RANKED, OFFLINE, UNAVAILABLE }` in `ui/home/`.
+  - Tests: `ResultTextTest`, covering every rule and its edges; §17's examples are test cases.
+- [ ] **S9. The search client, and the queries the screens need** (branch `sync/search-client`)
+  - `ServerClient.search(query, limit = 30): SearchOutcome`: GET /search on its own OkHttp
+    client from the same base, with a 20 s call timeout. It returns `Found(hits, interpretation)`
+    or `Unavailable(reason, offline)`:
+    - offline when it could not reach the server (IOException);
+    - not offline when the server answered without results (any non-2xx, or a body that would
+      not parse).
+  - `SearchHit` and `Ranks` match docs/api.md, with `ignoreUnknownKeys`.
+  - `UploadDao.observeUnsentCount(): Flow<Int>`: memories not yet SYNCED.
+  - The detail's note: `CaptureDao.setNote(listOf(id), note)` already takes null (clearing the
+    note), changes the row only when the note differs, re-queues it, and returns the rows
+    changed. Add the on-phone test that null clears it; add a by-id wrapper only if it reads
+    better.
+  - `ui/home/SearchJoin.kt`: `joinHits(hits, held: List<Memory>): List<SearchResult>`, with
+    `SearchResult(memory, hit: SearchHit?)`. It keeps the server's order with the phone's rows,
+    and drops a hit the phone does not hold.
+  - Tests:
+    - `ServerClientTest`: found; interpretation null; a non-2xx is unavailable, not offline; a
+      refused connection is offline.
+    - `SearchJoinTest`: the order is kept, and unknown ids are dropped.
+- [ ] **S10. Two answers in turn** (design §9's logic; branch `sync/two-stage-search`)
+  - `ui/home/TwoStageSearch.kt` turns a `Flow<String>` of what is typed into a
+    `Flow<SearchState>`: `Resting`, or `Searching(phrase, results, interpretation, status)`.
+  - It runs on every change of the normalised query (trimmed, with runs of whitespace as one
+    space), using `collectLatest`:
+    - an empty query gives Resting;
+    - the phone's word search answers at once (RANKING);
+    - after a 450 ms pause, the server answers. Found gives the joined hits, the
+      interpretation, and RANKED. Unavailable leaves the word matches standing, as OFFLINE or
+      UNAVAILABLE.
+  - Word search, the server and the held rows come in as functions, so the tests can fake them.
+  - Tests: `TwoStageSearchTest`, on virtual time (`kotlinx-coroutines-test`, added as a test
+    dependency with a comment saying why):
+    - each state above;
+    - a keystroke inside the pause abandons the server call;
+    - the same phrase with different spacing starts nothing new.
 
 ## Testing rules
 

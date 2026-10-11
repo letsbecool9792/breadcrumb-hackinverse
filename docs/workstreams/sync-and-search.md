@@ -15,8 +15,10 @@ the design wins.
 - `…/breadcrumb/net/ServerClient.kt` and the Kotlin data classes matching
   [`docs/api.md`](../api.md)
 - `…/breadcrumb/sync/`: the upload queue (WorkManager)
-- `…/breadcrumb/ui/home/`, `…/breadcrumb/ui/common/`, `…/breadcrumb/open/`: the search screens,
-  the detail sheet, opening originals
+- `…/breadcrumb/ui/home/`: the screens (home, search, the detail, `SheetLayer`, the undo bar),
+  stitched from pieces others build. The type, glyphs and thumbnails come from reading's R6;
+  opening and sharing from R7; bringing in from R8. The text rules, the search client and
+  two-stage search come from S8 to S10. The "+" composer comes from capture's C7 and C9.
 - `MainActivity`, and your own DAOs (`UploadDao`, `SearchDao`)
 
 ## What you use
@@ -96,6 +98,10 @@ the design wins.
   - The link step (reading R4) runs after deletes and before memories, so a link goes once, with
     its page's words.
 - [ ] **U3. Home: the mosaic**
+  - Design §4 to §7: `HomeScreen`, the masthead and slim strip, the mosaic with its entrances,
+    the date scrubber, and the empty mosaic. `MainActivity` shows it, and the view model
+    schedules an upload once at start. JVM tests: `mastheadCollapse` and `MosaicEntrances`.
+    Builds on R6, S8, and S9's unsent count.
   - The app's face: every memory, newest first, as a grid of tiles. Picture tiles are all
     picture, captioned over a shade; notes sit under a small amber mark. "breadcrumb" large in
     the serif at the head, handing over to a slim strip as it scrolls away. Tapping the slim
@@ -106,6 +112,8 @@ the design wins.
   - The debug list moves behind a long press on the wordmark, **in debug builds only**: pass the
     callback only when `BuildConfig.DEBUG`, and wire no long press at all when it is null.
 - [ ] **U4. Search**
+  - Design §8 and §9: the field and its light, the counter, the list and its rows, the lit word,
+    the empty states, and the haptic. Builds on S8 to S10.
   - One search field. While typing, reading's local word search answers at once; after a 450 ms
     pause the server's ranking replaces it, rows gliding to their ranked places.
   - Server order is kept; ids the phone does not hold are dropped (the server can hold memories
@@ -114,6 +122,8 @@ the design wins.
   - A result row: title (sans), a fragment with the matched word lit, chips, age, source app.
   - A drag on the results puts the keyboard away, as on the mosaic.
 - [ ] **U5. The detail of a memory, and the way back to the original**
+  - Design §10 to §12: `SheetLayer`, the detail, and delete with Undo and the undo bar.
+    Opening and sharing come from R7.
   - A sheet: the artifact (the picture, the PDF's first page, a link card), where it came from
     and when (saved, from, taken), the text found, what the model saw, the person's note
     (editable), and **one** main action: open original, open link, or copy text.
@@ -131,6 +141,8 @@ the design wins.
   - *Check:* a screenshot opens in the gallery, a PDF in a PDF viewer, a link in the browser,
     a note's text copies.
 - [ ] **U6. The "+" and the polish** (nice to have, in this order)
+  - Design §13, §14 and §18: the "+" sheet, hosting C9's composer and R8's import panel; the
+    import bar; the shortcut's request count in `MainActivity`; and the haptics.
   - An amber "+" beside the search field opens a sheet for keeping something from inside the
     app: one box to write in, and a photo (system photo picker, no permission) or a PDF to go
     with it. Text alone is the memory; with files, each file is a memory and the text is their
