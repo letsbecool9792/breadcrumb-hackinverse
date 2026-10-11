@@ -30,6 +30,7 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         val pass = UploadPass(
             dao = app.database.uploadDao(),
             api = app.server,
+            cloudAllowed = { app.syncSettings.geminiReadsMemories },
             held = { app.uploadHolds.toList() },
             reading = { app.readingOriginals.value },
             pictureOf = { memory -> app.originals.fileFor(memory)?.let(Pictures::jpeg) },

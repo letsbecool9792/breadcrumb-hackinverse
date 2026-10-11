@@ -193,6 +193,32 @@ fun MemoryListScreen() {
             }
         }
 
+        var geminiReadsMemories by remember { mutableStateOf(app.syncSettings.geminiReadsMemories) }
+
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("Gemini reads my memories", style = chrome, color = MaterialTheme.colorScheme.onBackground)
+            androidx.compose.material3.Switch(
+                checked = geminiReadsMemories,
+                onCheckedChange = { checked ->
+                    geminiReadsMemories = checked
+                    app.syncSettings.geminiReadsMemories = checked
+                    if (!checked) {
+                        app.applicationScope.launch {
+                            app.server.forgetAll()
+                        }
+                    } else {
+                        UploadWorker.runNow(app)
+                    }
+                },
+            )
+        }
+
         Row(
             Modifier
                 .fillMaxWidth()
