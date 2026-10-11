@@ -56,7 +56,22 @@ android {
     }
 }
 
+// Spike: LiteRT-LM is compiled with Kotlin 2.4; this project compiles with 2.2.
+kotlin {
+    compilerOptions {
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+
+configurations.all {
+    resolutionStrategy.force("org.jetbrains.kotlin:kotlin-stdlib:2.2.10")
+}
+
 dependencies {
+    // Spike: EmbeddingGemma 2 on the phone.
+    implementation("com.google.ai.edge.litertlm:litertlm-android:0.18.0") {
+        exclude(group = "org.jetbrains.kotlin", module = "kotlin-reflect")
+    }
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.compose.material3)
