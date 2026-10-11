@@ -9,7 +9,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import java.io.EOFException
 import java.io.IOException
+import java.net.NoRouteToHostException
+import java.net.SocketException
 import java.net.SocketTimeoutException
 
 class ServerClientTest {
@@ -61,6 +64,19 @@ class ServerClientTest {
         server.enqueue(MockResponse.Builder().onResponseStart(SocketEffect.Stall).build())
 
         assertEquals(ServerStatus.TimedOut, client(timeoutMillis = 500).checkHealth())
+    }
+
+    @Test
+    fun `a connection closed under the request is the same on every platform, whatever its words`() {
+        for (words in listOf("Connection reset", "Broken pipe", "An established connection was aborted by the software in your host machine")) {
+            assertEquals(words, ServerStatus.ClosedWithoutReply, statusOf(SocketException(words)))
+        }
+        assertEquals(ServerStatus.ClosedWithoutReply, statusOf(IOException("unexpected end of stream on http://localhost:3000/...", EOFException())))
+    }
+
+    @Test
+    fun `no route to the host is unreachable, not closed`() {
+        assertEquals(ServerStatus.Unreachable("No route to host"), statusOf(NoRouteToHostException("No route to host")))
     }
 
     @Test

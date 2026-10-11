@@ -17,6 +17,8 @@ import java.io.EOFException
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.ConnectException
+import java.net.NoRouteToHostException
+import java.net.PortUnreachableException
 import java.net.SocketException
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
@@ -134,13 +136,21 @@ sealed interface ServerStatus {
 @Serializable
 internal data class HealthReply(val service: String? = null, val status: String? = null)
 
-/** Tells the ways a call can fail apart. Pure, so JVM tests cover it. */
+/**
+ * Tells the ways a call can fail apart. Pure, so JVM tests cover it.
+ *
+ * By type, never by message: the words differ by platform. A peer closing
+ * under the request reads "Connection reset" or "Broken pipe" on the phone and
+ * "An established connection was aborted" on Windows, and is the same thing.
+ */
 internal fun statusOf(error: IOException): ServerStatus = when {
     error is InterruptedIOException -> ServerStatus.TimedOut
     error is ConnectException -> ServerStatus.Refused
-    error is EOFException || error.cause is EOFException ||
-        error.message?.contains("unexpected end of stream") == true ||
-        (error is SocketException && error.message?.contains("reset", ignoreCase = true) == true) -> ServerStatus.ClosedWithoutReply
+    // Socket errors before a connection: there was nowhere to send it.
+    error is NoRouteToHostException || error is PortUnreachableException -> ServerStatus.Unreachable(error.message ?: error.javaClass.simpleName)
+    // Any other socket error came after the connection was made: it closed under the request.
+    error is SocketException || error is EOFException || error.cause is EOFException ||
+        error.message?.contains("unexpected end of stream") == true -> ServerStatus.ClosedWithoutReply
     else -> ServerStatus.Unreachable(error.message ?: error.javaClass.simpleName)
 }
 
