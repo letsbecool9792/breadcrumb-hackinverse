@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridS
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -43,20 +44,24 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.SyncState
+import com.lbc.breadcrumb.imports.ImportBar
 import com.lbc.breadcrumb.open.Originals
+import com.lbc.breadcrumb.ui.keep.rememberKeepState
 import com.lbc.breadcrumb.ui.theme.Ink
 
 /**
  * The app's face (design §4): the mosaic of everything kept, or the ranked list
- * while searching, with the one search field underneath, and one memory opened
- * in a sheet over either. The "+" joins it in U6.
+ * while searching, with the one search field underneath and the "+" beside it,
+ * and one memory opened in a sheet over either, or the "+" sheet.
  *
  * [onOpenDebug] is passed only in debug builds; null, the wordmark has no
- * gesture at all.
+ * gesture at all. [keepRequests] counts the launcher shortcut's requests; each
+ * new one opens the "+" sheet.
  */
 @Composable
 fun HomeScreen(
     onOpenDebug: (() -> Unit)?,
+    keepRequests: Int = 0,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
@@ -67,6 +72,9 @@ fun HomeScreen(
 
     // The memory opened in the sheet, by id: the row is live, so what is copied back appears in place.
     var openedId by rememberSaveable { mutableStateOf<String?>(null) }
+    // The "+" sheet's panel while it is open. The draft outlives the sheet: it is stored as it changes.
+    var plus by rememberSaveable { mutableStateOf<PlusPanel?>(null) }
+    val keepState = rememberKeepState()
 
     var query by rememberSaveable { mutableStateOf("") }
     LaunchedEffect(query) { viewModel.setQuery(query) }
@@ -86,6 +94,23 @@ fun HomeScreen(
         keyboard?.hide()
         focus.clearFocus()
         openedId = memory.id
+    }
+    val openPlus: () -> Unit = {
+        keyboard?.hide()
+        focus.clearFocus()
+        plus = PlusPanel.opening(nothingKept = memories?.isEmpty() == true)
+    }
+
+    // Each new request from the launcher shortcut opens the composer, over any memory open.
+    var keepRequestsAnswered by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(keepRequests) {
+        if (keepRequests > keepRequestsAnswered) {
+            keepRequestsAnswered = keepRequests
+            keyboard?.hide()
+            focus.clearFocus()
+            openedId = null
+            plus = PlusPanel.COMPOSER
+        }
     }
 
     // One layer over everything, so a picture can travel between its tile and the sheet.
@@ -163,15 +188,18 @@ fun HomeScreen(
                         .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    ImportBar(importer = viewModel.importer)
                     UndoBar(
                         what = pendingDelete?.let { undoLine(ResultText.title(it)) },
                         onUndo = viewModel::undoDelete,
                     )
-                    SearchField(
+                    SearchRow(
                         query = query,
                         onQueryChange = { query = it },
                         searching = searching,
                         ranking = (searchState as? SearchState.Searching)?.status == SearchStatus.RANKING,
+                        hasDraft = keepState.hasDraft,
+                        onPlus = openPlus,
                     )
                 }
             }
@@ -198,6 +226,17 @@ fun HomeScreen(
                     )
                 }
                 MemoryDetail(memory, now, visibility, actions)
+            }
+
+            // Keeping something from inside the app, or bringing in what's already on the phone.
+            SheetLayer(item = plus, onDismiss = { plus = null }) { panel, _ ->
+                PlusSheet(
+                    panel = panel,
+                    keepState = keepState,
+                    importer = viewModel.importer,
+                    onPanel = { plus = it },
+                    onClose = { plus = null },
+                )
             }
         }
     }
