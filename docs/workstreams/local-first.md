@@ -86,8 +86,12 @@ the server reads memories only when the person turns it on; what goes is strippe
     against MockWebServer.
 - [x] **L4. What leaves the phone** (Aritra)
   - A setting, "Gemini reads my memories", off by default, held in SharedPreferences. While it is
-    off, the upload pass sends no memories and no pictures; deletes still go. Turning it off calls
-    `forgetAll()` (L3). For now the switch sits in the debug list.
+    off, the upload pass makes no call to the server, deletes included. Turning it off calls
+    `forgetAll()` (L3) and marks every memory unsent again.
+  - **The privacy sheet** (`ui/home/PrivacySheet`): "privacy" under the wordmark opens two
+    switches, "Understand searches in the cloud" (on by default; off, search runs without the
+    parsed filters) and "Gemini reads my memories". With both off the app makes no call to the
+    server.
   - When it is on, `Redactor` strips text before it goes. ML Kit Entity Extraction, on the phone,
     finds phone numbers, emails, addresses, card numbers, IBANs and tracking numbers; regexes
     catch OTPs, Aadhaar and PAN numbers, and API keys and long tokens. Each match becomes its type

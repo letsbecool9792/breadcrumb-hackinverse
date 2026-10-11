@@ -61,12 +61,13 @@ internal fun Mosaic(
     state: LazyStaggeredGridState,
     onOpen: (Memory) -> Unit,
     onLongPressWordmark: (() -> Unit)?,
+    onPrivacy: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     bottomPadding: Dp = 56.dp,
 ) {
     if (memories.isEmpty()) {
         Column(modifier.padding(horizontal = 14.dp)) {
-            Masthead(kept, onLongPressWordmark)
+            Masthead(kept, onLongPressWordmark, onPrivacy = onPrivacy)
             NothingKept(Modifier.weight(1f).fillMaxSize())
         }
         return
@@ -91,7 +92,7 @@ internal fun Mosaic(
             verticalItemSpacing = 10.dp,
         ) {
             item(key = MASTHEAD_KEY, span = StaggeredGridItemSpan.FullLine) {
-                Masthead(kept, onLongPressWordmark, Modifier.onSizeChanged { mastheadHeight = it.height })
+                Masthead(kept, onLongPressWordmark, Modifier.onSizeChanged { mastheadHeight = it.height }, onPrivacy)
             }
             itemsIndexed(memories, key = { _, memory -> memory.id }) { index, memory ->
                 // Decided once, the first time this tile is drawn.

@@ -31,8 +31,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     val memories: StateFlow<List<Memory>?> = app.database.memoryDao().observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    /** Whether Gemini reads memories (local-first L4); off, nothing is waiting to be sent. Set in the debug list. */
-    internal val cloudReads: Boolean get() = app.syncSettings.geminiReadsMemories
+    private val reads = MutableStateFlow(app.syncSettings.geminiReadsMemories)
+    private val parses = MutableStateFlow(app.syncSettings.cloudParses)
+
+    /** Whether Gemini reads memories (local first); off, nothing is waiting to be sent. */
+    val cloudReads: StateFlow<Boolean> = reads
+
+    /** Whether a search phrase goes to the server to be parsed into filters. */
+    val cloudParses: StateFlow<Boolean> = parses
+
+    /** Off, the server forgets every memory, and they are all unsent again, so turning it on sends them all. */
+    fun setCloudReads(on: Boolean) {
+        app.syncSettings.geminiReadsMemories = on
+        reads.value = on
+        if (on) {
+            UploadWorker.runNow(app)
+        } else {
+            app.applicationScope.launch {
+                app.database.uploadDao().unsendAll()
+                app.server.forgetAll()
+            }
+        }
+    }
+
+    fun setCloudParses(on: Boolean) {
+        app.syncSettings.cloudParses = on
+        parses.value = on
+    }
 
     /** Bringing in what is already on the phone; its line shows over the search field. */
     internal val importer: BulkImporter get() = app.importer
@@ -62,8 +87,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         words = { query, limit -> app.database.readingDao().search(query, limit) },
         // Only the phrase leaves the phone, with the names it may mean (L3).
         parse = { phrase ->
-            val sources = Sites.sourcesOf(app.database.memoryDao().getAll())
-            (app.server.parse(phrase, sources) as? Reply.Done)?.body
+            if (parses.value) {
+                val sources = Sites.sourcesOf(app.database.memoryDao().getAll())
+                (app.server.parse(phrase, sources) as? Reply.Done)?.body
+            } else {
+                null
+            }
         },
         memories = { app.database.memoryDao().getAll() },
     )

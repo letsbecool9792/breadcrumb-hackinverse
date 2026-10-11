@@ -9,6 +9,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import com.lbc.breadcrumb.ui.theme.BoneDim
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -27,11 +31,17 @@ import java.util.Locale
 
 /**
  * The mosaic's first item (design §5): the wordmark large in the serif, and
- * under it the count kept, in capitals. A long press on the wordmark opens the
- * debug list; with [onLongPress] null there is no gesture at all.
+ * under it the count kept, in capitals, and "privacy" at the far end, which
+ * opens what leaves the phone. A long press on the wordmark opens the debug
+ * list; with [onLongPress] null there is no gesture at all.
  */
 @Composable
-internal fun Masthead(kept: String, onLongPress: (() -> Unit)?, modifier: Modifier = Modifier) {
+internal fun Masthead(
+    kept: String,
+    onLongPress: (() -> Unit)?,
+    modifier: Modifier = Modifier,
+    onPrivacy: (() -> Unit)? = null,
+) {
     val haptic = LocalHapticFeedback.current
     Column(
         modifier.padding(start = 6.dp, end = 6.dp, top = 6.dp, bottom = 16.dp),
@@ -53,6 +63,7 @@ internal fun Masthead(kept: String, onLongPress: (() -> Unit)?, modifier: Modifi
             },
         )
         Row(
+            Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -60,7 +71,18 @@ internal fun Masthead(kept: String, onLongPress: (() -> Unit)?, modifier: Modifi
             Text(
                 kept.uppercase(Locale.ROOT),
                 style = monoStyle(11.sp, InkOutline, letterSpacing = 1.4.sp),
+                modifier = Modifier.weight(1f),
             )
+            if (onPrivacy != null) {
+                Text(
+                    stringResource(R.string.home_privacy).uppercase(Locale.ROOT),
+                    style = monoStyle(11.sp, BoneDim, letterSpacing = 1.4.sp),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable(onClick = onPrivacy)
+                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                )
+            }
         }
     }
 }

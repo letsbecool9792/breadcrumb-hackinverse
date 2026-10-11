@@ -111,4 +111,15 @@
     <string name="keep_remove">Remove</string>
     <string name="keep_failed">couldn\'t keep that — try again?</string>
     <string name="keep_bring_in">bring in what\'s already on the phone</string>
+
+    <!-- Local first: the privacy sheet, what leaves the phone -->
+    <string name="home_privacy">privacy</string>
+    <string name="privacy_title">What leaves the phone</string>
+    <string name="privacy_lead">Search runs on this phone, and the originals never leave it.</string>
+    <string name="privacy_parses">Understand searches in the cloud</string>
+    <string name="privacy_parses_on">only what you type goes, so “from april” or “screenshot” become filters</string>
+    <string name="privacy_parses_off">nothing you type leaves; search still works, without those filters</string>
+    <string name="privacy_reads">Gemini reads my memories</string>
+    <string name="privacy_reads_on">for one-line summaries; phone numbers, emails, IDs and OTPs are stripped first, and pictures and banking apps never go</string>
+    <string name="privacy_reads_off">nothing you save leaves the phone</string>
 </resources>
