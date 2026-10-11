@@ -156,7 +156,7 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     - `StepLightTest` (JVM): each crumb peaks in turn, and the last fifth of a lap is rest.
     - `ThumbnailsTest` (on the phone): a picture decodes with both sides at least the target; a
       PDF's first page draws on white; no file gives null.
-- [ ] **R7. Opening and sharing an original** (design §12; branch `open/originals`)
+- [x] **R7. Opening and sharing an original** (design §12; branch `open/originals`)
   - In `open/`, `OriginalAction` (`ViewFile(file, mime)`, `ViewUrl(url)`, `CopyText(text)`,
     `Missing`) and `ShareOut` are each **decided purely** from the memory and its stored file,
     so the JVM can test them. A thin Android layer then carries them out:
