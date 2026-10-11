@@ -1,6 +1,5 @@
 package com.lbc.breadcrumb.capture
 
-import android.net.Uri
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -13,12 +12,12 @@ class DraftCodecTest {
             text = "Meeting summary and action items",
             attachments = listOf(
                 DraftFile(
-                    uri = Uri.parse("content://media/external/images/media/101"),
+                    uri = "content://media/external/images/media/101",
                     name = "whiteboard.jpg",
                     isPdf = false,
                 ),
                 DraftFile(
-                    uri = Uri.parse("content://com.android.providers.downloads.documents/document/42"),
+                    uri = "content://com.android.providers.downloads.documents/document/42",
                     name = "roadmap.pdf",
                     isPdf = true,
                 ),
