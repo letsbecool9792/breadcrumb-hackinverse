@@ -52,7 +52,7 @@ class DraftStoreTest {
     @Test
     fun fileWhoseGrantIsGoneIsDroppedOnLoad() = runBlocking {
         val validUri = testUri ?: Uri.parse("content://settings/system/ringtone")
-        val revokedUri = Uri.parse("content://com.lbc.breadcrumb.hackinverse.test.revoked/document/9999")
+        val revokedUri = Uri.parse("content://com.lbc.breadcrumb.test.revoked/document/9999")
 
         val draft = Draft(
             text = "Draft with mixed grants",

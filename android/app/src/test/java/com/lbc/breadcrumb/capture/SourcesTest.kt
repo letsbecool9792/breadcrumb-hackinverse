@@ -5,7 +5,7 @@ import org.junit.Test
 
 class SourcesTest {
 
-    private val own = "com.lbc.breadcrumb.hackinverse"
+    private val own = "com.lbc.breadcrumb"
 
     @Test
     fun `an app is a source, with its name`() {
