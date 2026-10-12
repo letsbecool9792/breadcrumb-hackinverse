@@ -9,13 +9,15 @@ import com.lbc.breadcrumb.R
 class MediaReceiverActivity : CaptureActivity() {
 
     override fun capture() {
-        val uris = when (intent.action) {
+        val streams = when (intent.action) {
             Intent.ACTION_SEND ->
                 listOfNotNull(IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java))
             Intent.ACTION_SEND_MULTIPLE ->
                 IntentCompat.getParcelableArrayListExtra(intent, Intent.EXTRA_STREAM, Uri::class.java).orEmpty()
             else -> emptyList()
         }
+        val clip = intent.clipData?.let { data -> (0 until data.itemCount).mapNotNull { data.getItemAt(it).uri } }.orEmpty()
+        val uris = MediaRules.sharedFiles(streams, clip)
         if (uris.isEmpty()) {
             fail(getString(R.string.capture_nothing_to_save))
             return
