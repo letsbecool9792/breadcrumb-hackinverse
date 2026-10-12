@@ -82,4 +82,11 @@ class MediaRulesTest {
         assertNull(MediaRules.contentDate(null, null, null))
         assertNull(MediaRules.contentDate(0L, -1L, 0L))
     }
+
+    @Test
+    fun `a share's files are its streams, or its clip data when it has no streams, each once`() {
+        assertEquals(listOf("a", "b"), MediaRules.sharedFiles(listOf("a", "b", "a"), listOf("c")))
+        assertEquals(listOf("c", "d"), MediaRules.sharedFiles(emptyList(), listOf("c", "d", "c")))
+        assertEquals(emptyList<String>(), MediaRules.sharedFiles(emptyList<String>(), emptyList()))
+    }
 }

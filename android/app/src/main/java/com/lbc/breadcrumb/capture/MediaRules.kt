@@ -7,6 +7,12 @@ import java.util.Locale
 internal object MediaRules {
 
     /** The provider's type, else the type the intent (or the clip) declared. */
+    /**
+     * The files a share carries: its EXTRA_STREAM, or, when that is empty, its
+     * ClipData (some senders fill only that), each once.
+     */
+    fun <T> sharedFiles(streams: List<T>, clip: List<T>): List<T> = streams.ifEmpty { clip }.distinct()
+
     fun mimeOf(providerType: String?, declaredType: String?): String? =
         providerType?.takeIf { it.isNotBlank() } ?: declaredType?.takeIf { it.isNotBlank() }
 
