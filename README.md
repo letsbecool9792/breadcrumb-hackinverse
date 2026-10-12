@@ -119,7 +119,7 @@ tools/      generate_icons.py, which draws the launcher and splash icons
 
 ## Team
 
-Built by Suparno, Ayushi, Dhruba and Aritra. Who builds what:
+Built by [Suparno](https://suparno.me), [Ayushi](https://github.com/aeryxii), [Dhrubaparna](https://github.com/DhrubaIsha2006) and [Aritra](https://github.com/AM2004legend). Who builds what:
 [`CLAUDE.md`](CLAUDE.md), "Team and workstreams".
 
 ## Status
