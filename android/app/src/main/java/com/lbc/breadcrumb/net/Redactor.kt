@@ -8,10 +8,50 @@ import java.util.regex.Pattern
 data class RedactionSpan(val start: Int, val end: Int, val tag: String)
 
 /**
- * Interface for on-device entity extraction (e.g. ML Kit Entity Extraction).
+ * On-device entity extraction (ML Kit Entity Extraction). [extract] answers
+ * null when it could not read the text: the model isn't downloaded yet, or
+ * annotating failed or timed out. Then the text doesn't go.
  */
 fun interface EntityExtractor {
-    fun extract(text: String): List<RedactionSpan>
+    fun extract(text: String): List<RedactionSpan>?
+
+    /** Asks for the model, on any network, so it is ready by the time something goes. */
+    fun prepare() {}
+}
+
+/**
+ * Long text is annotated in pieces, each with its own time limit, so one long
+ * PDF can't time the whole memory out.
+ */
+object EntityChunks {
+
+    const val SIZE = 2_000
+
+    /** [text] in pieces of at most [size], each cut at the last whitespace before the limit when there is one. */
+    fun pieces(text: String, size: Int = SIZE): List<Pair<Int, String>> {
+        val out = mutableListOf<Pair<Int, String>>()
+        var start = 0
+        while (start < text.length) {
+            var end = minOf(start + size, text.length)
+            if (end < text.length) {
+                val cut = text.lastIndexOfAny(charArrayOf(' ', '\n'), end - 1)
+                if (cut > start) end = cut + 1
+            }
+            out += start to text.substring(start, end)
+            start = end
+        }
+        return out
+    }
+
+    /** Reads each piece and moves its spans to [text]'s offsets; null when any piece could not be read. */
+    fun annotate(text: String, size: Int = SIZE, read: (String) -> List<RedactionSpan>?): List<RedactionSpan>? {
+        val spans = mutableListOf<RedactionSpan>()
+        for ((offset, piece) in pieces(text, size)) {
+            val found = read(piece) ?: return null
+            found.mapTo(spans) { RedactionSpan(it.start + offset, it.end + offset, it.tag) }
+        }
+        return spans
+    }
 }
 
 /**
@@ -91,9 +131,22 @@ object Redactor {
     private val TRACKING_REGEX = Pattern.compile("""\b(?:1Z[0-9A-Z]{16}|[A-Z]{2}\d{9}[A-Z]{2})\b""")
     private val IBAN_REGEX = Pattern.compile("""\b[A-Z]{2}\d{2}(?:[\s]?[A-Z0-9]{4}){3,7}(?:[\s]?[A-Z0-9]{1,4})?\b""")
 
-    fun redact(text: String): String {
-        val deviceSpans = deviceExtractor?.extract(text).orEmpty()
-        return redact(text, deviceSpans)
+    /** [text] stripped by the rules alone (the regexes), without the phone's entity model. */
+    fun redact(text: String): String = redact(text, emptyList())
+
+    /**
+     * What goes to the server for [text]: stripped by the phone's entity model
+     * and the rules, or null when the model could not read it (not downloaded
+     * yet, a failure or a timeout). Null means the memory doesn't go this time:
+     * redaction fails closed, since addresses have no rule to fall back on.
+     */
+    fun forUpload(text: String, extractor: EntityExtractor? = deviceExtractor): String? {
+        val spans = try {
+            extractor?.extract(text)
+        } catch (_: Exception) {
+            null
+        } ?: return null
+        return redact(text, spans)
     }
 
     fun redact(text: String, additionalSpans: List<RedactionSpan>): String {

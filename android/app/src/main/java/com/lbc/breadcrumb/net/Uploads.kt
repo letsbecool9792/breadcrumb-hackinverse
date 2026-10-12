@@ -63,7 +63,16 @@ data class UploadMemory(
     val updatedAt: Long,
 )
 
-fun Memory.toUpload(redact: (String) -> String = Redactor::redact) = UploadMemory(
+/**
+ * What goes for this memory, its words through [redact]; null when any of them
+ * could not be checked for personal details, and then the memory doesn't go.
+ */
+fun Memory.toUpload(redact: (String) -> String? = Redactor::redact): UploadMemory? {
+    val words = listOf(title, rawText, extractedText, note).map { text -> text?.let { redact(it) ?: return null } }
+    return upload(words)
+}
+
+private fun Memory.upload(words: List<String?>) = UploadMemory(
     id = id,
     type = type.name,
     hasLink = hasLink,
@@ -71,10 +80,10 @@ fun Memory.toUpload(redact: (String) -> String = Redactor::redact) = UploadMemor
     contentCreatedAt = contentCreatedAt,
     sourceApp = sourceApp,
     sourceAppLabel = sourceAppLabel,
-    title = title?.let(redact),
-    rawText = rawText?.let(redact),
-    extractedText = extractedText?.let(redact),
-    note = note?.let(redact),
+    title = words[0],
+    rawText = words[1],
+    extractedText = words[2],
+    note = words[3],
     updatedAt = updatedAt,
 )
 
