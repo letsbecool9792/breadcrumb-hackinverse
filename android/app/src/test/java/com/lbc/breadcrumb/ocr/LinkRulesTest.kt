@@ -170,4 +170,18 @@ class LinkRulesTest {
         val encoded = "&lt;hello&gt; &amp; &quot;world&quot; &#39;test&#39; &nbsp; &mdash; &#8212; &#x2014;"
         assertEquals("<hello> & \"world\" 'test'   — — —", LinkRules.decodeHtmlEntities(encoded))
     }
+    @Test
+    fun `the preview picture is og image, resolved against the page`() {
+        val head = """<meta property="og:image" content="/img/card.png"><meta name="twitter:image" content="https://cdn.example.com/t.jpg">"""
+        assertEquals("https://www.krew3.site/img/card.png", LinkRules.extractImage(head, "https://www.krew3.site/events"))
+    }
+
+    @Test
+    fun `without og image the twitter image stands in, and without either there is none`() {
+        assertEquals(
+            "https://cdn.example.com/t.jpg",
+            LinkRules.extractImage("""<meta name="twitter:image" content="https://cdn.example.com/t.jpg">""", "https://example.com/a"),
+        )
+        assertNull(LinkRules.extractImage("""<meta name="description" content="no picture">""", "https://example.com/a"))
+    }
 }

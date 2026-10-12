@@ -36,6 +36,9 @@ class HttpLinkReader(
             return@withContext LinkReadResult.EMPTY
         }
 
+        // A video's page gives no title to a reader of its head; YouTube's oEmbed does, with its thumbnail.
+        if (isYouTube(normalized)) youTube(normalized)?.let { return@withContext it }
+
         try {
             val request = Request.Builder()
                 .url(normalized)
@@ -85,6 +88,7 @@ class HttpLinkReader(
                 LinkReadResult(
                     title = title,
                     description = description,
+                    imageUrl = LinkRules.extractImage(head, response.request.url.toString()),
                 )
             }
         } catch (_: IllegalArgumentException) {
@@ -94,7 +98,33 @@ class HttpLinkReader(
         }
     }
 
+    private fun isYouTube(url: String): Boolean {
+        val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return false
+        return host == "youtu.be" || host == "youtube.com" || host.endsWith(".youtube.com")
+    }
+
+    /** The video's title, channel and thumbnail from YouTube's oEmbed (no key needed), or null to read the page instead. */
+    private fun youTube(url: String): LinkReadResult? = try {
+        val oembed = "https://www.youtube.com/oembed?format=json&url=" + java.net.URLEncoder.encode(url, "UTF-8")
+        client.newCall(Request.Builder().url(oembed).header("User-Agent", USER_AGENT).build()).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val video = OEMBED_JSON.decodeFromString<OEmbed>(response.body.string())
+            LinkReadResult(
+                title = video.title?.takeIf { it.isNotBlank() },
+                description = listOfNotNull(video.author_name, "YouTube").joinToString(" · "),
+                imageUrl = video.thumbnail_url,
+            )
+        }
+    } catch (_: Exception) {
+        null
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class OEmbed(val title: String? = null, val author_name: String? = null, val thumbnail_url: String? = null)
+
     companion object {
+        private val OEMBED_JSON = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
         const val MAX_BYTES = 512L * 1024L // 512 KB
         const val USER_AGENT = "Mozilla/5.0 (Android; Mobile; rv:124.0) Gecko/124.0 Firefox/124.0"
 

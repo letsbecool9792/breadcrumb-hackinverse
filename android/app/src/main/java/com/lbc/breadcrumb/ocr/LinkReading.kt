@@ -32,12 +32,15 @@ class LinkReading(
     private val reader: LinkReader = HttpLinkReader(),
     /** Whether the phone is online, asked when a read fails. */
     private val isOnline: () -> Boolean = { true },
+    /** Where a link's preview picture is kept; null keeps none (tests). */
+    private val previews: LinkPreviews? = null,
 ) {
 
     /** Over the app's database, asking Android whether the phone is online. */
     constructor(context: Context) : this(
         readingDao = (context.applicationContext as BreadcrumbApp).database.readingDao(),
         isOnline = { hasValidatedNetwork(context) },
+        previews = LinkPreviews(context),
     )
 
     /**
@@ -61,6 +64,8 @@ class LinkReading(
             tried += batch.map { it.id }
             total += readTogether(batch)
         }
+        // Links read before previews existed get theirs, once each.
+        previews?.fillIn(reader)
         return total
     }
 
@@ -120,6 +125,7 @@ class LinkReading(
             extractedText = result.description,
             title = titleToSet,
         )
+        if (rowsUpdated > 0) result.imageUrl?.let { previews?.save(current.id, it) }
         return rowsUpdated > 0
     }
 
