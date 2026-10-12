@@ -24,7 +24,7 @@ class UploadPayloadTest {
         sourceAppLabel = "WhatsApp",
         rawText = "https://example.com/job",
         note = "Priya says apply early",
-        localUri = "file:///data/user/0/com.lbc.breadcrumb.hackinverse/files/originals/m1.jpg",
+        localUri = "file:///data/user/0/com.lbc.breadcrumb/files/originals/m1.jpg",
         extractedText = "Qualcomm is hiring",
         title = "Intern",
         summary = "A job posting",

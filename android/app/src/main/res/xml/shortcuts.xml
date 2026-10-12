@@ -8,7 +8,7 @@
         android:shortcutLongLabel="@string/shortcut_keep_long">
         <intent
             android:action="com.lbc.breadcrumb.action.KEEP"
-            android:targetPackage="com.lbc.breadcrumb.hackinverse"
+            android:targetPackage="com.lbc.breadcrumb"
             android:targetClass="com.lbc.breadcrumb.MainActivity" />
     </shortcut>
 </shortcuts>

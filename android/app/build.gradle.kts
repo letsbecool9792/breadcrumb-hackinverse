@@ -15,9 +15,10 @@ android {
     }
 
     defaultConfig {
-        // Differs from the code's namespace on purpose. adb commands, the test
-        // runner and any launcher shortcut's targetPackage use this id.
-        applicationId = "com.lbc.breadcrumb.hackinverse"
+        // The same as the code's namespace, and permanent once published. adb
+        // commands, the test runner (com.lbc.breadcrumb.test) and the launcher
+        // shortcut's targetPackage use it.
+        applicationId = "com.lbc.breadcrumb"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
