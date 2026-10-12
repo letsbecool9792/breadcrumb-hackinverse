@@ -64,7 +64,8 @@ object EntityChunks {
  * Uses regexes for OTPs, Aadhaar (12 digits, with or without spaces), PAN (5 letters,
  * 4 digits, 1 letter), API keys and long random tokens, plus regex fallbacks.
  *
- * Dates and URLs are preserved intact. Never changes the phone's own Room copy.
+ * Dates stay. A link keeps its scheme, host and path, nothing more ([stripUrl]).
+ * Never changes the phone's own Room copy.
  */
 object Redactor {
 
@@ -230,7 +231,45 @@ object Redactor {
         if (cursor < text.length) {
             sb.append(text.substring(cursor))
         }
-        return sb.toString()
+        return stripUrls(sb.toString())
+    }
+
+    /** Every link in [text] through [stripUrl]. Links were kept whole until now, so no rule cut into them. */
+    private fun stripUrls(text: String): String {
+        val matcher = URL_REGEX.matcher(text)
+        val out = StringBuilder()
+        var cursor = 0
+        while (matcher.find()) {
+            out.append(text, cursor, matcher.start()).append(stripUrl(matcher.group()))
+            cursor = matcher.end()
+        }
+        return out.append(text, cursor, text.length).toString()
+    }
+
+    /**
+     * A link as it goes: its scheme, host and path. The query string and the
+     * fragment carry tokens, emails, and reset and share links, and so does a
+     * `user:password@`; a long random path segment is an id, and becomes [key].
+     * The server needs only the host, for the sites a search may name.
+     */
+    internal fun stripUrl(url: String): String {
+        val bare = url.substringBefore('#').substringBefore('?')
+        val schemeEnd = bare.indexOf("://")
+        if (schemeEnd < 0) return bare
+        val rest = bare.substring(schemeEnd + 3)
+        val slash = rest.indexOf('/')
+        val host = (if (slash < 0) rest else rest.substring(0, slash)).substringAfterLast('@')
+        val path = if (slash < 0) "" else rest.substring(slash).split('/').joinToString("/") { if (isToken(it)) "[key]" else it }
+        return bare.substring(0, schemeEnd + 3) + host + path
+    }
+
+    /** A path segment that is an id, not words: long, letters and digits mixed, and not a slug of short words. */
+    private fun isToken(segment: String): Boolean {
+        if (segment.length < 20) return false
+        if (API_KEY_PREFIXES.matcher(segment).matches() || HEX_KEY_REGEX.matcher(segment).matches()) return true
+        val parts = segment.split('-', '_')
+        val slug = parts.size >= 3 && parts.all { it.length <= 12 }
+        return !slug && segment.any(Char::isDigit) && segment.any(Char::isLetter)
     }
 
     private fun addRegexMatches(

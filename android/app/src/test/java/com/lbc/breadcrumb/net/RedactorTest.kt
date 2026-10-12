@@ -10,7 +10,7 @@ import org.junit.Test
 class RedactorTest {
 
     @Test
-    fun `preserves urls intact`() {
+    fun `a link without a query keeps its scheme, host and path`() {
         val url = "https://www.linkedin.com/jobs/view/4120938817"
         assertEquals(url, Redactor.redact(url))
 
@@ -167,5 +167,33 @@ class RedactorTest {
         val text = "a".repeat(30)
         var pieces = 0
         assertNull(EntityChunks.annotate(text, size = 10) { pieces++; if (pieces == 2) null else emptyList() })
+    }
+
+    @Test
+    fun `a link goes without its query string or fragment`() {
+        assertEquals(
+            "Reset it at https://accounts.example.com/reset today",
+            Redactor.redact("Reset it at https://accounts.example.com/reset?token=Ab12Cd34&email=priya@example.com#step2 today"),
+        )
+    }
+
+    @Test
+    fun `a link goes without a user and password`() {
+        assertEquals("https://example.com/files/report", Redactor.redact("https://admin:hunter2@example.com/files/report"))
+    }
+
+    @Test
+    fun `a long random id in a link's path becomes a key`() {
+        assertEquals(
+            "https://docs.google.com/document/d/[key]/edit",
+            Redactor.redact("https://docs.google.com/document/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit?usp=sharing"),
+        )
+    }
+
+    @Test
+    fun `a slug of words and a short id stay`() {
+        val slug = "https://example.com/blog/how-to-make-paneer-butter-masala-2024"
+        assertEquals(slug, Redactor.redact(slug))
+        assertEquals("https://youtu.be/_0G4OG39XjI", Redactor.redact("https://youtu.be/_0G4OG39XjI?si=i66xnAa1Gd21_RKp"))
     }
 }
