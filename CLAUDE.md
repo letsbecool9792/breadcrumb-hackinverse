@@ -16,28 +16,43 @@ and what we are deliberately not building.** Read it before proposing work. Then
 
 ## Where things stand
 
-**On `main`**, each step checked as its brief says:
+**Breadcrumb won 1st place at Hackinverse 1.0**
+([the event](https://hackinverse-s1.devfolio.co/overview),
+[the project](https://devfolio.co/projects/breadcrumb-54b8)). On `main`, each step checked as its
+brief says:
 
-- **Capture, C1 to C6.** The share sheet, the selection toolbar and the tile save in one tap,
-  with the source app and the capture sheet's note.
-- **Reading, R1 to R5.** OCR of pictures, PDFs' text, links' pages, local word search, and the
-  importer for seeding.
-- **The server, S1 to S7.** Gemini reads each memory once, embeds it and indexes it; search is
-  hybrid and filtered by the parsed phrase; the phone is kept in step.
-- **Sync, U1 and U2.** The phone sends its memories, pictures OCR could barely read, and deletes,
-  then copies the server's summaries back. A link's page is read before it goes.
-- **The screens**, built to [`docs/design.md`](docs/design.md): R6 to R8, S8 to S10, C7 to C9 and
-  U3 to U6. Home is the mosaic with search under it; a memory opens in a sheet that opens its
-  original; the "+" keeps something or brings in what's on the phone, and the launcher
-  shortcut opens it. The debug list sits behind a long press on the wordmark, in debug builds.
+- **Capture, C1 to C9.** The share sheet, the selection toolbar, the Quick Settings tile and the
+  "+" save in one tap, with the source app and an optional note.
+- **Reading, R1 to R8.** OCR of pictures, PDFs' text, links' pages and their preview pictures,
+  local word search, and the importer with its way in from the app.
+- **The screens**, built to [`docs/design.md`](docs/design.md) (S8 to S10, U3 to U6): the mosaic
+  with search under it, a memory's detail that opens its original, the "+" sheet and the privacy
+  sheet. The debug list sits behind a long press on the wordmark, in debug builds.
+- **Local first** ([`docs/workstreams/local-first.md`](docs/workstreams/local-first.md)): the
+  app is local first. Memories are embedded with EmbeddingGemma 2 and ranked on the phone, and
+  search works in airplane mode. By default only a search phrase leaves the phone, with the
+  names of the apps and sites saves came from, to be parsed into filters. Gemini reads memories
+  only when the person turns it on in the privacy sheet, stripped of personal details first;
+  pictures never go.
+- **The server (S1 to S7, L3) and sync (U1, U2)** now serve only that: `POST /parse`, and
+  reading memories when allowed.
 
-- **Local first** ([`docs/workstreams/local-first.md`](docs/workstreams/local-first.md)): memories
-  are embedded and ranked on the phone with EmbeddingGemma 2. By default only the search phrase
-  goes to the server, to be parsed into filters; Gemini reads memories only when the person turns
-  it on in the privacy sheet, stripped of personal details first, and pictures never go.
+**Roadmap**, in this order:
 
-**Next:**
-- Seeding the demo phone (below), then leaving it on the charger so pictures get embedded.
+1. **Seed 500+ real items, then judge search honestly**: a fixed list of about 20 real searches,
+   each with the memory it should find, run after every change to search. Tune the 0.12 meaning
+   window and the fusion against it, not before.
+2. **Check that a clip marked sensitive is never saved**, with a real password manager on the
+   phone. Only the JVM test covers it today.
+3. **Filters need the server today**, so they are lost away from the laptop's `adb reverse`.
+   Decide: deploy the server (Cloud Run: ~2 s cold start, needs a billing account on file;
+   Render's free tier cold-starts in 30–60 s), or parse the phrase on the phone (dates, types
+   and app names by rules, or a small Gemma through the LiteRT-LM already in the app). If
+   deployed, the server needs auth: a long-lived token in the Android keystore, which the server
+   validates.
+4. **OCR reads Latin script only**; ML Kit has bundled Devanagari and other models if that
+   matters.
+5. **Post-V1**, as listed below.
 
 Each brief holds its own checklist; tick a step in the PR that finishes it.
 
@@ -57,10 +72,11 @@ Each brief holds its own checklist; tick a step in the PR that finishes it.
 ```
 capture writes a row (extractedText null)
    → reading fills extractedText (OCR, PDF text, a link's page), and calls the upload schedule
-      → sync sends it (deletes, then memories, then pictures OCR could barely read)
-         → the server reads it with Gemini, embeds it, indexes it
-            → sync copies the summary back; search screens find it, by words on the phone
-              and by meaning and words on the server
+      → the phone embeds it (EmbeddingGemma 2); search finds it on the phone, by meaning and words
+      → only with "Gemini reads my memories" on: sync sends it, stripped of personal details,
+        the server reads it with Gemini, and sync copies the summary back
+a search: the phone's words at once, then its own ranking by meaning; with "Understand searches
+in the cloud" on, the phrase alone goes to the server (POST /parse) for its filters
 ```
 
 Each workstream can be built and checked alone: capture and reading against the debug list,
@@ -117,10 +133,10 @@ it whenever a change needs a manual check, and tick items off when done.
       connection was down for R3 and R4, so their phone checks ran on Suparno's phone.
 - [x] **Server tests against Atlas** (`cd server`, `npm test`, with `MONGODB_URI` set): passing
       on the M0 cluster since 2026-10-10.
-- [ ] **Plan the seeding.** Search only impresses with a real corpus: put 500+ real items on the
-      demo phone with the importer (reading R5) the day before the demo. Ingest costs one Flash
-      Lite request per ten memories (500 a day), and embeddings take arrays (1,000 requests a
-      day), so a few thousand items fit in a day.
+- [ ] **Seed the phone** (roadmap 1). Search only impresses with a real corpus: put 500+ real
+      items on the phone with the importer (reading R5), then leave it on the charger so pictures
+      with no words get embedded. On the phone that costs nothing; with "Gemini reads my
+      memories" on, ingest costs one Flash Lite request per ten memories (500 a day).
 - [ ] **Check U1, U2, R3 and R4 on the phone**, with the server running (`npm run dev`) and
       the forward set (`npm run reverse`). The automated tests cannot cover these:
   - **Server line:** says *reachable*. With the server stopped, a tap says *connection closed
@@ -185,13 +201,13 @@ The product should feel like a personal search engine, not a digital notebook.
 
 | Layer | Choice |
 |---|---|
-| Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room, WorkManager |
-| Backend | Node + Express + TypeScript |
-| Database | MongoDB Atlas (M0 free tier) + Atlas Vector Search |
-| Ingest AI | **Gemini 3.5 Flash Lite** (multimodal: text and images in one call) |
-| Query AI | **Gemini 3.1 Flash Lite** (query parsing) |
-| Embeddings | `gemini-embedding-001` at 768 dimensions |
-| On-device OCR | ML Kit Text Recognition v2, bundled model |
+| Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
+| On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled) and Entity Extraction |
+| Server (optional) | Node + Express + TypeScript: `POST /parse`, and reading memories only when allowed |
+| Database (server) | MongoDB Atlas (M0 free tier) + Atlas Vector Search |
+| Query AI (server) | **Gemini 3.1 Flash Lite** (parsing a search phrase) |
+| Ingest AI (server, opt-in) | **Gemini 3.5 Flash Lite** (multimodal: text and images in one call) |
+| Embeddings (server) | `gemini-embedding-001` at 768 dimensions, for memories the server is sent |
 
 Pin explicit Gemini model versions in code. The `gemini-flash-latest` alias exists but must not be
 used: behaviour shifts under you. The server refuses aliases outright.
@@ -254,18 +270,19 @@ Share sheet / tile → write to Room → return immediately → WorkManager hand
 and retry. The user sees "Saved" before anything touches a server, which is also why a server
 cold start is invisible on the ingest path.
 
-**3. One Gemini call for ingest, not a four-stage pipeline, and only when the person asks.**
+**3. The Gemini pass is optional: one call for ingest, and only when the person asks.**
 Gemini reads memories only with "Gemini reads my memories" on (off by default, in the privacy
-sheet); what goes is stripped of personal details first, and pictures and saves from banking and
-password apps never go. Search never needs it.
-A single multimodal Flash Lite call takes the artifact and returns structured JSON: a one-line
+sheet). What goes is stripped of personal details first, and fails closed when the phone can't
+check it; pictures and saves from banking and password apps never go. Search never needs it.
+When it runs, a single multimodal Flash Lite call takes the artifact and returns structured JSON: a one-line
 summary, entities, an inferred kind, date references. This is *better* than raw OCR, not just
 simpler, because it understands context: "LinkedIn post, Qualcomm SWE internship, deadline April
 30" rather than a bag of words.
 
-**4. On-device OCR as a fast path.**
-ML Kit reads text locally at save time. Free, instant, offline. The item is searchable in the
-local index before the network round-trip completes; the Gemini pass enriches it afterward.
+**4. On-device OCR, and by default the only reading.**
+ML Kit reads text locally at save time. Free, instant, offline. The item is searchable on the
+phone, by its words and its embedding, with no network at all. The Gemini pass adds a summary
+afterward only when the person allows it.
 
 **5. Hybrid search, never pure vector, on the phone.** EmbeddingGemma 2 embeds memories and the
 phrase on the phone, every vector is scored there (no vector database at this size), and the
@@ -294,7 +311,8 @@ On a share, record the calling app via `Activity.getReferrer()`. That makes *"th
 sent me on WhatsApp"* answerable. Also store the capture time and, for existing files, the
 original creation date. Cheap to store, and it matches how people actually remember things.
 
-**8. Embeddings at 768 dims, not 3,072.**
+**8. On the server, embeddings at 768 dims, not 3,072.** (The phone's EmbeddingGemma 2 gives 768
+too; the two models' vectors are never compared.)
 `gemini-embedding-001` defaults to 3,072 but is Matryoshka-trained: 768 scores barely behind the
 full size on MTEB. On a 512 MB M0 the storage difference matters. M0 also allows **3 search
 indexes per cluster**; one vector index plus one text index fits.
@@ -443,10 +461,8 @@ data classes matching `docs/api.md` are faster and clearer.
 
 # ══════════ V1 SCOPE ══════════
 
-**In V1:** everything in the four briefs. **For the demo, these must work:** share sheet and tile
-capture; OCR; upload; ingest; hybrid search with query parsing; the search screens and opening the
-original; the importer, for seeding. **Nice to have, in this order:** the capture sheet's note,
-PDF and link reading, the "+" sheet, bookmark import, motion and haptics.
+**In V1:** everything in the four briefs, and local first. It shipped for Hackinverse 1.0 (below),
+nice-to-haves included.
 
 **Also in V1, outside the briefs:**
 
@@ -482,18 +498,11 @@ Listed so the ideas are not lost, not so they get pulled forward.
 
 ---
 
-## The demo
+## Hackinverse 1.0
 
-What has to be true when it is shown:
-
-- A phone holding a few hundred real memories, seeded with the importer.
-- Three searches people actually type, each landing on the right thing in one go:
-  *"that internship screenshot from April"*, *"the link someone sent me on WhatsApp"*,
-  *"that guy from the hackathon who worked at Qualcomm"*, and one tap to the original.
-- A save from the share sheet and one from the tile, found by a search seconds later, with the
-  network off for the save.
-- One sentence on privacy: search runs on the phone, and by default only the search phrase
-  leaves it; the person can open "privacy" and switch even that off.
+History, kept for the reasoning. Breadcrumb won 1st place. At mid-evals the judges asked about
+personal data on the server, and local first was the answer: the final demo ran in airplane
+mode, with search by meaning on the phone ("ramen" found a photo with no words in it).
 
 ## The name
 
