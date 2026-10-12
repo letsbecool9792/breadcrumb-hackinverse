@@ -280,6 +280,22 @@ class LinkReadingTest {
 
         override suspend fun getById(id: String): Memory? = memories[id]
 
+        override suspend fun linksWithoutPreview(): List<Memory> =
+            memories.values.filter { it.type == MemoryType.LINK && it.localUri == null && it.extractedText != null }
+
+        override suspend fun setLinkPreview(id: String, localUri: String, updatedAt: Long): Int {
+            val mem = memories[id]?.takeIf { it.type == MemoryType.LINK && it.localUri == null } ?: return 0
+            memories[id] = mem.copy(localUri = localUri, updatedAt = updatedAt)
+            return 1
+        }
+
+        override suspend fun fillLinkTitle(id: String, title: String, text: String, updatedAt: Long): Int {
+            val mem = memories[id]?.takeIf { it.title.isNullOrEmpty() } ?: return 0
+            val words = if (mem.extractedText.isNullOrEmpty()) text else mem.extractedText
+            memories[id] = mem.copy(title = title, extractedText = words, updatedAt = updatedAt)
+            return 1
+        }
+
         override suspend fun updateExtractedText(id: String, extractedText: String, updatedAt: Long): Int {
             val mem = memories[id] ?: return 0
             if (mem.extractedText != null) return 0

@@ -54,6 +54,25 @@ interface ReadingDao {
     @Query("SELECT * FROM memories WHERE id = :id")
     suspend fun getById(id: String): Memory?
 
+    /** Links already read that have no preview picture yet, newest first. */
+    @Query("SELECT * FROM memories WHERE type = 'LINK' AND localUri IS NULL AND extractedText IS NOT NULL ORDER BY capturedAt DESC")
+    suspend fun linksWithoutPreview(): List<Memory>
+
+    /** A link's preview picture, kept in the originals folder like any picture. */
+    @Query("UPDATE memories SET localUri = :localUri, updatedAt = :updatedAt WHERE id = :id AND type = 'LINK' AND localUri IS NULL")
+    suspend fun setLinkPreview(id: String, localUri: String, updatedAt: Long = System.currentTimeMillis()): Int
+
+    /** A title read later (a video's, from oEmbed), only where there was none; its words too, where there were none. */
+    @Query(
+        """
+        UPDATE memories SET title = :title,
+            extractedText = CASE WHEN extractedText IS NULL OR extractedText = '' THEN :text ELSE extractedText END,
+            updatedAt = :updatedAt
+        WHERE id = :id AND (title IS NULL OR title = '')
+        """,
+    )
+    suspend fun fillLinkTitle(id: String, title: String, text: String, updatedAt: Long = System.currentTimeMillis()): Int
+
     /**
      * Targeted update of [Memory.extractedText].
      *

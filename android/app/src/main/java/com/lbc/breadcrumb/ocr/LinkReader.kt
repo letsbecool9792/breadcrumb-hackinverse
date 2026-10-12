@@ -8,6 +8,8 @@ data class LinkReadResult(
     val title: String?,
     /** Extracted meta description, or empty string if missing/unreadable. */
     val description: String,
+    /** The page's preview picture (og:image, or a video's thumbnail), when it has one. */
+    val imageUrl: String? = null,
 ) {
     companion object {
         val EMPTY = LinkReadResult(title = null, description = "")

@@ -207,4 +207,25 @@ object LinkRules {
 
         return result
     }
+
+    /**
+     * The page's preview picture: og:image (or its secure_url), else
+     * twitter:image, resolved against [pageUrl]. Null when it has none.
+     */
+    fun extractImage(htmlHead: String, pageUrl: String): String? {
+        var og: String? = null
+        var twitter: String? = null
+        val metaRegex = Regex("""(?is)<meta\s+([^>]*?)>""")
+        for (match in metaRegex.findAll(htmlHead)) {
+            val attrs = match.groupValues[1]
+            val key = (getAttribute(attrs, "property") ?: getAttribute(attrs, "name"))?.lowercase() ?: continue
+            val content = getAttribute(attrs, "content")?.let { decodeHtmlEntities(it).trim() }?.takeIf { it.isNotEmpty() } ?: continue
+            when (key) {
+                "og:image", "og:image:secure_url", "og:image:url" -> if (og == null) og = content
+                "twitter:image", "twitter:image:src" -> if (twitter == null) twitter = content
+            }
+        }
+        val found = og ?: twitter ?: return null
+        return runCatching { java.net.URI(pageUrl).resolve(found).toString() }.getOrNull()
+    }
 }
