@@ -42,7 +42,7 @@ class UploadPayloadTest {
 
     @Test
     fun `the payload never carries localUri`() {
-        val sent = encoded(listOf(memory.toUpload()))
+        val sent = encoded(listOf(memory.toUpload()!!))
 
         assertFalse(sent.contains("localUri"))
         assertFalse(sent.contains("file://"))
@@ -51,7 +51,7 @@ class UploadPayloadTest {
 
     @Test
     fun `the payload is the contract's fields and nothing the phone keeps for itself`() {
-        val fields = Json.parseToJsonElement(encoded(listOf(memory.toUpload()))).jsonArray[0].jsonObject
+        val fields = Json.parseToJsonElement(encoded(listOf(memory.toUpload()!!))).jsonArray[0].jsonObject
 
         assertEquals(
             setOf(
@@ -66,7 +66,7 @@ class UploadPayloadTest {
     @Test
     fun `nulls are sent as nulls, not left out`() {
         val bare = Memory(id = "m2", type = MemoryType.TEXT, capturedAt = 1_000, updatedAt = 1_000)
-        val fields = Json.parseToJsonElement(encoded(listOf(bare.toUpload()))).jsonArray[0].jsonObject
+        val fields = Json.parseToJsonElement(encoded(listOf(bare.toUpload()!!))).jsonArray[0].jsonObject
 
         assertEquals(12, fields.size)
         assertEquals(JsonNull, fields["note"])

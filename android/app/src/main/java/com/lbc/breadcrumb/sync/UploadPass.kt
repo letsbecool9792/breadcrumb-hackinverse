@@ -7,6 +7,7 @@ import com.lbc.breadcrumb.net.IngestResult
 import com.lbc.breadcrumb.net.Reply
 import com.lbc.breadcrumb.net.UploadApi
 import com.lbc.breadcrumb.net.UploadPicture
+import com.lbc.breadcrumb.net.Redactor
 import com.lbc.breadcrumb.net.toUpload
 import java.util.Base64
 
@@ -35,6 +36,8 @@ class UploadPass(
     private val pictureOf: suspend (Memory) -> ByteArray? = { null },
     /** Reads unread links' pages ([com.lbc.breadcrumb.ocr.LinkReading]), so each goes with its page's words. */
     private val readLinks: suspend () -> Unit = {},
+    /** A memory's words as they go, stripped of personal details; null when they couldn't be checked, and then they don't go. */
+    private val redact: (String) -> String? = Redactor::forUpload,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     sealed interface Outcome {
@@ -93,7 +96,13 @@ class UploadPass(
             if (allowed.isEmpty()) continue
 
             val ids = allowed.map { it.id }
-            when (val reply = api.sendMemories(allowed.map { it.toUpload() })) {
+            val uploads = allowed.map { it.toUpload(redact) }
+            if (uploads.any { it == null }) {
+                // Redaction fails closed: the phone couldn't check these for personal details, so none go this pass.
+                dao.markPending(ids)
+                return Outcome.Later("personal details could not be checked yet")
+            }
+            when (val reply = api.sendMemories(uploads.filterNotNull())) {
                 is Reply.Done -> if (!settle(ids, reply.body)) return Outcome.Later("not every memory was finished")
                 is Reply.Later -> {
                     settle(ids, reply.body.orEmpty())

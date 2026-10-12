@@ -3,6 +3,7 @@ package com.lbc.breadcrumb.net
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
@@ -118,7 +119,7 @@ class RedactorTest {
             note = "Secret key: sk-proj-1234567890abcdef12345678",
         )
 
-        val upload = original.toUpload()
+        val upload = original.toUpload()!!
 
         // Verify upload has redacted fields
         assertEquals("Qualcomm chat with [phone]", upload.title)
@@ -131,5 +132,40 @@ class RedactorTest {
         assertEquals("PAN is ABCDE1234F and OTP is 987654", original.rawText)
         assertEquals("Reached via https://example.com/job on April 30, Aadhaar: 2345 6789 0123", original.extractedText)
         assertEquals("Secret key: sk-proj-1234567890abcdef12345678", original.note)
+    }
+
+    @Test
+    fun `for upload, text the entity model could not read does not go`() {
+        assertNull(Redactor.forUpload("Call me at home", extractor = null))
+        assertNull(Redactor.forUpload("Call me at home") { null })
+        assertNull(Redactor.forUpload("Call me at home") { error("timed out") })
+    }
+
+    @Test
+    fun `for upload, the model's spans and the rules both strip`() {
+        val text = "Office at Bagmane Tech Park, Bengaluru; PAN ABCDE1234F"
+        val stripped = Redactor.forUpload(text) { listOf(RedactionSpan(10, 38, "[address]")) }
+        assertEquals("Office at [address]; PAN [pan]", stripped)
+    }
+
+    @Test
+    fun `long text is read in pieces cut at whitespace, and each piece's spans land at the right offsets`() {
+        val text = "aaaa bbbb cccc dddd"
+        assertEquals(listOf(0 to "aaaa bbbb ", 10 to "cccc dddd"), EntityChunks.pieces(text, size = 12))
+
+        // A fake model that marks every "cccc" in the piece it is given.
+        val spans = EntityChunks.annotate(text, size = 12) { piece ->
+            val at = piece.indexOf("cccc")
+            if (at < 0) emptyList() else listOf(RedactionSpan(at, at + 4, "[x]"))
+        }
+        assertEquals(listOf(RedactionSpan(10, 14, "[x]")), spans)
+        assertEquals("aaaa bbbb [x] dddd", Redactor.redact(text, spans!!))
+    }
+
+    @Test
+    fun `one piece that could not be read means none of the text goes`() {
+        val text = "a".repeat(30)
+        var pieces = 0
+        assertNull(EntityChunks.annotate(text, size = 10) { pieces++; if (pieces == 2) null else emptyList() })
     }
 }

@@ -9,6 +9,7 @@ import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.LocalSearch
 import com.lbc.breadcrumb.embed.VectorIndex
 import com.lbc.breadcrumb.embed.Sites
+import com.lbc.breadcrumb.net.Redactor
 import com.lbc.breadcrumb.net.Reply
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
@@ -45,6 +46,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         app.syncSettings.geminiReadsMemories = on
         reads.value = on
         if (on) {
+            // The entity model strips personal details before anything goes; without it nothing goes.
+            Redactor.deviceExtractor?.prepare()
             UploadWorker.runNow(app)
         } else {
             app.applicationScope.launch {

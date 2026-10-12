@@ -69,7 +69,11 @@ class BreadcrumbApp : Application() {
     override fun onCreate() {
         super.onCreate()
         // ML Kit entity extraction for redacting text leaving the phone (local-first L4).
-        com.lbc.breadcrumb.net.Redactor.deviceExtractor = com.lbc.breadcrumb.net.DeviceEntityExtractor()
+        val extractor = com.lbc.breadcrumb.net.DeviceEntityExtractor()
+        com.lbc.breadcrumb.net.Redactor.deviceExtractor = extractor
+        // Reading on, the model should be there before the next upload pass needs it. Off the main
+        // thread: a capture is a cold start, and the settings are a disk read.
+        applicationScope.launch { if (syncSettings.geminiReadsMemories) extractor.prepare() }
         // Before the OCR queue starts: a read landing first would call the
         // no-op, and nothing would be scheduled.
         uploadScheduler = {

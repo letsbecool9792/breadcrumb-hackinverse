@@ -11,6 +11,7 @@ import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.SyncState
 import com.lbc.breadcrumb.net.EnrichmentReply
 import com.lbc.breadcrumb.net.IngestResult
+import com.lbc.breadcrumb.net.Redactor
 import com.lbc.breadcrumb.net.Reply
 import com.lbc.breadcrumb.net.UploadApi
 import com.lbc.breadcrumb.net.UploadMemory
@@ -52,6 +53,8 @@ class UploadPassTest {
         held: Collection<String> = emptyList(),
         reading: Boolean = false,
         readLinks: suspend () -> Unit = {},
+        // The rules alone: the real entity model would make these tests wait on its download.
+        redact: (String) -> String? = Redactor::redact,
     ) = UploadPass(
         dao = db.uploadDao(),
         api = api,
@@ -60,6 +63,7 @@ class UploadPassTest {
         reading = { reading },
         pictureOf = { PICTURE },
         readLinks = readLinks,
+        redact = redact,
     )
 
     private suspend fun state(id: String) = memoryDao.getById(id)!!.syncState
@@ -223,6 +227,18 @@ class UploadPassTest {
         assertEquals(1, memoryDao.pendingDeleteCount())
         assertEquals(emptyList<UploadMemory>(), api.sent)
         assertEquals(emptyList<UploadPicture>(), api.pictures)
+        assertEquals(SyncState.PENDING, state("m1"))
+        assertEquals(SyncState.PENDING, state("m2"))
+    }
+
+    @Test
+    fun aBatchThatCouldNotBeCheckedForPersonalDetailsDoesNotGo() = runBlocking {
+        memoryDao.upsertAll(listOf(text("m1", 1), text("m2", 2)))
+
+        val outcome = pass(redact = { null }).run()
+
+        assertTrue(outcome is UploadPass.Outcome.Later)
+        assertEquals(emptyList<UploadMemory>(), api.sent)
         assertEquals(SyncState.PENDING, state("m1"))
         assertEquals(SyncState.PENDING, state("m2"))
     }
