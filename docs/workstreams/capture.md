@@ -157,6 +157,8 @@ what Suparno runs when he reviews.
   `taskAffinity=""`, the capture theme, `adjustResize`, and
   `configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode"`,
   so a rotation mid-save does not recreate the activity and drop the sheet.
+- **Some senders put shared files only in the intent's `ClipData`.** When `EXTRA_STREAM` is
+  empty, take the URIs from `ClipData`, each once (`MediaRules.sharedFiles`).
 - **`EXTRA_TEXT` and `EXTRA_PROCESS_TEXT` are `CharSequence`, not `String`.** `getStringExtra`
   returns null when the sender supplies styled text, turning a real share into "nothing to save"
   with no error. Always `getCharSequenceExtra(...)?.toString()`.
