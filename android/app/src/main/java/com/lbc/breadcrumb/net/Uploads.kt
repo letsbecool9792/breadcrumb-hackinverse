@@ -19,6 +19,9 @@ interface UploadApi {
 
     /** POST /memories/delete: how many the server held. */
     suspend fun sendDeletes(ids: List<String>): Reply<Int>
+
+    /** POST /memories/forget: the server drops every memory it holds, and says how many. */
+    suspend fun forgetAll(): Reply<Int>
 }
 
 /** How a request went, in the three ways the phone acts on (docs/api.md, "Status codes"). */

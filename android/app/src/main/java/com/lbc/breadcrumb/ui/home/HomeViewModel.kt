@@ -16,6 +16,7 @@ import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -41,7 +42,15 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     /** Whether a search phrase goes to the server to be parsed into filters. */
     val cloudParses: StateFlow<Boolean> = parses
 
-    /** Off, the server forgets every memory, and they are all unsent again, so turning it on sends them all. */
+    /** True from turning reading off until the server confirms it forgot everything. */
+    val forgetting: StateFlow<Boolean> = app.syncSettings.changes()
+        .map { app.syncSettings.forgetPending }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, app.syncSettings.forgetPending)
+
+    /**
+     * Off, the server is told to forget every memory (by the upload pass, until it answers), and they are
+     * all unsent again, so turning it on sends them all.
+     */
     fun setCloudReads(on: Boolean) {
         app.syncSettings.geminiReadsMemories = on
         reads.value = on
@@ -50,9 +59,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             Redactor.deviceExtractor?.prepare()
             UploadWorker.runNow(app)
         } else {
+            app.syncSettings.forgetPending = true
             app.applicationScope.launch {
                 app.database.uploadDao().unsendAll()
-                app.server.forgetAll()
+                UploadWorker.runNow(app)
             }
         }
     }

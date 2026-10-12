@@ -36,6 +36,10 @@ class UploadPass(
     private val pictureOf: suspend (Memory) -> ByteArray? = { null },
     /** Reads unread links' pages ([com.lbc.breadcrumb.ocr.LinkReading]), so each goes with its page's words. */
     private val readLinks: suspend () -> Unit = {},
+    /** A "forget everything" waiting to reach the server ([SyncSettings.forgetPending]). */
+    private val forgetPending: () -> Boolean = { false },
+    /** The server answered the forget: it is done. */
+    private val forgotten: () -> Unit = {},
     /** A memory's words as they go, stripped of personal details; null when they couldn't be checked, and then they don't go. */
     private val redact: (String) -> String? = Redactor::forUpload,
     private val now: () -> Long = System::currentTimeMillis,
@@ -54,11 +58,20 @@ class UploadPass(
     suspend fun run(): Outcome {
         // Nothing is in flight when a pass starts: an UPLOADING row is one a killed process left.
         dao.releaseStale()
-        // Off, the server was told to forget everything: a delete would only be a call to it (local first).
+        // Reading was turned off: the server forgets everything first. It is the one call made while the
+        // setting is off, and until the server answers it, nothing else goes.
+        if (forgetPending()) {
+            when (val reply = api.forgetAll()) {
+                is Reply.Done -> forgotten()
+                is Reply.Later -> return Outcome.Later(reply.why)
+                is Reply.Refused -> return Outcome.Later("the server refused to forget (${reply.code})")
+            }
+        }
+        // Off, the server holds nothing to delete from, so deletes wait (local first).
         if (cloudAllowed()) sendDeletes()?.let { return it }
         // A link's page is read on the phone even with the setting off, since local search embeds its words (local-first L4).
         readLinks()
-        // While the setting is off, send no memories and no pictures; deletes still go (local-first L4).
+        // While the setting is off, nothing else goes: no memories, no pictures, no deletes (local-first L4).
         if (!cloudAllowed()) return Outcome.Done(null)
         // Pictures never go, setting or not (local-first L4): skips sendPictures().
         return sendMemories()

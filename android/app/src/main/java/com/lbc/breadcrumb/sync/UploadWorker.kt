@@ -31,6 +31,8 @@ class UploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker
             dao = app.database.uploadDao(),
             api = app.server,
             cloudAllowed = { app.syncSettings.geminiReadsMemories },
+            forgetPending = { app.syncSettings.forgetPending },
+            forgotten = { app.syncSettings.forgetPending = false },
             held = { app.uploadHolds.toList() },
             reading = { app.readingOriginals.value },
             pictureOf = { memory -> app.originals.fileFor(memory)?.let(Pictures::jpeg) },
