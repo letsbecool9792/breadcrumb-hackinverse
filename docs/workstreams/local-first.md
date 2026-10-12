@@ -48,7 +48,7 @@ the server reads memories only when the person turns it on; what goes is strippe
   - `embed/ModelStore`: the model (`embeddinggemma-2-text-vision-440m.litertlm`, 388 MB,
     Apache 2.0, not gated) is downloaded once on an unmetered network into app storage, pinned to
     one revision and checked against its SHA-256; never in the APK. During development,
-    `adb push` it to `/sdcard/Android/data/com.lbc.breadcrumb.hackinverse/files/`.
+    `adb push` it to `/sdcard/Android/data/com.lbc.breadcrumb/files/`.
   - Schema version 2: an `embeddings` table of its own (`memoryId`, `key`, `vector`,
     `embeddedAt`), deleted with its memory, so the memories' own reads don't carry the floats.
     The key names the model and a hash of what was embedded, so a finished read or a changed
