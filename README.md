@@ -4,6 +4,9 @@
 
 Save anything in one tap. Find it later by describing it the way you actually remember it.
 
+🏆 **1st place at [Hackinverse 1.0](https://hackinverse-s1.devfolio.co/overview).** Project page on
+[Devfolio](https://devfolio.co/projects/breadcrumb-54b8).
+
 ---
 
 ## The problem
@@ -54,41 +57,52 @@ or a second brain. It should feel like a personal search engine, not a digital n
 **Saving**
 
 ```
-share / tile  →  saved on the phone, instantly  →  background work
-                                                         ↓
-                                     on-device OCR, then one Gemini Flash Lite pass
-                                     per batch (summary, kind, entities, dates)
-                                                         ↓
-                                         embedding → Atlas Vector Search
+share / tile / "+"  →  saved on the phone, instantly  →  background work, on the phone
+                                                                ↓
+                                    OCR of pictures, PDFs' text, links' pages and previews
+                                                                ↓
+                                    EmbeddingGemma 2 turns it into a vector (a picture with
+                                    no words is embedded as a picture)
 ```
 
-Saving never waits on the network. The original file never permanently leaves your phone: only
-extracted text and embeddings go to the cloud.
+Saving never waits on the network, and nothing you save leaves the phone. Search works in
+airplane mode.
 
 **Retrieving**
 
 ```
 "that internship screenshot from April"
               ↓
-    query parsing → { words: internship, type: image, date: April }
+    the phrase is embedded on the phone, and scored against every memory
               ↓
-    hybrid search (vector + keyword, fused by rank, date-filtered)
+    fused with the phone's own word search, by rank
+              ↓
+    narrowed by date, type and app, when the cloud may read the phrase
               ↓
     ranked memories → tap to open the original
 ```
 
-Hybrid rather than pure semantic search, because the queries people actually type are full of
-proper nouns: "Qualcomm" needs keyword matching while the rest of the sentence needs meaning.
+Meaning and words together, because the queries people actually type are full of proper nouns:
+"Qualcomm" needs words while the rest of the sentence needs meaning.
+
+**What leaves the phone** is up to the person, under "privacy" on the home screen:
+
+- **Understand searches in the cloud** (on by default): only the phrase typed goes, so that
+  "from April" or "screenshot" become filters.
+- **Gemini reads my memories** (off by default): for one-line summaries. Phone numbers, emails,
+  addresses, cards, IDs and OTPs are stripped first; pictures and saves from banking and
+  password apps never go.
+
+With both off, the app never talks to a server.
 
 ## Stack
 
 | | |
 |---|---|
-| **Mobile** | Native Android: Kotlin, Jetpack Compose, Room, WorkManager |
-| **Backend** | Node + Express + TypeScript |
-| **Database** | MongoDB Atlas + Atlas Vector Search (hybrid: meaning and words, fused by reciprocal rank) |
-| **AI** | Gemini Flash Lite (ingest and query parsing), `gemini-embedding-001` |
-| **On-device** | ML Kit Text Recognition |
+| **Mobile** | Native Android: Kotlin, Jetpack Compose, Room (with full-text search), WorkManager |
+| **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures), ML Kit Text Recognition and Entity Extraction |
+| **Backend (optional)** | Node + Express + TypeScript, MongoDB Atlas with Atlas Vector Search |
+| **Cloud AI (optional)** | Gemini Flash Lite (reading a search phrase; summaries when allowed), `gemini-embedding-001` |
 
 Native Android rather than a cross-platform framework: every capture surface is an Android
 platform surface, and every save is a cold start, so a native capture path is the difference
@@ -110,9 +124,8 @@ Built by Suparno, Ayushi, Dhruba and Aritra. Who builds what:
 
 ## Status
 
-Capture, reading on the phone, the server and the upload queue are in: a save is read, sent,
-understood and searchable. The search screens are next. [`CLAUDE.md`](CLAUDE.md) tracks where each
-workstream stands.
+Won 1st place at Hackinverse 1.0. Capture, reading, search on the phone, the screens and the
+privacy switches are all in; [`CLAUDE.md`](CLAUDE.md) tracks what's next.
 
 ## Why "Breadcrumb"
 
