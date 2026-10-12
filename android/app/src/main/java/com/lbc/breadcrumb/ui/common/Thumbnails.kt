@@ -111,7 +111,8 @@ object Thumbnails {
         if (!file.exists() || !file.isFile) return null
 
         val bitmap = when (memory.type) {
-            MemoryType.IMAGE -> decodePicture(file, targetPx)
+            // A link's preview picture (og:image, or a video's thumbnail).
+            MemoryType.IMAGE, MemoryType.LINK -> decodePicture(file, targetPx)
             MemoryType.PDF -> renderPdfPage(file, targetPx)
             else -> null
         } ?: return null
