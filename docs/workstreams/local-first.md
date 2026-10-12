@@ -86,22 +86,34 @@ the server reads memories only when the person turns it on; what goes is strippe
     against MockWebServer.
 - [x] **L4. What leaves the phone** (Aritra)
   - A setting, "Gemini reads my memories", off by default, held in SharedPreferences. While it is
-    off, the upload pass makes no call to the server, deletes included. Turning it off calls
-    `forgetAll()` (L3) and marks every memory unsent again.
+    off, the upload pass makes no call to the server, deletes included, except one: turning it
+    off sets a persisted "forget pending" flag (`SyncSettings.forgetPending`) and marks every
+    memory unsent again, and the pass sends `forgetAll()` (L3) first, retrying until the server
+    answers 200, before it clears the flag. Turned back on before then, the forget still goes
+    first. The sheet says "forgetting…" meanwhile.
   - **The privacy sheet** (`ui/home/PrivacySheet`): "privacy" under the wordmark opens two
     switches, "Understand searches in the cloud" (on by default; off, search runs without the
     parsed filters) and "Gemini reads my memories". With both off the app makes no call to the
-    server.
+    server but the forget. "Understand searches in the cloud" sends what is typed and the names
+    of the apps and sites the saves came from (`POST /parse`), and the sheet says so.
   - When it is on, `Redactor` strips text before it goes. ML Kit Entity Extraction, on the phone,
     finds phone numbers, emails, addresses, card numbers, IBANs and tracking numbers; regexes
     catch OTPs, Aadhaar and PAN numbers, and API keys and long tokens. Each match becomes its type
-    (`[phone]`). Dates and URLs stay. The phone's own copy is never changed.
+    (`[phone]`). Dates stay. The phone's own copy is never changed.
+  - **Redaction fails closed** (`Redactor.forUpload`): the entity model not downloaded yet, or
+    annotating failing or timing out, means the memory doesn't go this pass; it goes back to
+    pending and the pass ends Later. Long text is annotated in pieces of about 2,000 characters,
+    each with its own time limit. The model is downloaded, on any network, when the setting is
+    turned on.
+  - **A link goes as its scheme, host and path** (`Redactor.stripUrl`): no query string, no
+    fragment, no `user:password@`, and a long random path segment becomes `[key]`.
   - Pictures never go, setting or not.
   - Links' pages are read inside the upload pass today (`LinkReading`): keep them read with the
     setting off, since search on the phone embeds what they say.
   - Saves from banking, UPI and password-manager apps never go, by package name.
-  - Tests: `RedactorTest` (JVM, the regexes, with real-looking samples), and the upload pass
-    sending nothing while the setting is off.
+  - Tests: `RedactorTest` (JVM: the regexes with real-looking samples, failing closed, pieces'
+    offsets, links), and `UploadPassTest` (on the phone: nothing sent while the setting is off,
+    the forget first and until answered, a batch that couldn't be checked held back).
 - [x] **L5. A headline and a snippet in place of the summary** (Dhruba)
   - With the server off, there is no summary. `Headline.of(memory)` (pure):
     - a link's page title;
