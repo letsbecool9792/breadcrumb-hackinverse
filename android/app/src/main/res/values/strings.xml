@@ -117,7 +117,7 @@
     <string name="privacy_title">What leaves the phone</string>
     <string name="privacy_lead">Search runs on this phone, and the originals never leave it.</string>
     <string name="privacy_parses">Understand searches in the cloud</string>
-    <string name="privacy_parses_on">only what you type goes, so “from april” or “screenshot” become filters</string>
+    <string name="privacy_parses_on">what you type goes, and the names of the apps and sites your saves came from, so “from april” or “on whatsapp” become filters</string>
     <string name="privacy_parses_off">nothing you type leaves; search still works, without those filters</string>
     <string name="privacy_reads">Gemini reads my memories</string>
     <string name="privacy_reads_on">for one-line summaries; phone numbers, emails, IDs and OTPs are stripped first, and pictures and banking apps never go</string>

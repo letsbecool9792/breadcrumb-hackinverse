@@ -87,8 +87,9 @@ Meaning and words together, because the queries people actually type are full of
 
 **What leaves the phone** is up to the person, under "privacy" on the home screen:
 
-- **Understand searches in the cloud** (on by default): only the phrase typed goes, so that
-  "from April" or "screenshot" become filters.
+- **Understand searches in the cloud** (on by default): what you type goes, and the names of
+  the apps and sites your saves came from, so that "from April", "screenshot" or "on WhatsApp"
+  become filters.
 - **Gemini reads my memories** (off by default): for one-line summaries. Phone numbers, emails,
   addresses, cards, IDs and OTPs are stripped first; pictures and saves from banking and
   password apps never go.
