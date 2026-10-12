@@ -74,17 +74,21 @@ class OriginalStore(
     fun uriFor(file: File): String = Uri.fromFile(file).toString()
 
     /**
-     * Resolves a memory's stored original, or null when it has none, the file
-     * is gone, or its localUri points anywhere outside this store. The last
-     * case matters: this is also what [delete] trusts, so a row with a
-     * hand-edited or sample localUri can never make us delete a foreign file.
+     * Resolves a memory's stored original by its file's name in this store, or
+     * null when it has none, the file is gone, or the name could reach outside
+     * the store. By name, not by the absolute path in localUri: that path names
+     * the package, so a restore into another package, or a new applicationId,
+     * would lose every original. Only a file directly in this store is ever
+     * found, and this is also what [delete] trusts, so a hand-edited localUri
+     * can never make us delete a foreign file.
      */
     fun fileFor(memory: Memory): File? {
         val uri = memory.localUri?.let(Uri::parse) ?: return null
         if (uri.scheme != "file") return null
-        val file = File(uri.path ?: return null).canonicalFile
-        val base = root.canonicalFile
-        if (file.parentFile != base) return null
+        val name = File(uri.path ?: return null).name
+        if (name.isEmpty() || name == "." || name == ".." || '/' in name || '\\' in name) return null
+        val file = File(root, name)
+        if (file.canonicalFile.parentFile != root.canonicalFile) return null
         return file.takeIf { it.isFile }
     }
 
