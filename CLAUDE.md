@@ -128,7 +128,7 @@ it whenever a change needs a manual check, and tick items off when done.
   - **Offline save:** save in airplane mode and it stays `pending`. Back online, it syncs,
     nothing duplicated.
   - **Killed mid-upload:** during an import, run
-    `adb shell am force-stop com.lbc.breadcrumb.hackinverse` while rows show `uploading`. On the
+    `adb shell am force-stop com.lbc.breadcrumb` while rows show `uploading`. On the
     next launch they finish.
   - **Photo with no text:** it syncs, its picture goes in one `POST /memories/images`, and it
     gains a `summary:` line.
@@ -305,9 +305,26 @@ indexes per cluster**; one vector index plus one text index fits.
 
 - **minSdk 29** (Android 10), target 36. The clipboard restriction lands at 29, so a 29 floor
   means one code path instead of two; scoped storage is mandatory from 29 anyway.
-- **The applicationId is `com.lbc.breadcrumb.hackinverse`; the code's namespace is
-  `com.lbc.breadcrumb`.** adb commands, the test runner and launcher shortcuts use the
-  applicationId.
+- **The applicationId is `com.lbc.breadcrumb`, the same as the code's namespace, and permanent
+  once published.** adb commands, the test runner (`com.lbc.breadcrumb.test`) and the launcher
+  shortcut's `targetPackage` use it. It was `com.lbc.breadcrumb.hackinverse` until the hackathon.
+- **Moving a phone's data to a new applicationId**, by hand (done once, from
+  `com.lbc.breadcrumb.hackinverse`). From Git Bash, never PowerShell: its `>` and `<` re-encode
+  binary data and the archive comes out corrupt. Git Bash also rewrites `/sdcard/...` arguments
+  into Windows paths, so those commands take `MSYS_NO_PATHCONV=1`.
+  ```
+  adb shell am force-stop com.lbc.breadcrumb.hackinverse
+  adb exec-out run-as com.lbc.breadcrumb.hackinverse tar cf - databases files shared_prefs > app.tar
+  ./gradlew installDebug                    # the new id, installed beside the old app
+  adb shell am force-stop com.lbc.breadcrumb
+  adb exec-in run-as com.lbc.breadcrumb tar xf - < app.tar
+  ```
+  Then re-add the Quick Settings tile, and give the new app the embedding model: copy it across
+  (`adb shell cp` from the old app's `/sdcard/Android/data/<id>/files/` to the new one's) and
+  `adb shell chmod 666` the copy, or the app can't read it; or let it download. Originals are
+  found by name in the new store (`OriginalStore.fileFor`), so the old package in their stored
+  paths doesn't matter. Files picked into a "+" draft don't survive: read grants are per
+  package. Uninstall the old app only once the new one shows everything.
 - **No Android Studio.** The app is built, installed and tested from the command line (`gradlew`
   in `android/`, and adb), and edited in any editor. Live Edit and `@Preview` are not used.
 - **Setting up a machine** (once; checked on Windows by building against a fresh SDK):
@@ -340,7 +357,7 @@ indexes per cluster**; one vector index plus one text index fits.
   (`app/schemas/`). Never `fallbackToDestructiveMigration`: it would silently wipe saved memories
   on upgrade. A migration that changes the word index's columns must rebuild it.
 - **Back up the phone's database before installing a schema bump:**
-  `adb exec-out run-as com.lbc.breadcrumb.hackinverse cat databases/breadcrumb.db > breadcrumb.db`,
+  `adb exec-out run-as com.lbc.breadcrumb cat databases/breadcrumb.db > breadcrumb.db`,
   and the same for `-wal` and `-shm` (the WAL holds recent writes). Run it from Git Bash:
   PowerShell 5.1's `>` re-encodes binary output and corrupts the copy.
 - **Run the instrumented tests without wiping saved memories.** Gradle's
@@ -412,9 +429,9 @@ npm run typecheck
 cd android
 ./gradlew testDebugUnitTest                         # JVM tests
 ./gradlew installDebug                              # build and install on the phone
-adb shell am start -n com.lbc.breadcrumb.hackinverse/com.lbc.breadcrumb.MainActivity
+adb shell am start -n com.lbc.breadcrumb/com.lbc.breadcrumb.MainActivity
 ./gradlew installDebug installDebugAndroidTest      # then the on-device tests, without a wipe:
-adb shell am instrument -w com.lbc.breadcrumb.hackinverse.test/androidx.test.runner.AndroidJUnitRunner
+adb shell am instrument -w com.lbc.breadcrumb.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
 **Deployment is deferred.** When it comes: Google Cloud Run scales to zero with a ~2 s cold

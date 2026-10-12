@@ -419,7 +419,7 @@ off the main thread at start; anything typed meanwhile wins. Closing the sheet k
 and the "+" opens on the composer again, not the import panel.
 
 **The launcher shortcut** "Keep something" (short label "Keep"): `res/xml/shortcuts.xml` with
-action `com.lbc.breadcrumb.action.KEEP`, targetPackage `com.lbc.breadcrumb.hackinverse` (the
+action `com.lbc.breadcrumb.action.KEEP`, targetPackage `com.lbc.breadcrumb` (the
 applicationId), targetClass `com.lbc.breadcrumb.MainActivity`; icon an adaptive icon, background
 @color/brand_ink, foreground a 108dp vector with a plus in #FFFFC46B, stroke 6, round caps,
 `M54,38 L54,70 M38,54 L70,54`; declared as `android.app.shortcuts` meta-data on MainActivity.

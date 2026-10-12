@@ -233,7 +233,7 @@ the design wins.
 - **Haptics follow the phone's Touch feedback setting** (`performHapticFeedback` drops them when
   it is off). Felt nothing? Check `adb shell settings get system haptic_feedback_enabled` before
   the code.
-- **A launcher shortcut names the applicationId** (`com.lbc.breadcrumb.hackinverse`) in
+- **A launcher shortcut names the applicationId** (`com.lbc.breadcrumb`) in
   `res/xml/shortcuts.xml` as its `targetPackage`. An `applicationIdSuffix` on a build type
   breaks it for that build.
 - **Cleartext HTTP is blocked by default.** The debug build's network security config permits it
