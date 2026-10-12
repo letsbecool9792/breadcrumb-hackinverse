@@ -69,6 +69,7 @@ fun HomeScreen(
     val searchState by viewModel.search.collectAsStateWithLifecycle()
     val cloudReads by viewModel.cloudReads.collectAsStateWithLifecycle()
     val cloudParses by viewModel.cloudParses.collectAsStateWithLifecycle()
+    val forgetting by viewModel.forgetting.collectAsStateWithLifecycle()
     // What leaves the phone, opened from "privacy" under the wordmark.
     var privacyOpen by rememberSaveable { mutableStateOf(false) }
     val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
@@ -243,6 +244,7 @@ fun HomeScreen(
                     onCloudParses = viewModel::setCloudParses,
                     cloudReads = cloudReads,
                     onCloudReads = viewModel::setCloudReads,
+                    forgetting = forgetting,
                 )
             }
 

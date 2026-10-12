@@ -122,4 +122,5 @@
     <string name="privacy_reads">Gemini reads my memories</string>
     <string name="privacy_reads_on">for one-line summaries; phone numbers, emails, IDs and OTPs are stripped first, and pictures and banking apps never go</string>
     <string name="privacy_reads_off">nothing you save leaves the phone</string>
+    <string name="privacy_reads_forgetting">forgetting… the server drops everything it holds as soon as it can be reached</string>
 </resources>

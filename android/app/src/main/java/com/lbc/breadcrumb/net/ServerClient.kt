@@ -126,7 +126,7 @@ class ServerClient(
         post("parse", json.encodeToString(ParseRequest(phrase, sources))) { json.decodeFromString<ParseReply>(it).interpretation }
 
     /** POST /memories/forget: deletes every memory the server holds */
-    suspend fun forgetAll(): Reply<Int> =
+    override suspend fun forgetAll(): Reply<Int> =
         post("memories/forget", "{}") { json.decodeFromString<Deleted>(it).deleted }
 
     /**

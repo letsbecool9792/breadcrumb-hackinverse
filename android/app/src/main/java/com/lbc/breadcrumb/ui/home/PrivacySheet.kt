@@ -34,7 +34,8 @@ import com.lbc.breadcrumb.ui.theme.InkOutline
 /**
  * What leaves the phone (local first): two switches, opened from "privacy"
  * under the wordmark. Search runs on the phone either way; with both off the
- * app makes no call to the server at all.
+ * app makes no call to the server but the one that tells it to forget, and
+ * while that hasn't landed the second switch says "forgetting…".
  */
 @Composable
 internal fun ColumnScope.PrivacySheet(
@@ -42,6 +43,7 @@ internal fun ColumnScope.PrivacySheet(
     onCloudParses: (Boolean) -> Unit,
     cloudReads: Boolean,
     onCloudReads: (Boolean) -> Unit,
+    forgetting: Boolean = false,
 ) {
     Grabber(Modifier.align(Alignment.CenterHorizontally))
     Column(
@@ -63,7 +65,13 @@ internal fun ColumnScope.PrivacySheet(
         )
         Choice(
             label = stringResource(R.string.privacy_reads),
-            detail = stringResource(if (cloudReads) R.string.privacy_reads_on else R.string.privacy_reads_off),
+            detail = stringResource(
+                when {
+                    forgetting -> R.string.privacy_reads_forgetting
+                    cloudReads -> R.string.privacy_reads_on
+                    else -> R.string.privacy_reads_off
+                },
+            ),
             checked = cloudReads,
             onChange = onCloudReads,
         )

@@ -19,6 +19,7 @@ import com.lbc.breadcrumb.net.UploadPicture
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -37,6 +38,9 @@ class UploadPassTest {
     private lateinit var db: BreadcrumbDatabase
     private lateinit var memoryDao: MemoryDao
     private val api = FakeApi()
+
+    /** What SyncSettings.forgetPending holds, for the pass under test. */
+    private var forgetPending = false
 
     @Before
     fun open() {
@@ -64,6 +68,8 @@ class UploadPassTest {
         pictureOf = { PICTURE },
         readLinks = readLinks,
         redact = redact,
+        forgetPending = { forgetPending },
+        forgotten = { forgetPending = false },
     )
 
     private suspend fun state(id: String) = memoryDao.getById(id)!!.syncState
@@ -232,6 +238,47 @@ class UploadPassTest {
     }
 
     @Test
+    fun turnedOffTheForgetGoesFirstAndIsTheOnlyCall() = runBlocking {
+        val gone = text("gone", 0)
+        memoryDao.upsert(gone)
+        memoryDao.deleteEverywhere(gone, now = 1)
+        memoryDao.upsertAll(listOf(text("m1", 1)))
+        forgetPending = true
+
+        val outcome = pass(cloudAllowed = false).run()
+
+        assertTrue(outcome is UploadPass.Outcome.Done)
+        assertEquals(listOf("forget"), api.calls)
+        assertFalse(forgetPending)
+    }
+
+    @Test
+    fun aForgetTheServerHasNotAnsweredStaysAndNothingElseGoes() = runBlocking {
+        memoryDao.upsertAll(listOf(text("m1", 1)))
+        forgetPending = true
+        api.onForget = { Reply.Later(null, "connection refused") }
+
+        val outcome = pass(cloudAllowed = true).run()
+
+        assertTrue(outcome is UploadPass.Outcome.Later)
+        assertEquals(listOf("forget"), api.calls)
+        assertTrue(forgetPending)
+        assertEquals(SyncState.PENDING, state("m1"))
+    }
+
+    @Test
+    fun turnedBackOnBeforeTheForgetLandedItStillGoesBeforeTheMemories() = runBlocking {
+        memoryDao.upsertAll(listOf(text("m1", 1)))
+        forgetPending = true
+
+        pass(cloudAllowed = true).run()
+
+        assertEquals("forget", api.calls.first())
+        assertTrue(api.calls.any { it.startsWith("memories") })
+        assertFalse(forgetPending)
+    }
+
+    @Test
     fun aBatchThatCouldNotBeCheckedForPersonalDetailsDoesNotGo() = runBlocking {
         memoryDao.upsertAll(listOf(text("m1", 1), text("m2", 2)))
 
@@ -309,6 +356,13 @@ class UploadPassTest {
         override suspend fun sendDeletes(ids: List<String>): Reply<Int> {
             calls += "delete $ids"
             return Reply.Done(ids.size)
+        }
+
+        var onForget: suspend () -> Reply<Int> = { Reply.Done(0) }
+
+        override suspend fun forgetAll(): Reply<Int> {
+            calls += "forget"
+            return onForget()
         }
     }
 
