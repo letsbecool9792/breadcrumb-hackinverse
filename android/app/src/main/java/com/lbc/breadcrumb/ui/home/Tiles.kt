@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -173,37 +174,51 @@ private fun DocumentTile(memory: Memory, now: Long) {
     }
 }
 
-/** The host in a small amber mark, then the title. */
+/** The page's preview picture when it has one, then the host in a small amber mark, then the title. */
 @Composable
 private fun LinkTile(memory: Memory, now: Long) {
     val host = memory.rawText?.let(ResultText::host)
-    Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        if (host != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(AmberContainerDark),
-                    contentAlignment = Alignment.Center,
-                ) {
+    val preview = rememberThumbnail(memory, THUMBNAIL_PX)
+    Column {
+        if (preview != null) {
+            Image(
+                bitmap = preview,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(16f / 9f)
+                    .background(InkMedia),
+                contentScale = ContentScale.Crop,
+            )
+        }
+        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            if (host != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier.size(16.dp).clip(RoundedCornerShape(4.dp)).background(AmberContainerDark),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            host.first().uppercase(Locale.ROOT),
+                            style = monoStyle(9.sp, AmberBright, weight = FontWeight.Medium),
+                        )
+                    }
                     Text(
-                        host.first().uppercase(Locale.ROOT),
-                        style = monoStyle(9.sp, AmberBright, weight = FontWeight.Medium),
+                        host,
+                        style = monoStyle(10.sp, BoneDim),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Text(
-                    host,
-                    style = monoStyle(10.sp, BoneDim),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
             }
+            Text(
+                ResultText.title(memory),
+                style = sans(14.sp, weight = FontWeight.Medium, lineHeight = 19.sp),
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Meta(memory, now)
         }
-        Text(
-            ResultText.title(memory),
-            style = sans(14.sp, weight = FontWeight.Medium, lineHeight = 19.sp),
-            maxLines = 4,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Meta(memory, now)
     }
 }
 

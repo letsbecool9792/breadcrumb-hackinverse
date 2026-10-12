@@ -32,6 +32,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -214,6 +215,18 @@ private fun PageArtifact(memory: Memory, visibility: AnimatedVisibilityScope, on
 @Composable
 private fun LinkCard(memory: Memory, onOpen: () -> Unit) {
     val host = memory.rawText?.let(ResultText::host)
+    // The page's preview picture, when it has one, over the card.
+    rememberThumbnail(memory, 1080)?.let { preview ->
+        Image(
+            bitmap = preview,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(16f / 9f)
+                .clickable(onClick = onOpen),
+            contentScale = ContentScale.Crop,
+        )
+    }
     Column(
         Modifier
             .fillMaxWidth()
