@@ -52,7 +52,7 @@ brief says:
    matters.
 5. **Post-V1**, as listed below.
 
-Each brief holds its own checklist; tick a step in the PR that finishes it.
+Each brief holds its own checklist; tick a step with the commits that finish it.
 
 ---
 
@@ -95,16 +95,18 @@ the server from the terminal, sync against the server.
 
 ## How we work
 
-- **One step, one branch, one PR.** Branch from the latest `main`; never commit on `main`. Check
-  the branch (`git status -sb`) before every commit.
-- **Test on a real phone before asking for review**, not in an emulator and not "it compiles".
-  The brief's *check* lines are what the review runs.
-- **Suparno reviews every PR on the phone and merges with "Rebase and merge"**, never squash, so
-  every commit stays visible on `main`. A commit message unfit for history gets reworded during
-  the rebase, not squashed away.
+- **Work goes straight to `main`**, now that one person works on the repo (since 2026-10-24):
+  small commits, each fit for history. Push once the tests the change touches pass; when it needs
+  a check by hand on the phone, commit but hold the push until Suparno confirms the check. Only a
+  big separate task, or an experiment, gets its own branch and a PR. Check the branch
+  (`git status -sb`) before every commit.
+- **Test on a real phone**, not in an emulator and not "it compiles". The brief's *check* lines
+  are the checks by hand.
+- **A PR, when there is one, Suparno merges with "Rebase and merge"**, never squash, so every
+  commit stays visible on `main`.
 - **Tests come with the code**: JVM tests (`./gradlew testDebugUnitTest`) for anything pure, tests
   on the phone for anything that touches Android, `npm test` for the server.
-- **Tick your step's box in your brief in the same PR.** The briefs are the only progress
+- **Tick your step's box in your brief with the step's commits.** The briefs are the only progress
   tracker: no separate TODO files, no issues.
 - **Never commit secrets.** `server/.env` is gitignored; `.env.example` holds placeholders only.
   Agents never read or print `.env`.
