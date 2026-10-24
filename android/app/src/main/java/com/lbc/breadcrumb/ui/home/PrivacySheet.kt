@@ -32,15 +32,13 @@ import com.lbc.breadcrumb.ui.theme.InkFieldBorder
 import com.lbc.breadcrumb.ui.theme.InkOutline
 
 /**
- * What leaves the phone (local first): two switches, opened from "privacy"
- * under the wordmark. Search runs on the phone either way; with both off the
- * app makes no call to the server but the one that tells it to forget, and
- * while that hasn't landed the second switch says "forgetting…".
+ * What leaves the phone (local first): one switch, opened from "privacy"
+ * under the wordmark. Search runs on the phone, phrase and all (L6); with the
+ * switch off the app makes no call to the server but the one that tells it to
+ * forget, and while that hasn't landed the switch says "forgetting…".
  */
 @Composable
 internal fun ColumnScope.PrivacySheet(
-    cloudParses: Boolean,
-    onCloudParses: (Boolean) -> Unit,
     cloudReads: Boolean,
     onCloudReads: (Boolean) -> Unit,
     forgetting: Boolean = false,
@@ -57,12 +55,6 @@ internal fun ColumnScope.PrivacySheet(
     ) {
         Text(stringResource(R.string.privacy_title), style = serif(26.sp, lineHeight = 30.sp))
         Text(stringResource(R.string.privacy_lead), style = sans(15.sp, BoneDim, lineHeight = 22.sp))
-        Choice(
-            label = stringResource(R.string.privacy_parses),
-            detail = stringResource(if (cloudParses) R.string.privacy_parses_on else R.string.privacy_parses_off),
-            checked = cloudParses,
-            onChange = onCloudParses,
-        )
         Choice(
             label = stringResource(R.string.privacy_reads),
             detail = stringResource(

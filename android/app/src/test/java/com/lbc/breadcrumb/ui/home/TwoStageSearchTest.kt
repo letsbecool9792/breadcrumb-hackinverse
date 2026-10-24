@@ -31,7 +31,7 @@ class TwoStageSearchTest {
             twoStageSearch(
                 queries = queries,
                 wordSearch = { listOf(localMem1) },
-                serverSearch = { SearchOutcome.Found(emptyList(), null) },
+                rankedSearch = { SearchOutcome.Found(emptyList(), null) },
                 heldMemories = { listOf(localMem1) },
             ).collect { emitted.add(it) }
         }
@@ -43,18 +43,18 @@ class TwoStageSearchTest {
     }
 
     @Test
-    fun `word search answers at once as RANKING and server answers after 450 ms as RANKED`() = runTest {
+    fun `word search answers at once as RANKING and the ranking answers after 450 ms as RANKED`() = runTest {
         val queries = MutableSharedFlow<String>()
         val emitted = mutableListOf<SearchState>()
 
-        val serverHit = SearchHit(id = "m2", score = 0.033, ranks = Ranks(vector = 1, text = 1))
+        val rankedHit = SearchHit(id = "m2", score = 0.033, ranks = Ranks(vector = 1, text = 1))
         val interpretation = Interpretation(query = "qualcomm")
 
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             twoStageSearch(
                 queries = queries,
                 wordSearch = { listOf(localMem1, localMem2) },
-                serverSearch = { SearchOutcome.Found(listOf(serverHit), interpretation) },
+                rankedSearch = { SearchOutcome.Found(listOf(rankedHit), interpretation) },
                 heldMemories = { listOf(localMem1, localMem2) },
             ).collect { emitted.add(it) }
         }
@@ -62,7 +62,7 @@ class TwoStageSearchTest {
         queries.emit("qualcomm")
         runCurrent()
 
-        // At t = 0 ms: word search answered, server has not yet answered
+        // At t = 0 ms: word search answered, the ranking has not yet answered
         assertEquals(1, emitted.size)
         val stage1 = emitted[0] as SearchState.Searching
         assertEquals("qualcomm", stage1.phrase)
@@ -77,7 +77,7 @@ class TwoStageSearchTest {
         runCurrent()
         assertEquals(1, emitted.size)
 
-        // Advance past 450 ms: server answers
+        // Advance past 450 ms: the ranking answers
         advanceTimeBy(1)
         runCurrent()
         assertEquals(2, emitted.size)
@@ -87,11 +87,11 @@ class TwoStageSearchTest {
         assertEquals(interpretation, stage2.interpretation)
         assertEquals(1, stage2.results.size)
         assertEquals("m2", stage2.results[0].memory.id)
-        assertEquals(serverHit, stage2.results[0].hit)
+        assertEquals(rankedHit, stage2.results[0].hit)
     }
 
     @Test
-    fun `unavailable server leaves word matches standing as OFFLINE or UNAVAILABLE`() = runTest {
+    fun `an unavailable ranking leaves word matches standing as OFFLINE or UNAVAILABLE`() = runTest {
         val queries = MutableSharedFlow<String>()
         val emitted = mutableListOf<SearchState>()
 
@@ -101,7 +101,7 @@ class TwoStageSearchTest {
             twoStageSearch(
                 queries = queries,
                 wordSearch = { listOf(localMem1) },
-                serverSearch = {
+                rankedSearch = {
                     if (isOffline) {
                         SearchOutcome.Unavailable("Refused", offline = true)
                     } else {
@@ -137,17 +137,17 @@ class TwoStageSearchTest {
     }
 
     @Test
-    fun `a keystroke inside the pause abandons the server call`() = runTest {
+    fun `a keystroke inside the pause abandons the ranking`() = runTest {
         val queries = MutableSharedFlow<String>()
         val emitted = mutableListOf<SearchState>()
-        var serverCalls = 0
+        var rankings = 0
 
         backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
             twoStageSearch(
                 queries = queries,
                 wordSearch = { listOf(localMem1) },
-                serverSearch = {
-                    serverCalls++
+                rankedSearch = {
+                    rankings++
                     SearchOutcome.Found(emptyList(), null)
                 },
                 heldMemories = { listOf(localMem1) },
@@ -164,12 +164,12 @@ class TwoStageSearchTest {
         // Advance 300 ms (now 500 ms from start, but only 300 ms after "internship")
         advanceTimeBy(300)
         runCurrent()
-        assertEquals(0, serverCalls)
+        assertEquals(0, rankings)
 
         // Advance the remaining 150 ms to hit the 450 ms mark for "internship"
         advanceTimeBy(150)
         runCurrent()
-        assertEquals(1, serverCalls)
+        assertEquals(1, rankings)
         val lastState = emitted.last() as SearchState.Searching
         assertEquals("internship", lastState.phrase)
         assertEquals(SearchStatus.RANKED, lastState.status)
@@ -188,7 +188,7 @@ class TwoStageSearchTest {
                     wordSearchCalls++
                     listOf(localMem1)
                 },
-                serverSearch = { SearchOutcome.Found(emptyList(), null) },
+                rankedSearch = { SearchOutcome.Found(emptyList(), null) },
                 heldMemories = { listOf(localMem1) },
             ).collect { emitted.add(it) }
         }

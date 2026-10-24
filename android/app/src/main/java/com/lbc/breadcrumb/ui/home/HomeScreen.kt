@@ -68,7 +68,6 @@ fun HomeScreen(
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchState by viewModel.search.collectAsStateWithLifecycle()
     val cloudReads by viewModel.cloudReads.collectAsStateWithLifecycle()
-    val cloudParses by viewModel.cloudParses.collectAsStateWithLifecycle()
     val forgetting by viewModel.forgetting.collectAsStateWithLifecycle()
     // What leaves the phone, opened from "privacy" under the wordmark.
     var privacyOpen by rememberSaveable { mutableStateOf(false) }
@@ -240,8 +239,6 @@ fun HomeScreen(
 
             SheetLayer(item = if (privacyOpen) Unit else null, onDismiss = { privacyOpen = false }) { _, _ ->
                 PrivacySheet(
-                    cloudParses = cloudParses,
-                    onCloudParses = viewModel::setCloudParses,
                     cloudReads = cloudReads,
                     onCloudReads = viewModel::setCloudReads,
                     forgetting = forgetting,

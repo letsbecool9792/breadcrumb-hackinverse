@@ -7,10 +7,10 @@ import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.LocalSearch
+import com.lbc.breadcrumb.embed.PhraseRules
 import com.lbc.breadcrumb.embed.VectorIndex
 import com.lbc.breadcrumb.embed.Sites
 import com.lbc.breadcrumb.net.Redactor
-import com.lbc.breadcrumb.net.Reply
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 /**
  * What the home screen holds (design §4). The memories come straight from Room,
@@ -34,13 +35,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val reads = MutableStateFlow(app.syncSettings.geminiReadsMemories)
-    private val parses = MutableStateFlow(app.syncSettings.cloudParses)
 
     /** Whether Gemini reads memories (local first); off, nothing is waiting to be sent. */
     val cloudReads: StateFlow<Boolean> = reads
-
-    /** Whether a search phrase goes to the server to be parsed into filters. */
-    val cloudParses: StateFlow<Boolean> = parses
 
     /** True from turning reading off until the server confirms it forgot everything. */
     val forgetting: StateFlow<Boolean> = app.syncSettings.changes()
@@ -67,11 +64,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun setCloudParses(on: Boolean) {
-        app.syncSettings.cloudParses = on
-        parses.value = on
-    }
-
     /** Bringing in what is already on the phone; its line shows over the search field. */
     internal val importer: BulkImporter get() = app.importer
 
@@ -90,30 +82,21 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     /**
      * The search (design §9): the phone's own words at once, then the ranking
-     * after a pause. The ranking runs on the phone (local-first L2); only the
-     * phrase goes to the server, to be parsed. Until the model is on the phone,
-     * the server ranks, and the words stand alone when it is out of reach.
+     * after a pause, both narrowed by the phrase's filters. All of it runs on
+     * the phone (local-first L2 and L6): nothing typed leaves it.
      */
     private val localSearch = LocalSearch(
         embed = { app.embedder.text(it) },
         vectors = VectorIndex(app.database.embeddingDao())::current,
         words = { query, limit -> app.database.readingDao().search(query, limit) },
-        // Only the phrase leaves the phone, with the names it may mean (L3).
-        parse = { phrase ->
-            if (parses.value) {
-                val sources = Sites.sourcesOf(app.database.memoryDao().getAll())
-                (app.server.parse(phrase, sources) as? Reply.Done)?.body
-            } else {
-                null
-            }
-        },
+        parse = { phrase -> PhraseRules.parse(phrase, LocalDate.now(), Sites.sourcesOf(app.database.memoryDao().getAll())) },
         memories = { app.database.memoryDao().getAll() },
     )
 
     val search: StateFlow<SearchState> = twoStageSearch(
         queries = typed,
-        wordSearch = { app.database.readingDao().search(it, MATCHES) },
-        serverSearch = { localSearch.search(it, MATCHES) ?: app.server.search(it, MATCHES) },
+        wordSearch = { localSearch.byWords(it, MATCHES) },
+        rankedSearch = { localSearch.search(it, MATCHES) },
         heldMemories = { app.database.memoryDao().getAll() },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState.Resting)
 

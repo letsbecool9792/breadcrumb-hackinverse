@@ -40,21 +40,21 @@ fun normaliseQuery(query: String): String =
  * On every change of the normalised query:
  * 1. Empty -> [SearchState.Resting]
  * 2. Word search answers immediately with [SearchStatus.RANKING] and no interpretation
- * 3. After 450 ms, the server answers:
- *    - [SearchOutcome.Found] -> joined hits with server interpretation and [SearchStatus.RANKED]
+ * 3. After 450 ms, the ranking answers:
+ *    - [SearchOutcome.Found] -> joined hits with the phrase's interpretation and [SearchStatus.RANKED]
  *    - [SearchOutcome.Unavailable] -> local word matches stand, with [SearchStatus.OFFLINE] (if offline)
  *      or [SearchStatus.UNAVAILABLE]
  *
- * Incoming [wordSearch], [serverSearch], and [heldMemories] are passed as functions so
+ * Incoming [wordSearch], [rankedSearch], and [heldMemories] are passed as functions so
  * tests can fake or mock them.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 fun twoStageSearch(
     queries: Flow<String>,
     wordSearch: suspend (phrase: String) -> List<Memory>,
-    serverSearch: suspend (phrase: String) -> SearchOutcome,
+    rankedSearch: suspend (phrase: String) -> SearchOutcome,
     heldMemories: suspend () -> List<Memory>,
-    serverDelayMillis: Long = 450L,
+    rankDelayMillis: Long = 450L,
 ): Flow<SearchState> {
     return queries
         .map { normaliseQuery(it) }
@@ -77,12 +77,12 @@ fun twoStageSearch(
                 ),
             )
 
-            // 2. Pause before server call; if a new query arrives during pause,
+            // 2. Pause before ranking; if a new query arrives during pause,
             // transformLatest cancels this block automatically.
-            delay(serverDelayMillis)
+            delay(rankDelayMillis)
 
-            // 3. Server answers
-            val outcome = serverSearch(phrase)
+            // 3. The ranking answers
+            val outcome = rankedSearch(phrase)
             when (outcome) {
                 is SearchOutcome.Found -> {
                     val held = heldMemories()

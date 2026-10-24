@@ -65,7 +65,7 @@ class EmbedOnPhoneTest {
         assertEquals("job", best("that internship i saved"))
         assertEquals("cash", best("finance lecture about managing money"))
 
-        // The whole search on the phone, as the home screen runs it, without the server's parse.
+        // The whole search on the phone, as the home screen runs it, without a parse.
         val local = LocalSearch(
             embed = { embedder.text(it) },
             vectors = VectorIndex(database.embeddingDao())::current,
@@ -73,8 +73,8 @@ class EmbedOnPhoneTest {
             parse = { null },
             memories = { database.memoryDao().getAll() },
         )
-        assertEquals("burger", local.search("where priya said to eat", 30)!!.hits.first().id)
-        assertEquals("job", local.search("qualcomm", 30)!!.hits.first().id)
+        assertEquals("burger", local.search("where priya said to eat", 30).hits.first().id)
+        assertEquals("job", local.search("qualcomm", 30).hits.first().id)
 
         database.memoryDao().delete(burger)
         assertEquals(2, database.embeddingDao().version().count)
