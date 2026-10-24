@@ -30,12 +30,12 @@ brief says:
   sheet. The debug list sits behind a long press on the wordmark, in debug builds.
 - **Local first** ([`docs/workstreams/local-first.md`](docs/workstreams/local-first.md)): the
   app is local first. Memories are embedded with EmbeddingGemma 2 and ranked on the phone, and
-  search works in airplane mode. By default only a search phrase leaves the phone, with the
-  names of the apps and sites saves came from, to be parsed into filters. Gemini reads memories
-  only when the person turns it on in the privacy sheet, stripped of personal details first;
-  pictures never go.
-- **The server (S1 to S7, L3) and sync (U1, U2)** now serve only that: `POST /parse`, and
-  reading memories when allowed.
+  search works in airplane mode. By default nothing leaves the phone: a search phrase is taken
+  apart into its filters on the phone too, by rules (L6). Gemini reads memories only when the
+  person turns it on in the privacy sheet, stripped of personal details first; pictures never
+  go.
+- **The server (S1 to S7, L3) and sync (U1, U2)** now serve only that: reading memories when
+  allowed. The app no longer calls `POST /parse` or `GET /search`.
 
 **Roadmap**, in this order:
 
@@ -44,12 +44,10 @@ brief says:
    window and the fusion against it, not before.
 2. **Check that a clip marked sensitive is never saved**, with a real password manager on the
    phone. Only the JVM test covers it today.
-3. **Filters need the server today**, so they are lost away from the laptop's `adb reverse`.
-   Decide: deploy the server (Cloud Run: ~2 s cold start, needs a billing account on file;
-   Render's free tier cold-starts in 30–60 s), or parse the phrase on the phone (dates, types
-   and app names by rules, or a small Gemma through the LiteRT-LM already in the app). If
-   deployed, the server needs auth: a long-lived token in the Android keystore, which the server
-   validates.
+3. **Mobile only, no server.** Filters are parsed on the phone (L6), so search needs no server.
+   Next, retire "Gemini reads my memories" with its upload queue and the privacy sheet, then
+   mark the server retired in the docs. `server/` stays in the repo, never deleted: it is
+   simply no longer used.
 4. **OCR reads Latin script only**; ML Kit has bundled Devanagari and other models if that
    matters.
 5. **Post-V1**, as listed below.
@@ -75,8 +73,8 @@ capture writes a row (extractedText null)
       → the phone embeds it (EmbeddingGemma 2); search finds it on the phone, by meaning and words
       → only with "Gemini reads my memories" on: sync sends it, stripped of personal details,
         the server reads it with Gemini, and sync copies the summary back
-a search: the phone's words at once, then its own ranking by meaning; with "Understand searches
-in the cloud" on, the phrase alone goes to the server (POST /parse) for its filters
+a search: the phrase is taken apart on the phone (embed/PhraseRules), then its words at once and
+its own ranking by meaning, both narrowed by the phrase's filters; nothing typed leaves the phone
 ```
 
 Each workstream can be built and checked alone: capture and reading against the debug list,
@@ -203,9 +201,9 @@ The product should feel like a personal search engine, not a digital notebook.
 |---|---|
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
 | On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled) and Entity Extraction |
-| Server (optional) | Node + Express + TypeScript: `POST /parse`, and reading memories only when allowed |
+| Server (optional) | Node + Express + TypeScript: reading memories only when allowed |
 | Database (server) | MongoDB Atlas (M0 free tier) + Atlas Vector Search |
-| Query AI (server) | **Gemini 3.1 Flash Lite** (parsing a search phrase) |
+| Query parsing | **On the phone, by rules** (`embed/PhraseRules`). The server's Gemini 3.1 Flash Lite parser is unused since L6 |
 | Ingest AI (server, opt-in) | **Gemini 3.5 Flash Lite** (multimodal: text and images in one call) |
 | Embeddings (server) | `gemini-embedding-001` at 768 dimensions, for memories the server is sent |
 
@@ -287,7 +285,7 @@ afterward only when the person allows it.
 **5. Hybrid search, never pure vector, on the phone.** EmbeddingGemma 2 embeds memories and the
 phrase on the phone, every vector is scored there (no vector database at this size), and the
 result is fused with the phone's word search by reciprocal rank (`embed/LocalSearch`). The server's
-hybrid search below still runs for memories it was sent.
+hybrid search below is no longer called by the app (L6).
 Pure semantic search is weakest at exactly what the target queries contain: proper nouns. In
 *"that guy from the hackathon who worked at Qualcomm"*, "Qualcomm" wants keyword matching and the
 rest wants meaning. `$vectorSearch` and `$search` run in parallel, and the server fuses them by
@@ -297,14 +295,15 @@ For whoever revisits it: `$rankFusion` would save one round trip, and with `scor
 each result's `{$meta: "scoreDetails"}` lists every input pipeline's rank
 (`details[].inputPipelineName`, `details[].rank`), so the per-half ranks survive a switch.
 
-**6. Parse the query before searching it.** Only the phrase goes, to `POST /parse`, with the app
-and site names it may mean; the phone applies the filters. "Understand searches in the cloud"
-off, search runs without them.
+**6. Parse the query before searching it, on the phone.**
 *"that internship screenshot from April"* decomposes into words (internship), a type filter
 (screenshot) and a date filter (April). Vector search handles none of the filtering: "from April"
-just becomes noise in the embedding. A cheap Flash Lite call turns the phrase into
-`{query, types, from, to, sourceApp}`, then runs a **filtered** search. Without this layer the
-headline demo queries do not actually work.
+just becomes noise in the embedding. `embed/PhraseRules` turns the phrase into
+`{query, types, from, to, sourceApp}` by rules, against the app and site names saves came from,
+and both the word search and the ranking are **filtered**. Without this layer the headline
+queries do not actually work. It was a Gemini call on the server until L6: on 67 test phrases
+the rules did as well (24 of 25 they weren't written against, to Gemini's 22) in microseconds,
+where Gemini beat the search's 2.5 s wait for 18 of 65.
 
 **7. Capture provenance: it is a first-class retrieval signal.**
 On a share, record the calling app via `Activity.getReferrer()`. That makes *"that link someone
