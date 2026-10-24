@@ -11,4 +11,4 @@ import android.content.Context
  * [com.lbc.breadcrumb.sync.UploadWorker.schedule] before the OCR queue starts;
  * a no-op until then, and in tests that build the queue alone.
  */
-var uploadScheduler: (Context) -> Unit = {}
+var workScheduler: (Context) -> Unit = {}

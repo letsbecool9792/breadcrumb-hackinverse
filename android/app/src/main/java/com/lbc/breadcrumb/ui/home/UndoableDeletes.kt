@@ -33,7 +33,7 @@ internal class UndoableDeletes(
     private val deleteRow: suspend (Memory) -> Unit,
     private val restoreRow: suspend (Memory) -> Unit,
     private val deleteOriginal: (Memory) -> Unit,
-    private val scheduleUpload: () -> Unit,
+    private val scheduleWork: () -> Unit,
     private val now: () -> Long = System::currentTimeMillis,
     /** Waits out the undo window. */
     private val undoWindow: suspend () -> Unit = { delay(UNDO_MILLIS) },
@@ -93,7 +93,7 @@ internal class UndoableDeletes(
                     updatedAt = now(),
                 ),
             )
-            scheduleUpload()
+            scheduleWork()
         }
     }
 
@@ -109,7 +109,7 @@ internal class UndoableDeletes(
         _pending.value = null
         work.trySend {
             deleteOriginal(memory)
-            scheduleUpload()
+            scheduleWork()
         }
     }
 

@@ -3,7 +3,7 @@ package com.lbc.breadcrumb.capture
 import android.content.Context
 import android.net.Uri
 import com.lbc.breadcrumb.BreadcrumbApp
-import com.lbc.breadcrumb.ocr.uploadScheduler
+import com.lbc.breadcrumb.ocr.workScheduler
 import kotlinx.coroutines.async
 
 const val ACTION_KEEP = "com.lbc.breadcrumb.action.KEEP"
@@ -34,7 +34,7 @@ object Keep {
                 if (trimmedText == null) return@async 0
                 val memory = CaptureStorage.createTextMemory(trimmedText)
                 app.database.memoryDao().upsert(memory)
-                uploadScheduler(app)
+                workScheduler(app)
                 return@async 1
             }
 
@@ -52,7 +52,7 @@ object Keep {
                 }
             }
             if (keptCount > 0) {
-                uploadScheduler(app)
+                workScheduler(app)
             }
             keptCount
         }.await()

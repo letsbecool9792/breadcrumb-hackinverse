@@ -107,7 +107,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         restoreRow = { app.database.memoryDao().restore(it) },
         deleteOriginal = { app.originals.delete(it) },
         // A memory brought back lost its vector with the row: embed it again too.
-        scheduleUpload = {
+        scheduleWork = {
             UploadWorker.schedule(app)
             EmbedWorker.schedule(app)
         },

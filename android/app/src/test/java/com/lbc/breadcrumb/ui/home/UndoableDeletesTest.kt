@@ -27,7 +27,7 @@ class UndoableDeletesTest {
         deleteRow = { log += "row gone ${it.id}" },
         restoreRow = { log += "row back ${it.id}"; restored += it },
         deleteOriginal = { log += "file gone ${it.id}" },
-        scheduleUpload = { log += "upload" },
+        scheduleWork = { log += "upload" },
         now = { 9_000L },
         undoWindow = { CompletableDeferred<Unit>().also { windows += it }.await() },
     )
@@ -153,7 +153,7 @@ class UndoableDeletesTest {
             deleteRow = { error("database busy") },
             restoreRow = { log += "row back ${it.id}" },
             deleteOriginal = {},
-            scheduleUpload = { log += "upload" },
+            scheduleWork = { log += "upload" },
             undoWindow = { CompletableDeferred<Unit>().await() },
         )
 

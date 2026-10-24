@@ -9,7 +9,7 @@ import com.lbc.breadcrumb.embed.ModelStore
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.net.ServerClient
 import com.lbc.breadcrumb.ocr.OcrQueue
-import com.lbc.breadcrumb.ocr.uploadScheduler
+import com.lbc.breadcrumb.ocr.workScheduler
 import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -76,7 +76,7 @@ class BreadcrumbApp : Application() {
         applicationScope.launch { if (syncSettings.geminiReadsMemories) extractor.prepare() }
         // Before the OCR queue starts: a read landing first would call the
         // no-op, and nothing would be scheduled.
-        uploadScheduler = {
+        workScheduler = {
             UploadWorker.schedule(it)
             // What was saved or read is embedded on the phone too (local-first L1).
             EmbedWorker.schedule(it)

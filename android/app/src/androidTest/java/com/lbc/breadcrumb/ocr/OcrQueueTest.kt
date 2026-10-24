@@ -112,7 +112,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = fakeReader,
-            scheduleUpload = { uploadCalls++ },
+            scheduleWork = { uploadCalls++ },
         )
 
         queueJob = queue.start()
@@ -159,7 +159,7 @@ class OcrQueueTest {
             readingOriginals = readingOriginals,
             reader = fakeImageReader,
             pdfReader = fakePdfReader,
-            scheduleUpload = { uploadCalls++ },
+            scheduleWork = { uploadCalls++ },
         )
 
         queueJob = queue.start()
@@ -198,7 +198,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = fakeReader,
-            scheduleUpload = { uploadCalls++ },
+            scheduleWork = { uploadCalls++ },
         )
 
         queueJob = queue.start()
@@ -268,7 +268,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = fakeReader,
-            scheduleUpload = {},
+            scheduleWork = {},
         ).start()
 
         withTimeout(5000) {
@@ -297,7 +297,7 @@ class OcrQueueTest {
             scope = scope,
             readingOriginals = readingOriginals,
             reader = FakeReader { "text" },
-            scheduleUpload = {},
+            scheduleWork = {},
         ).start()
 
         withTimeout(3000) {
@@ -327,7 +327,7 @@ class OcrQueueTest {
             readingOriginals = readingOriginals,
             reader = FakeReader { "text" },
             // The first picture's read fails after its write; the queue must go on.
-            scheduleUpload = { if (calls++ == 0) throw IllegalStateException("upload hook failed") },
+            scheduleWork = { if (calls++ == 0) throw IllegalStateException("upload hook failed") },
         ).start()
 
         withTimeout(3000) {

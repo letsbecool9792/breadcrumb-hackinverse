@@ -17,7 +17,7 @@ import androidx.compose.runtime.getValue
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.ocr.uploadScheduler
+import com.lbc.breadcrumb.ocr.workScheduler
 import com.lbc.breadcrumb.ui.capture.CaptureSheet
 import com.lbc.breadcrumb.ui.capture.CaptureState
 import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
@@ -211,7 +211,7 @@ abstract class CaptureActivity : ComponentActivity() {
             if (typed.isNotEmpty() && ids.isNotEmpty()) app.database.captureDao().setNote(ids, typed)
             if (first) {
                 app.uploadHolds.removeAll(ids.toSet())
-                uploadScheduler(app)
+                workScheduler(app)
             }
         }
     }

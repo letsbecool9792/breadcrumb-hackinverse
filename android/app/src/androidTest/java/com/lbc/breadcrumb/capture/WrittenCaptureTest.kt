@@ -9,7 +9,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.ocr.uploadScheduler
+import com.lbc.breadcrumb.ocr.workScheduler
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -39,14 +39,14 @@ class WrittenCaptureTest {
     @Before
     fun setup() {
         app = ApplicationProvider.getApplicationContext<Context>() as BreadcrumbApp
-        scheduler = uploadScheduler
-        uploadScheduler = {}
+        scheduler = workScheduler
+        workScheduler = {}
         before = runBlocking { app.database.memoryDao().getAll().map { it.id }.toSet() }
     }
 
     @After
     fun tearDown() {
-        uploadScheduler = scheduler
+        workScheduler = scheduler
         for (uri in createdUris) {
             try {
                 app.contentResolver.delete(uri, null, null)
