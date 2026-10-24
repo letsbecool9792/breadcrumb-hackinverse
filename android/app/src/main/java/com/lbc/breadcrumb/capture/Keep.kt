@@ -14,7 +14,7 @@ const val ACTION_KEEP = "com.lbc.breadcrumb.action.KEEP"
  *   with no source app.
  * - With files, each file is its own memory, copied in as a share would be, with the text as
  *   the note on every one.
- * - It schedules an upload and says how many it kept; none (0) is a failure.
+ * - It schedules what follows a save, and says how many it kept; none (0) is a failure.
  * - It shares the code paths [CaptureActivity] already uses ([CaptureStorage]).
  */
 object Keep {

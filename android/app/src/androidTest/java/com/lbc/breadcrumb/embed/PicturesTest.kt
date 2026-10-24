@@ -1,4 +1,4 @@
-package com.lbc.breadcrumb.sync
+package com.lbc.breadcrumb.embed
 
 import android.content.Context
 import android.graphics.Bitmap

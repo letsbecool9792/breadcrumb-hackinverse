@@ -227,7 +227,7 @@ class OcrQueueTest {
         memoryDao.upsert(memory)
 
         val fakeReader = FakeReader {
-            runBlocking { memoryDao.deleteEverywhere(memory, now = 2000) }
+            runBlocking { memoryDao.delete(memory) }
             "text should not be saved"
         }
 
@@ -245,7 +245,6 @@ class OcrQueueTest {
         delay(300)
         assertNull(readingDao.getById("to_delete"))
         assertNull(memoryDao.getById("to_delete"))
-        assertEquals(1, memoryDao.pendingDeleteCount())
     }
 
     @Test

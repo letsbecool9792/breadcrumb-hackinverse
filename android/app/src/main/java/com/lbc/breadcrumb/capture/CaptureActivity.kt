@@ -29,7 +29,7 @@ import java.util.UUID
 
 /**
  * What the three capture activities share: the sheet and its state, the
- * upload hold, the note, Undo and closing. Each activity only captures: in
+ * note, Undo and closing. Each activity only captures: in
  * [capture] it calls [saveText] or [saveFiles], or [fail] with a reason.
  *
  * Saving runs in applicationScope, one file at a time, each row written right
@@ -162,12 +162,9 @@ abstract class CaptureActivity : ComponentActivity() {
         }
     }
 
-    /** A memory is saved: held back from upload while the sheet is open. */
+    /** A memory is saved: remembered, for the note and for an undo. */
     private fun keep(memory: Memory) {
-        synchronized(this) {
-            saved += memory
-            if (!ended) app.uploadHolds += memory.id
-        }
+        synchronized(this) { saved += memory }
     }
 
     /**
@@ -181,12 +178,10 @@ abstract class CaptureActivity : ComponentActivity() {
         app.applicationScope.launch {
             writes?.join()
             val removed = synchronized(this@CaptureActivity) { saved.toList().also { saved.clear() } }
-            val now = System.currentTimeMillis()
             for (memory in removed) {
-                app.database.memoryDao().deleteEverywhere(memory, now)
+                app.database.memoryDao().delete(memory)
                 app.originals.delete(memory)
             }
-            app.uploadHolds.removeAll(removed.map { it.id }.toSet())
         }
     }
 
@@ -197,9 +192,9 @@ abstract class CaptureActivity : ComponentActivity() {
 
     /**
      * The sheet is going, dismissed or left: write whatever note is typed, then
-     * release the hold, then tell the upload queue. In that order: released
-     * first, the queue could send the memories without the note and then again
-     * with it. The hold and the call happen once; the note whenever it is typed.
+     * schedule what follows a save (a link's page, the embedding), so the note
+     * is in what is embedded. The call happens once; the note whenever it is
+     * typed.
      */
     private fun end() {
         val typed = note.value.trim()
@@ -209,10 +204,7 @@ abstract class CaptureActivity : ComponentActivity() {
             writes?.join()
             val ids = synchronized(this@CaptureActivity) { saved.map { it.id } }
             if (typed.isNotEmpty() && ids.isNotEmpty()) app.database.captureDao().setNote(ids, typed)
-            if (first) {
-                app.uploadHolds.removeAll(ids.toSet())
-                workScheduler(app)
-            }
+            if (first) workScheduler(app)
         }
     }
 

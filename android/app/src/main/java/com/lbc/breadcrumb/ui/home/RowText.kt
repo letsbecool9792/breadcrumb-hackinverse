@@ -1,7 +1,6 @@
 package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.net.SearchHit
 
 /**
  * Why a result matched, in one place (design §9): the words around the hit, with
@@ -15,14 +14,10 @@ internal sealed interface Why {
 /** What a result row says: its title, and why it matched when there is something to say. */
 internal data class RowText(val title: String, val why: Why?)
 
-/**
- * The text of a result row. The summary and the text the model read come from
- * the hit when the server ranked it, else from the phone's own row; [words] are
- * what to light.
- */
-internal fun rowText(memory: Memory, hit: SearchHit?, words: List<String>): RowText {
-    val summary = hit?.summary ?: memory.summary
-    val readText = hit?.readText ?: memory.readText
+/** The text of a result row, from the phone's own row; [words] are what to light. */
+internal fun rowText(memory: Memory, words: List<String>): RowText {
+    val summary = memory.summary
+    val readText = memory.readText
     val title = ResultText.title(memory, summary)
 
     val fragment = ResultText.fragment(
@@ -37,6 +32,6 @@ internal fun rowText(memory: Memory, hit: SearchHit?, words: List<String>): RowT
     return RowText(title, why)
 }
 
-/** The words to light: what the server took the phrase to mean, else the phrase itself. */
+/** The words to light: what the parse left of the phrase, else the phrase itself. */
 internal fun wordsToLight(phrase: String, interpretedQuery: String?): List<String> =
     ResultText.words(interpretedQuery?.takeIf { it.isNotBlank() } ?: phrase)

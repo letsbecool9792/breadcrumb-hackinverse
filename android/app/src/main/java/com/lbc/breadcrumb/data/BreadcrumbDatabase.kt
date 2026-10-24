@@ -40,9 +40,6 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
     // Reading workstream: bulk importer duplicate tracking
     abstract fun importDao(): ImportDao
 
-    // Sync workstream: the upload queue's claims and marks
-    abstract fun uploadDao(): UploadDao
-
     // Local first: the vectors made on the phone
     abstract fun embeddingDao(): EmbeddingDao
 

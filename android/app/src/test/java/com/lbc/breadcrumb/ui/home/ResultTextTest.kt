@@ -3,7 +3,7 @@ package com.lbc.breadcrumb.ui.home
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.SyncState
-import com.lbc.breadcrumb.net.Interpretation
+import com.lbc.breadcrumb.embed.Interpretation
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -143,26 +143,21 @@ class ResultTextTest {
     }
 
     @Test
-    fun `status formats reading and sending states`() {
+    fun `status says what is still being read`() {
         val readingLink = Memory(type = MemoryType.LINK, extractedText = null, syncState = SyncState.PENDING)
-        assertEquals("page not read yet · not sent yet", ResultText.status(readingLink))
-        // With cloud reading off, nothing is waiting to be sent.
-        assertEquals("page not read yet", ResultText.status(readingLink, cloudReads = false))
+        assertEquals("page not read yet", ResultText.status(readingLink))
 
-        val readingImage = Memory(type = MemoryType.IMAGE, localUri = "file://img.jpg", extractedText = null, syncState = SyncState.UPLOADING)
-        assertEquals("still reading it · not sent yet", ResultText.status(readingImage))
+        val readingImage = Memory(type = MemoryType.IMAGE, localUri = "file://img.jpg", extractedText = null)
+        assertEquals("still reading it", ResultText.status(readingImage))
 
-        val refused = Memory(type = MemoryType.TEXT, extractedText = "text", syncState = SyncState.FAILED)
-        assertEquals("the server refused it", ResultText.status(refused))
-
-        val synced = Memory(type = MemoryType.TEXT, extractedText = "text", syncState = SyncState.SYNCED)
-        assertNull(ResultText.status(synced))
+        // Nothing is ever sent, so a memory waiting on the old sync says nothing of it.
+        val read = Memory(type = MemoryType.TEXT, extractedText = "text", syncState = SyncState.FAILED)
+        assertNull(ResultText.status(read))
     }
 
     @Test
-    fun `kept formats total and unsent counts`() {
-        assertEquals("17 kept", ResultText.kept(17, 0))
-        assertEquals("17 kept · 2 unsent", ResultText.kept(17, 2))
+    fun `kept formats the total`() {
+        assertEquals("17 kept", ResultText.kept(17))
     }
 
     @Test

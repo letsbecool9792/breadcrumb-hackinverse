@@ -2,7 +2,6 @@ package com.lbc.breadcrumb.embed
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.sync.UploadPass
 import java.security.MessageDigest
 
 /**
@@ -17,6 +16,9 @@ object EmbedText {
 
     /** The model reads at most 1,024 tokens; 2,000 characters stays under that. */
     const val MAX_CHARS = 2_000
+
+    /** A picture is embedded as a picture only when OCR read fewer characters than this. */
+    const val MIN_OCR_CHARS = 80
 
     /** What the phone wrote or read itself: never the server's summary, so it is the same with the server off. */
     fun text(memory: Memory): String =
@@ -57,7 +59,7 @@ object EmbedText {
 
         val text = text(memory)
         val asText = text.takeIf { it.isNotEmpty() }?.let { AsText(document(it), key("text", document(it))) }
-        val barelyRead = (memory.extractedText?.trim()?.length ?: 0) < UploadPass.MIN_OCR_CHARS
+        val barelyRead = (memory.extractedText?.trim()?.length ?: 0) < MIN_OCR_CHARS
         if (memory.type == MemoryType.IMAGE && hasPicture && barelyRead) {
             val prompt = asText?.prompt
             return AsPicture(prompt, key("picture", prompt.orEmpty()), meanwhile = asText)

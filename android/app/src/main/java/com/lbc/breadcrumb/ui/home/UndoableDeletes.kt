@@ -1,7 +1,6 @@
 package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.data.SyncState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -15,14 +14,11 @@ import kotlinx.coroutines.launch
  * Delete with five seconds of Undo instead of a confirmation (design §12).
  *
  * - [delete]: the row goes at once ([deleteRow]), so it leaves the mosaic and
- *   the results immediately. The original file stays, and nothing is
- *   scheduled, so the server does not hear of it yet.
- * - [undo]: the row comes back as PENDING ([restoreRow]) and the queue is
- *   told. The server may already have heard the delete, so the memory is sent
- *   again from scratch: its picture too, and its summary is copied back again.
+ *   the results immediately. The original file stays.
+ * - [undo]: the row comes back ([restoreRow]), and [scheduleWork] has it
+ *   embedded again, since its vector went with the row.
  * - Five seconds pass, or a second delete comes, or [finish] is called (the
- *   view model is cleared mid-undo): the delete is final. The file goes and the
- *   queue is told, so the server hears.
+ *   view model is cleared mid-undo): the delete is final, and the file goes.
  *
  * Every database change runs one at a time on [scope], in the order asked, so
  * a restore can never overtake the delete it undoes. [scope] is the
@@ -85,14 +81,7 @@ internal class UndoableDeletes(
             memory
         }
         work.trySend {
-            restoreRow(
-                memory.copy(
-                    syncState = SyncState.PENDING,
-                    imageSentAt = null,
-                    enrichedAt = null,
-                    updatedAt = now(),
-                ),
-            )
+            restoreRow(memory.copy(updatedAt = now()))
             scheduleWork()
         }
     }
@@ -107,10 +96,7 @@ internal class UndoableDeletes(
 
     private fun makeFinal(memory: Memory) {
         _pending.value = null
-        work.trySend {
-            deleteOriginal(memory)
-            scheduleWork()
-        }
+        work.trySend { deleteOriginal(memory) }
     }
 
     companion object {

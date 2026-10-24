@@ -3,7 +3,6 @@ package com.lbc.breadcrumb.data
 import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Query
-import androidx.room.Transaction
 import androidx.room.Update
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -36,10 +35,7 @@ interface MemoryDao {
     @Update
     suspend fun update(memory: Memory)
 
-    /**
-     * The row only. Almost every caller wants [deleteEverywhere], which also
-     * tells the server.
-     */
+    /** The row; its vector goes with it. The original file is the caller's to remove ([OriginalStore.delete]). */
     @Delete
     suspend fun delete(memory: Memory)
 
@@ -65,48 +61,6 @@ interface MemoryDao {
     @Query("SELECT COUNT(*) FROM memories")
     fun observeCount(): Flow<Int>
 
-    @Upsert
-    suspend fun rememberDelete(delete: PendingDelete)
-
-    @Query("DELETE FROM pending_deletes WHERE id = :id")
-    suspend fun forgetDelete(id: String)
-
-    /**
-     * Deletes a memory here and remembers to delete it on the server, in one
-     * transaction, so a crash between the two cannot leave a delete that never
-     * reaches the cloud. The original file is the caller's to remove
-     * ([OriginalStore.delete]).
-     */
-    @Transaction
-    suspend fun deleteEverywhere(memory: Memory, now: Long) {
-        delete(memory)
-        rememberDelete(PendingDelete(memory.id, now))
-    }
-
-    /**
-     * Undoes [deleteEverywhere]. The server may already have heard the delete,
-     * so the caller restores the memory as PENDING: sending it again costs
-     * nothing if the server still holds it, and restores it if not.
-     */
-    @Transaction
-    suspend fun restore(memory: Memory) {
-        upsert(memory)
-        forgetDelete(memory.id)
-    }
-
-    @Query("INSERT OR REPLACE INTO pending_deletes (id, requestedAt) SELECT id, :now FROM memories")
-    suspend fun rememberDeletingAll(now: Long)
-
     @Query("DELETE FROM memories")
     suspend fun clear()
-
-    /** Every memory, here and on the server. */
-    @Transaction
-    suspend fun clearEverywhere(now: Long) {
-        rememberDeletingAll(now)
-        clear()
-    }
-
-    @Query("SELECT COUNT(*) FROM pending_deletes")
-    suspend fun pendingDeleteCount(): Int
 }

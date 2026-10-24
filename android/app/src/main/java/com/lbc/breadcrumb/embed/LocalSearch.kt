@@ -3,10 +3,6 @@ package com.lbc.breadcrumb.embed
 import com.lbc.breadcrumb.data.EmbeddingDao
 import com.lbc.breadcrumb.data.EmbeddingsVersion
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.net.Interpretation
-import com.lbc.breadcrumb.net.Ranks
-import com.lbc.breadcrumb.net.SearchHit
-import com.lbc.breadcrumb.net.SearchOutcome
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.LocalDate

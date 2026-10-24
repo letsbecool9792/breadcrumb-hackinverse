@@ -54,31 +54,30 @@ class MemoryDaoTest {
     }
 
     @Test
-    fun deleteEverywhereRemovesTheRowAndQueuesTheServersDelete() = runBlocking {
+    fun deleteRemovesTheRowAndItsWords() = runBlocking {
         val memory = Memory(id = "m1", type = MemoryType.TEXT, rawText = "to delete")
         dao.upsert(memory)
 
-        dao.deleteEverywhere(memory, now = 1_000)
+        dao.delete(memory)
 
         assertNull(dao.getById("m1"))
-        assertEquals(1, dao.pendingDeleteCount())
         assertEquals("a deleted memory's words leave the index", 0, matches("delete"))
     }
 
     @Test
-    fun restoreUndoesADelete() = runBlocking {
+    fun anUndoneDeleteComesBackWithItsWords() = runBlocking {
         val memory = Memory(id = "m1", type = MemoryType.TEXT, rawText = "kept after all")
         dao.upsert(memory)
-        dao.deleteEverywhere(memory, now = 1_000)
+        dao.delete(memory)
 
-        dao.restore(memory.copy(syncState = SyncState.PENDING))
+        dao.upsert(memory)
 
         assertEquals("kept after all", dao.getById("m1")?.rawText)
-        assertEquals(0, dao.pendingDeleteCount())
+        assertEquals(1, matches("kept"))
     }
 
     @Test
-    fun clearEverywhereQueuesADeleteForEveryMemory() = runBlocking {
+    fun clearRemovesEveryMemory() = runBlocking {
         dao.upsertAll(
             listOf(
                 Memory(id = "a", type = MemoryType.TEXT),
@@ -86,10 +85,9 @@ class MemoryDaoTest {
             ),
         )
 
-        dao.clearEverywhere(now = 1_000)
+        dao.clear()
 
         assertEquals(0, dao.count())
-        assertEquals(2, dao.pendingDeleteCount())
     }
 
     @Test

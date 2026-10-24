@@ -2,7 +2,6 @@ package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.data.SyncState
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -27,7 +26,7 @@ class UndoableDeletesTest {
         deleteRow = { log += "row gone ${it.id}" },
         restoreRow = { log += "row back ${it.id}"; restored += it },
         deleteOriginal = { log += "file gone ${it.id}" },
-        scheduleWork = { log += "upload" },
+        scheduleWork = { log += "embed" },
         now = { 9_000L },
         undoWindow = { CompletableDeferred<Unit>().also { windows += it }.await() },
     )
@@ -38,14 +37,11 @@ class UndoableDeletesTest {
     private fun memory(id: String) = Memory(
         id = id,
         type = MemoryType.IMAGE,
-        syncState = SyncState.SYNCED,
-        imageSentAt = 5_000,
-        enrichedAt = 6_000,
         summary = "A job posting",
     )
 
     @Test
-    fun `a delete takes the row at once and leaves the file and the server alone`() {
+    fun `a delete takes the row at once and leaves the file alone`() {
         deletes.delete(memory("a"))
 
         assertEquals(listOf("row gone a"), log)
@@ -58,22 +54,18 @@ class UndoableDeletesTest {
 
         windows.single().complete(Unit)
 
-        assertEquals(listOf("row gone a", "file gone a", "upload"), log)
+        assertEquals(listOf("row gone a", "file gone a"), log)
         assertNull(deletes.pending.value)
     }
 
     @Test
-    fun `undo brings the row back as pending, to be sent again from scratch`() {
+    fun `undo brings the row back as it was, to be embedded again`() {
         deletes.delete(memory("a"))
 
         deletes.undo()
 
-        assertEquals(listOf("row gone a", "row back a", "upload"), log)
+        assertEquals(listOf("row gone a", "row back a", "embed"), log)
         val back = restored.single()
-        assertEquals(SyncState.PENDING, back.syncState)
-        // The server may have heard the delete: its copy of the picture's reading and summary can be gone.
-        assertNull(back.imageSentAt)
-        assertNull(back.enrichedAt)
         assertEquals(9_000L, back.updatedAt)
         assertEquals("A job posting", back.summary)
         assertNull(deletes.pending.value)
@@ -86,7 +78,7 @@ class UndoableDeletesTest {
 
         windows.single().complete(Unit)
 
-        assertEquals(listOf("row gone a", "row back a", "upload"), log)
+        assertEquals(listOf("row gone a", "row back a", "embed"), log)
     }
 
     @Test
@@ -95,12 +87,12 @@ class UndoableDeletesTest {
 
         deletes.delete(memory("b"))
 
-        assertEquals(listOf("row gone a", "file gone a", "upload", "row gone b"), log)
+        assertEquals(listOf("row gone a", "file gone a", "row gone b"), log)
         assertEquals("b", deletes.pending.value?.id)
         // The first one's window ending later changes nothing.
         windows.first().complete(Unit)
         assertEquals("b", deletes.pending.value?.id)
-        assertEquals(4, log.size)
+        assertEquals(3, log.size)
     }
 
     @Test
@@ -121,7 +113,7 @@ class UndoableDeletesTest {
         deletes.finish()
         windows.single().complete(Unit)
 
-        assertEquals(listOf("row gone a", "file gone a", "upload"), log)
+        assertEquals(listOf("row gone a", "file gone a"), log)
         assertNull(deletes.pending.value)
     }
 
@@ -141,7 +133,7 @@ class UndoableDeletesTest {
         windows.last().complete(Unit)
 
         assertEquals(
-            listOf("row gone a", "row back a", "upload", "row gone a", "file gone a", "upload"),
+            listOf("row gone a", "row back a", "embed", "row gone a", "file gone a"),
             log,
         )
     }
@@ -153,13 +145,13 @@ class UndoableDeletesTest {
             deleteRow = { error("database busy") },
             restoreRow = { log += "row back ${it.id}" },
             deleteOriginal = {},
-            scheduleWork = { log += "upload" },
+            scheduleWork = { log += "embed" },
             undoWindow = { CompletableDeferred<Unit>().await() },
         )
 
         failing.delete(memory("a"))
         failing.undo()
 
-        assertEquals(listOf("row back a", "upload"), log)
+        assertEquals(listOf("row back a", "embed"), log)
     }
 }

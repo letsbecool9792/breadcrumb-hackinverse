@@ -83,7 +83,6 @@ class DetailTextTest {
                 Provenance.SAVED to "12 sep · 2 days ago",
                 Provenance.FROM to "whatsapp",
                 Provenance.TAKEN to "15 apr",
-                Provenance.STATUS to "not sent yet",
             ),
             rows,
         )

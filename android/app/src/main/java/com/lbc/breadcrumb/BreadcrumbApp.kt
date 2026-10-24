@@ -7,10 +7,9 @@ import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.Embedder
 import com.lbc.breadcrumb.embed.ModelStore
 import com.lbc.breadcrumb.imports.BulkImporter
-import com.lbc.breadcrumb.net.ServerClient
+import com.lbc.breadcrumb.ocr.LinkWorker
 import com.lbc.breadcrumb.ocr.OcrQueue
 import com.lbc.breadcrumb.ocr.workScheduler
-import com.lbc.breadcrumb.sync.UploadWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,12 +34,6 @@ class BreadcrumbApp : Application() {
     /** Where the originals of saved pictures and PDFs live (architecture rule 1). */
     val originals: OriginalStore by lazy { OriginalStore(this) }
 
-    /** The server's API (docs/api.md), shared so its connection pool is too. */
-    val server: ServerClient by lazy { ServerClient() }
-
-    /** Sync settings, including 'Gemini reads my memories' (local-first L4). */
-    val syncSettings: com.lbc.breadcrumb.sync.SyncSettings by lazy { com.lbc.breadcrumb.sync.SyncSettings(this) }
-
     /** The embedding model's file, downloaded once (local-first L1). */
     val models: ModelStore by lazy { ModelStore(this) }
 
@@ -52,43 +45,29 @@ class BreadcrumbApp : Application() {
 
     /**
      * Reading workstream: true while the OCR queue is working through unread
-     * pictures and PDFs, so the uploader holds them back rather than sending
-     * them unread. Presumed true until the queue has looked, and goes false in
-     * a finally when the queue finishes or never starts.
+     * pictures and PDFs. Presumed true until the queue has looked, and goes
+     * false in a finally when the queue finishes or never starts. The upload
+     * pass held unread pictures back on it; since local-first L7 nothing reads it.
      */
     val readingOriginals = MutableStateFlow(true)
 
-    /**
-     * Capture workstream: memory ids that must not be uploaded yet. The capture
-     * sheet adds its ids here while the note field is open; the sync
-     * workstream's queue skips them. Released on dismiss, on leaving for
-     * another app, and in onDestroy.
-     */
-    val uploadHolds: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-
     override fun onCreate() {
         super.onCreate()
-        // ML Kit entity extraction for redacting text leaving the phone (local-first L4).
-        val extractor = com.lbc.breadcrumb.net.DeviceEntityExtractor()
-        com.lbc.breadcrumb.net.Redactor.deviceExtractor = extractor
-        // Reading on, the model should be there before the next upload pass needs it. Off the main
-        // thread: a capture is a cold start, and the settings are a disk read.
-        applicationScope.launch { if (syncSettings.geminiReadsMemories) extractor.prepare() }
         // Before the OCR queue starts: a read landing first would call the
         // no-op, and nothing would be scheduled.
         workScheduler = {
-            UploadWorker.schedule(it)
-            // What was saved or read is embedded on the phone too (local-first L1).
+            LinkWorker.schedule(it)
+            // What was saved or read is embedded on the phone (local-first L1).
             EmbedWorker.schedule(it)
         }
         // Work that runs in every process starts here, inside applicationScope
         // so none of it touches the main thread during a capture's cold start:
-        // the OCR queue (reading workstream), and the upload queue's first
-        // schedule (sync workstream), which sends whatever a killed process
-        // left. Building the queue builds the database.
+        // the OCR queue (reading workstream), and the first schedule of links'
+        // pages and embedding, for whatever a killed process left. Building the
+        // queue builds the database.
         OcrQueue.launchIn(applicationScope, readingOriginals) { OcrQueue(this) }
         applicationScope.launch {
-            UploadWorker.schedule(this@BreadcrumbApp)
+            LinkWorker.schedule(this@BreadcrumbApp)
             EmbedWorker.schedule(this@BreadcrumbApp)
         }
     }

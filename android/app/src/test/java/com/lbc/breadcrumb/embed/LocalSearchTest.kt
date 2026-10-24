@@ -2,7 +2,6 @@ package com.lbc.breadcrumb.embed
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.net.Interpretation
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull

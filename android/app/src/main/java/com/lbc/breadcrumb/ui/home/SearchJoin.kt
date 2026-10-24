@@ -1,7 +1,7 @@
 package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.net.SearchHit
+import com.lbc.breadcrumb.embed.SearchHit
 
 /**
  * A combined search result pairing the local [Memory] with server [SearchHit] metadata.

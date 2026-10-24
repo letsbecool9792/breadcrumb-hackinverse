@@ -2,8 +2,7 @@ package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.data.SyncState
-import com.lbc.breadcrumb.net.Interpretation
+import com.lbc.breadcrumb.embed.Interpretation
 import java.net.URI
 import java.time.Instant
 import java.time.LocalDate
@@ -258,12 +257,10 @@ object ResultText {
     }
 
     /**
-     * status(memory):
-     * reading: extractedText null and a LINK → "page not read yet"; null and an IMAGE or PDF with a stored file → "still reading it".
-     * Sending: FAILED → "the server refused it"; PENDING or UPLOADING → "not sent yet · words only"; SYNCED → nothing.
-     * Joined " · "; null when empty.
+     * status(memory): extractedText null and a LINK → "page not read yet"; null
+     * and an IMAGE or PDF with a stored file → "still reading it"; else null.
      */
-    fun status(memory: Memory, cloudReads: Boolean = true): String? {
+    fun status(memory: Memory): String? {
         val parts = mutableListOf<String>()
 
         if (memory.extractedText == null) {
@@ -275,22 +272,11 @@ object ResultText {
             }
         }
 
-        when (memory.syncState) {
-            SyncState.FAILED -> parts.add("the server refused it")
-            // With cloud reading off, a memory isn't waiting to be sent: it stays on the phone (local-first L4).
-            SyncState.PENDING, SyncState.UPLOADING -> if (cloudReads) parts.add("not sent yet")
-            SyncState.SYNCED -> { /* nothing */ }
-        }
-
         return if (parts.isEmpty()) null else parts.joinToString(" · ")
     }
 
-    /**
-     * kept(total, unsent): "17 kept", or "17 kept · 2 unsent".
-     */
-    fun kept(total: Int, unsent: Int): String {
-        return if (unsent > 0) "$total kept · $unsent unsent" else "$total kept"
-    }
+    /** kept(total): "17 kept". */
+    fun kept(total: Int): String = "$total kept"
 
     /**
      * dates(from, to, today): a whole calendar month → "apr" ("apr 2025" when not this year);

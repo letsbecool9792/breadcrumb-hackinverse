@@ -72,13 +72,6 @@ class MosaicTest {
     }
 
     @Test
-    fun whatIsNotSentYetIsCounted() {
-        show(listOf(note, link, pdf), kept = ResultText.kept(3, 2))
-
-        compose.onNodeWithText("3 KEPT · 2 UNSENT").assertIsDisplayed()
-    }
-
-    @Test
     fun eachKindOfTileSaysWhatItIs() {
         show(listOf(note, link, pdf))
 

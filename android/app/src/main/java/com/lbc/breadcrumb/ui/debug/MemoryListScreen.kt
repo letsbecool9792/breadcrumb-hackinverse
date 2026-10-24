@@ -48,7 +48,6 @@ import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.imports.ImportProgress
-import com.lbc.breadcrumb.sync.UploadWorker
 import com.lbc.breadcrumb.ui.theme.Mono
 import com.lbc.breadcrumb.ui.theme.Sans
 import kotlinx.coroutines.launch
@@ -58,12 +57,12 @@ import java.util.Locale
 
 /**
  * Every memory on the phone, newest first, with the state each workstream
- * moves it through: its chips, whether its text has been read, whether it
- * has synced. A developer's view, not a product screen: the search screens
- * replace it as the app's face, and it stays reachable in debug builds.
+ * moves it through: its chips, and whether its text has been read. A
+ * developer's view, not a product screen: the search screens replace it as
+ * the app's face, and it stays reachable in debug builds.
  *
  * Each workstream may add a line or an action here for what it needs to see
- * (an import button, a sync button), kept small.
+ * (an import button), kept small.
  */
 @Composable
 fun MemoryListScreen() {
@@ -126,11 +125,10 @@ fun MemoryListScreen() {
             Text("${memories.size}", style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
             TextButton(onClick = {
                 app.applicationScope.launch {
-                    memoryDao.clearEverywhere(System.currentTimeMillis())
+                    memoryDao.clear()
                     app.originals.clear()
                     // Or importing again after a Clear would skip everything as seen.
                     app.database.importDao().clear()
-                    UploadWorker.schedule(app)
                 }
             }) { Text(stringResource(R.string.debug_clear), style = chrome) }
             TextButton(onClick = {
@@ -139,7 +137,6 @@ fun MemoryListScreen() {
                 app.applicationScope.launch { memoryDao.upsert(sample) }
             }) { Text("+", style = chrome.copy(fontSize = 18.sp)) }
         }
-        ServerStatusLine(app.server)
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -168,52 +165,6 @@ fun MemoryListScreen() {
             ),
         )
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text("import:", style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = { folderLauncher.launch(null) }) {
-                Text("folder", style = chrome)
-            }
-            TextButton(onClick = {
-                photoLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-            }) {
-                Text("photos", style = chrome)
-            }
-            TextButton(onClick = { pdfLauncher.launch(arrayOf("application/pdf")) }) {
-                Text("pdfs", style = chrome)
-            }
-            TextButton(onClick = { bookmarkLauncher.launch(arrayOf("text/html", "*/*")) }) {
-                Text("bookmarks", style = chrome)
-            }
-        }
-
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Text(stringResource(R.string.debug_upload), style = chrome, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            // Out of any backoff: after starting the server, or running adb reverse.
-            TextButton(onClick = { UploadWorker.runNow(app) }) {
-                Text(stringResource(R.string.debug_sync_now), style = chrome)
-            }
-            // Refused memories are not retried on their own: the same bytes would be refused again.
-            TextButton(onClick = {
-                app.applicationScope.launch {
-                    if (app.database.uploadDao().retryFailed() > 0) UploadWorker.runNow(app)
-                }
-            }) {
-                Text(stringResource(R.string.debug_retry_refused), style = chrome)
-            }
-        }
 
         val progressText = when (val p = importProgress) {
             is ImportProgress.Scanning -> p.message
@@ -244,9 +195,8 @@ fun MemoryListScreen() {
                 items(memories, key = { it.id }) { memory ->
                     MemoryRow(memory, onDelete = {
                         app.applicationScope.launch {
-                            memoryDao.deleteEverywhere(memory, System.currentTimeMillis())
+                            memoryDao.delete(memory)
                             app.originals.delete(memory)
-                            UploadWorker.schedule(app)
                         }
                     })
                     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -272,7 +222,6 @@ private fun MemoryRow(memory: Memory, onDelete: () -> Unit) {
                 listOfNotNull(
                     memory.chips.joinToString(" + ") { it.name.lowercase() },
                     readingState(memory),
-                    memory.syncState.name.lowercase(),
                     memory.sourceAppLabel?.let { "from $it" },
                 ).joinToString(" · "),
                 style = chrome,

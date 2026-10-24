@@ -13,7 +13,6 @@ import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.lbc.breadcrumb.BreadcrumbApp
-import com.lbc.breadcrumb.sync.Pictures
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient

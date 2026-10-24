@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.staggeredgrid.rememberLazyStaggeredGridState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -44,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lbc.breadcrumb.data.Memory
-import com.lbc.breadcrumb.data.SyncState
 import com.lbc.breadcrumb.imports.ImportBar
 import com.lbc.breadcrumb.open.Originals
 import com.lbc.breadcrumb.ui.keep.rememberKeepState
@@ -67,10 +65,6 @@ fun HomeScreen(
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
     val searchState by viewModel.search.collectAsStateWithLifecycle()
-    val cloudReads by viewModel.cloudReads.collectAsStateWithLifecycle()
-    val forgetting by viewModel.forgetting.collectAsStateWithLifecycle()
-    // What leaves the phone, opened from "privacy" under the wordmark.
-    var privacyOpen by rememberSaveable { mutableStateOf(false) }
     val pendingDelete by viewModel.pendingDelete.collectAsStateWithLifecycle()
     val gridState = rememberLazyStaggeredGridState()
     val context = LocalContext.current
@@ -138,8 +132,7 @@ fun HomeScreen(
                         // One "now" per screenful, so ages don't tick apart row by row.
                         val now = remember(list, searching) { System.currentTimeMillis() }
                         remember(list) { viewModel.entrances.submit(list.map { it.id }) }
-                        val unsent = if (cloudReads) list.count { it.syncState != SyncState.SYNCED } else 0
-                        val kept = ResultText.kept(list.size, unsent)
+                        val kept = ResultText.kept(list.size)
 
                         AnimatedContent(
                             targetState = searching,
@@ -171,7 +164,6 @@ fun HomeScreen(
                                     state = gridState,
                                     onOpen = open,
                                     onLongPressWordmark = onOpenDebug,
-                                    onPrivacy = { privacyOpen = true },
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -232,17 +224,7 @@ fun HomeScreen(
                         onNote = { viewModel.setNote(memory.id, it) },
                     )
                 }
-                CompositionLocalProvider(LocalCloudReads provides cloudReads) {
-                    MemoryDetail(memory, now, visibility, actions)
-                }
-            }
-
-            SheetLayer(item = if (privacyOpen) Unit else null, onDismiss = { privacyOpen = false }) { _, _ ->
-                PrivacySheet(
-                    cloudReads = cloudReads,
-                    onCloudReads = viewModel::setCloudReads,
-                    forgetting = forgetting,
-                )
+                MemoryDetail(memory, now, visibility, actions)
             }
 
             // Keeping something from inside the app, or bringing in what's already on the phone.

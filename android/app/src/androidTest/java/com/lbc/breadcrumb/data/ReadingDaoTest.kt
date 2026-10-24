@@ -87,7 +87,7 @@ class ReadingDaoTest {
         memoryDao.upsert(memory)
 
         // Simulates user deleting row while OCR was computing
-        memoryDao.deleteEverywhere(memory, now = 1_000)
+        memoryDao.delete(memory)
 
         // Targeted update must match 0 rows and not re-insert the deleted row
         val updated = readingDao.updateExtractedText("m1", "some text")

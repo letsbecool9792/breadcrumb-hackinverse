@@ -55,7 +55,7 @@ class WrittenCaptureTest {
         runBlocking {
             // Only what this test made.
             created().forEach {
-                app.database.memoryDao().deleteEverywhere(it, System.currentTimeMillis())
+                app.database.memoryDao().delete(it)
                 app.originals.delete(it)
             }
         }

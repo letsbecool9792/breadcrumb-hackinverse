@@ -33,7 +33,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -386,13 +385,10 @@ private fun NoteSection(memory: Memory, onNote: (String?) -> Unit) {
     }
 }
 
-/** Whether Gemini reads memories (local-first L4): off, nothing is waiting to be sent. */
-internal val LocalCloudReads = staticCompositionLocalOf { true }
-
 /** Where it came from and when, receding. */
 @Composable
 private fun Provenance(memory: Memory, now: Long) {
-    val rows = DetailText.provenance(memory, now, LocalCloudReads.current)
+    val rows = DetailText.provenance(memory, now)
     Column {
         HorizontalDivider(color = InkElevated)
         rows.forEachIndexed { index, (kind, value) ->

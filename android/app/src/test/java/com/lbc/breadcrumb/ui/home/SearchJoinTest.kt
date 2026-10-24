@@ -2,8 +2,8 @@ package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.net.Ranks
-import com.lbc.breadcrumb.net.SearchHit
+import com.lbc.breadcrumb.embed.Ranks
+import com.lbc.breadcrumb.embed.SearchHit
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test

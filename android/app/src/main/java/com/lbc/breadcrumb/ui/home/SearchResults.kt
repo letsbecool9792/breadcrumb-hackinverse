@@ -156,7 +156,7 @@ private fun ResultRow(
     modifier: Modifier = Modifier,
 ) {
     val memory = result.memory
-    val text = rowText(memory, result.hit, words)
+    val text = rowText(memory, words)
 
     // Decided once, the first time this row is drawn in this search.
     val arrivalDelay = remember(memory.id) { arrivals.delayFor(memory.id, index) }

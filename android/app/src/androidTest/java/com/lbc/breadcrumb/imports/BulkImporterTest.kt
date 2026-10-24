@@ -208,7 +208,7 @@ class BulkImporterTest {
             assertEquals("https://deleted.com", memory.rawText)
 
             // User deletes the memory
-            memoryDao.deleteEverywhere(memory, now = System.currentTimeMillis())
+            memoryDao.delete(memory)
             assertEquals(0, memoryDao.count())
 
             // Re-importing must NOT resurrect the deleted memory
@@ -304,7 +304,7 @@ class BulkImporterTest {
             assertEquals(MemoryType.IMAGE, memory.type)
 
             // Delete everywhere and remove original
-            memoryDao.deleteEverywhere(memory, now = System.currentTimeMillis())
+            memoryDao.delete(memory)
             testOriginals.delete(memory)
             assertEquals(0, memoryDao.count())
 

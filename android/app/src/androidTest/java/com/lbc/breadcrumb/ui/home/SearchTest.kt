@@ -16,7 +16,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.data.SyncState
-import com.lbc.breadcrumb.net.Interpretation
+import com.lbc.breadcrumb.embed.Interpretation
 import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
 import org.junit.Assert.assertEquals
 import org.junit.Rule

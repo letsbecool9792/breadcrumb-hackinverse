@@ -25,11 +25,6 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-
-        // The dev machine's server, reached through `adb reverse tcp:3000 tcp:3000`.
-        // Deployment is deferred, so every build points here for now; a release
-        // build cannot reach it anyway, since only debug permits cleartext.
-        buildConfigField("String", "SERVER_URL", "\"http://localhost:3000\"")
     }
 
     buildTypes {
@@ -73,7 +68,6 @@ dependencies {
     implementation(libs.androidx.work.runtime)
     ksp(libs.androidx.room.compiler)
     implementation(libs.mlkit.text.recognition)
-    implementation(libs.mlkit.entity.extraction)
     implementation(libs.okhttp)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.litertlm.android)

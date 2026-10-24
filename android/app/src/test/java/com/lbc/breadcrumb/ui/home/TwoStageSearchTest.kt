@@ -2,10 +2,10 @@ package com.lbc.breadcrumb.ui.home
 
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
-import com.lbc.breadcrumb.net.Interpretation
-import com.lbc.breadcrumb.net.Ranks
-import com.lbc.breadcrumb.net.SearchHit
-import com.lbc.breadcrumb.net.SearchOutcome
+import com.lbc.breadcrumb.embed.Interpretation
+import com.lbc.breadcrumb.embed.Ranks
+import com.lbc.breadcrumb.embed.SearchHit
+import com.lbc.breadcrumb.embed.SearchOutcome
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch

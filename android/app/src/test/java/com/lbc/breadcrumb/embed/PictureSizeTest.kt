@@ -1,4 +1,4 @@
-package com.lbc.breadcrumb.sync
+package com.lbc.breadcrumb.embed
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

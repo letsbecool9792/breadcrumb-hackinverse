@@ -1,6 +1,5 @@
 package com.lbc.breadcrumb.embed
 
-import com.lbc.breadcrumb.net.Interpretation
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.time.LocalDate

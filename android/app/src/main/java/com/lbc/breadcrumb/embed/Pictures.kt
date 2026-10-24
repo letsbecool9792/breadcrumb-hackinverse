@@ -1,4 +1,4 @@
-package com.lbc.breadcrumb.sync
+package com.lbc.breadcrumb.embed
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -9,16 +9,15 @@ import java.io.File
 import kotlin.math.roundToInt
 
 /**
- * A saved picture as it goes to the server for reading: a JPEG whose long
- * side is at most [LONG_SIDE], upright. Made in memory and sent; never
- * written anywhere (architecture rule 1).
+ * A saved picture as it is embedded: a JPEG whose long side is at most
+ * [LONG_SIDE], upright. Made in memory; never written anywhere.
  */
 internal object Pictures {
 
     const val LONG_SIDE = 1_500
     private const val QUALITY = 85
 
-    /** [file] as a JPEG to send, or null when it is not a picture the phone can decode. */
+    /** [file] as a JPEG to embed, or null when it is not a picture the phone can decode. */
     fun jpeg(file: File): ByteArray? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, bounds)

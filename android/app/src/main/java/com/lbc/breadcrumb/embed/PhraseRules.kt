@@ -1,6 +1,5 @@
 package com.lbc.breadcrumb.embed
 
-import com.lbc.breadcrumb.net.Interpretation
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth

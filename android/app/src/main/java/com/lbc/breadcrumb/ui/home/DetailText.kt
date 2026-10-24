@@ -50,13 +50,12 @@ internal object DetailText {
     fun provenance(
         memory: Memory,
         now: Long,
-        cloudReads: Boolean = true,
         zone: ZoneId = ZoneId.systemDefault(),
     ): List<Pair<Provenance, String>> = buildList {
         add(Provenance.SAVED to ResultText.saved(memory.capturedAt, now, zone))
         memory.sourceAppLabel?.takeIf { it.isNotBlank() }?.let { add(Provenance.FROM to it.lowercase(Locale.ROOT)) }
         memory.contentCreatedAt?.let { add(Provenance.TAKEN to ResultText.taken(it, zone)) }
-        ResultText.status(memory, cloudReads)?.let { add(Provenance.STATUS to it) }
+        ResultText.status(memory)?.let { add(Provenance.STATUS to it) }
     }
 
     enum class Found { TEXT_FOUND, FROM_THE_PAGE, WHAT_IT_SHOWS }
