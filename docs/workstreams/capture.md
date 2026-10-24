@@ -31,7 +31,8 @@ free.** One tap, no questions, done before the user's thumb leaves the screen.
   `contentCreatedAt`, `sourceApp`, `sourceAppLabel` (and `note`, if you build the note). Leave
   `extractedText` **null**: the reading workstream finds its work by that null, and reads every
   picture and PDF you save without you calling anything. After a save, call
-  `uploadScheduler`, which `BreadcrumbApp.onCreate` points at `UploadWorker.schedule(context)`.
+  `workScheduler` (`uploadScheduler` until local-first L7), which schedules reading a link's page
+  and the embedding.
 
 ## Steps
 
@@ -94,7 +95,7 @@ what Suparno runs when he reviews.
   - A quiet "add a note" in the sheet opens a field, closed by default, so saving stays one tap.
     The note goes on every memory that share saved, when the sheet goes.
   - While the sheet is open, its memories are held back from upload (a note written there would
-    otherwise cost a second send): add `uploadHolds: MutableSet<String>` (a
+    otherwise cost a second send; gone in local-first L7, with the upload): add `uploadHolds: MutableSet<String>` (a
     `ConcurrentHashMap.newKeySet()`) to `BreadcrumbApp`; the sync workstream's queue skips those
     ids. Release on dismiss, on leaving for another app, and in `onDestroy`: a hold never
     released strands a memory until the process dies.

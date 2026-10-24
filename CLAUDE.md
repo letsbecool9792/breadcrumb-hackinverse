@@ -26,16 +26,16 @@ brief says:
 - **Reading, R1 to R8.** OCR of pictures, PDFs' text, links' pages and their preview pictures,
   local word search, and the importer with its way in from the app.
 - **The screens**, built to [`docs/design.md`](docs/design.md) (S8 to S10, U3 to U6): the mosaic
-  with search under it, a memory's detail that opens its original, the "+" sheet and the privacy
-  sheet. The debug list sits behind a long press on the wordmark, in debug builds.
+  with search under it, a memory's detail that opens its original, and the "+" sheet (the
+  privacy sheet went with L7). The debug list sits behind a long press on the wordmark, in debug builds.
 - **Local first** ([`docs/workstreams/local-first.md`](docs/workstreams/local-first.md)): the
-  app is local first. Memories are embedded with EmbeddingGemma 2 and ranked on the phone, and
-  search works in airplane mode. By default nothing leaves the phone: a search phrase is taken
-  apart into its filters on the phone too, by rules (L6). Gemini reads memories only when the
-  person turns it on in the privacy sheet, stripped of personal details first; pictures never
-  go.
-- **The server (S1 to S7, L3) and sync (U1, U2)** now serve only that: reading memories when
-  allowed. The app no longer calls `POST /parse` or `GET /search`.
+  app is mobile only. Memories are embedded with EmbeddingGemma 2 and ranked on the phone, a
+  search phrase is taken apart into its filters on the phone by rules (L6), and search works in
+  airplane mode. Nothing saved or typed leaves the phone (L7): the phone goes online only to
+  read a saved link's page and to download the embedding model.
+- **The server (S1 to S7, L3) and sync (U1, U2) are retired** (L7): the app makes no call to a
+  server. `server/` stays in the repo, never deleted, and still runs and passes its tests; it is
+  simply no longer used.
 
 **Roadmap**, in this order:
 
@@ -44,13 +44,9 @@ brief says:
    window and the fusion against it, not before.
 2. **Check that a clip marked sensitive is never saved**, with a real password manager on the
    phone. Only the JVM test covers it today.
-3. **Mobile only, no server.** Filters are parsed on the phone (L6), so search needs no server.
-   Next, retire "Gemini reads my memories" with its upload queue and the privacy sheet, then
-   mark the server retired in the docs. `server/` stays in the repo, never deleted: it is
-   simply no longer used.
-4. **OCR reads Latin script only**; ML Kit has bundled Devanagari and other models if that
+3. **OCR reads Latin script only**; ML Kit has bundled Devanagari and other models if that
    matters.
-5. **Post-V1**, as listed below.
+4. **Post-V1**, as listed below.
 
 Each brief holds its own checklist; tick a step with the commits that finish it.
 
@@ -65,27 +61,28 @@ Each brief holds its own checklist; tick a step with the commits that finish it.
 | Server | Ayushi (aeryxii) | [server.md](docs/workstreams/server.md) | Gemini ingest, embeddings, Atlas indexes, hybrid search, query parsing; on the phone, the search client, two-stage search and the text rules | Is the server |
 | Sync, search screens, integration | Suparno (letsbecool9792) | [sync-and-search.md](docs/workstreams/sync-and-search.md) | Upload queue, server client, home, search, the detail and its sheet, stitching the screens together; reviews every PR | Yes |
 
+The team built V1 for Hackinverse; since 2026-10-24 Suparno alone works on the repo, and the
+app is mobile only, so the server column is history.
+
 **How the pieces meet:**
 
 ```
-capture writes a row (extractedText null)
-   → reading fills extractedText (OCR, PDF text, a link's page), and calls the upload schedule
+capture writes a row (extractedText null), and calls the work scheduler
+   → reading fills extractedText (OCR, PDF text, a link's page, read by ocr/LinkWorker)
       → the phone embeds it (EmbeddingGemma 2); search finds it on the phone, by meaning and words
-      → only with "Gemini reads my memories" on: sync sends it, stripped of personal details,
-        the server reads it with Gemini, and sync copies the summary back
 a search: the phrase is taken apart on the phone (embed/PhraseRules), then its words at once and
 its own ranking by meaning, both narrowed by the phrase's filters; nothing typed leaves the phone
 ```
 
 Each workstream can be built and checked alone: capture and reading against the debug list,
-the server from the terminal, sync against the server.
+search against what the phone holds.
 
 **The few shared points** (each named in the briefs that touch it):
 
-- `BreadcrumbApp`: `applicationScope`, `database`, `originals`; capture adds `uploadHolds`,
-  reading adds `readingOriginals` and starts the OCR queue in `onCreate`.
-- `UploadWorker.schedule(context)`: sync provides it; capture and reading call it after a save
-  or a read.
+- `BreadcrumbApp`: `applicationScope`, `database`, `originals`, `embedder`; reading adds
+  `readingOriginals` and starts the OCR queue in `onCreate`.
+- `workScheduler(context)` (`ocr/WorkSchedule.kt`): capture and reading call it after a save or
+  a read; it schedules `LinkWorker` (links' pages) and `EmbedWorker`.
 - `BreadcrumbDatabase`: each workstream registers its own DAO there (one abstract function).
 - `AndroidManifest.xml` and `strings.xml`: each adds its own entries, with a comment saying why.
 - The schema: **every column is already there.** A change is a version bump with an
@@ -135,20 +132,8 @@ it whenever a change needs a manual check, and tick items off when done.
       on the M0 cluster since 2026-10-10.
 - [ ] **Seed the phone** (roadmap 1). Search only impresses with a real corpus: put 500+ real
       items on the phone with the importer (reading R5), then leave it on the charger so pictures
-      with no words get embedded. On the phone that costs nothing; with "Gemini reads my
-      memories" on, ingest costs one Flash Lite request per ten memories (500 a day).
-- [ ] **Check U1, U2, R3 and R4 on the phone**, with the server running (`npm run dev`) and
-      the forward set (`npm run reverse`). The automated tests cannot cover these:
-  - **Server line:** says *reachable*. With the server stopped, a tap says *connection closed
-    without a reply*. After `adb reverse --remove-all`, a tap says *connection refused*.
-  - **Offline save:** save in airplane mode and it stays `pending`. Back online, it syncs,
-    nothing duplicated.
-  - **Killed mid-upload:** during an import, run
-    `adb shell am force-stop com.lbc.breadcrumb` while rows show `uploading`. On the
-    next launch they finish.
-  - **Photo with no text:** it syncs, its picture goes in one `POST /memories/images`, and it
-    gains a `summary:` line.
-  - **Delete:** deleting a synced memory sends `POST /memories/delete`.
+      with no words get embedded. It costs nothing.
+- [ ] **Check R3 and R4 on the phone.** The automated tests cannot cover these:
   - **PDFs:** a scanned PDF is read by OCR. A PDF behind a password shows *no text found*.
   - **Links:** a bare link gets its page's description, and its title when it had none. A link
     saved in airplane mode stays unread, and is read when the network is back.
@@ -202,15 +187,13 @@ The product should feel like a personal search engine, not a digital notebook.
 | Layer | Choice |
 |---|---|
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
-| On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled) and Entity Extraction |
-| Server (optional) | Node + Express + TypeScript: reading memories only when allowed |
-| Database (server) | MongoDB Atlas (M0 free tier) + Atlas Vector Search |
-| Query parsing | **On the phone, by rules** (`embed/PhraseRules`). The server's Gemini 3.1 Flash Lite parser is unused since L6 |
-| Ingest AI (server, opt-in) | **Gemini 3.5 Flash Lite** (multimodal: text and images in one call) |
-| Embeddings (server) | `gemini-embedding-001` at 768 dimensions, for memories the server is sent |
+| On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled) |
+| Query parsing | **On the phone, by rules** (`embed/PhraseRules`) |
+| Server (**retired**, L7) | Node + Express + TypeScript, MongoDB Atlas (M0) with Atlas Vector Search, Gemini 3.1 and 3.5 Flash Lite, `gemini-embedding-001`. Kept in `server/`; the app makes no call to it |
 
-Pin explicit Gemini model versions in code. The `gemini-flash-latest` alias exists but must not be
-used: behaviour shifts under you. The server refuses aliases outright.
+For the retired server: pin explicit Gemini model versions in code. The `gemini-flash-latest`
+alias exists but must not be used: behaviour shifts under you. The server refuses aliases
+outright.
 
 **Why native Android:** every capture surface is an Android platform surface (share sheet,
 `TileService`, clipboard), so it is Kotlin either way, and both capture paths are cold starts:
@@ -219,6 +202,8 @@ JavaScript runtime booting from a tile tap takes hundreds of milliseconds to sec
 promise is that saving feels free. Revisit only if iOS becomes a real target.
 
 ### The free tier is the design constraint
+
+*The server's, kept for history: since L7 the app uses no cloud service at all.*
 
 **No billing.** What the free tier allows, **per model per project** (each model has its own
 allowance):
@@ -259,30 +244,25 @@ output.
 These are decisions, not suggestions. Changing one is a deliberate call, not an implementation
 detail.
 
-**1. Originals stay on the device.**
-Do not upload blobs to MongoDB. M0 is 512 MB total and Mongo caps documents at 16 MB. Originals
-live in app-private storage. Files are sent to the server only for processing, then dropped. The
-cloud stores **extracted text + embedding + metadata only.** Cheaper, faster, more private, and a
-defensible product stance: your screenshots never permanently leave your phone.
+**1. Everything stays on the device.**
+Originals live in app-private storage, and since L7 so does everything made from them: text,
+embeddings, metadata. Nothing is uploaded. Before L7 the rule was narrower (the server could
+hold extracted text and an embedding, never a blob), and the reasons it gave still hold: M0 is
+512 MB and Mongo caps documents at 16 MB.
 
 **2. Save never blocks on the network.**
-Share sheet / tile → write to Room → return immediately → WorkManager handles upload, processing
-and retry. The user sees "Saved" before anything touches a server, which is also why a server
-cold start is invisible on the ingest path.
+Share sheet / tile → write to Room → return immediately → WorkManager reads a link's page and
+embeds, later. The user sees "Saved" before anything touches the network.
 
-**3. The Gemini pass is optional: one call for ingest, and only when the person asks.**
-Gemini reads memories only with "Gemini reads my memories" on (off by default, in the privacy
-sheet). What goes is stripped of personal details first, and fails closed when the phone can't
-check it; pictures and saves from banking and password apps never go. Search never needs it.
-When it runs, a single multimodal Flash Lite call takes the artifact and returns structured JSON: a one-line
-summary, entities, an inferred kind, date references. This is *better* than raw OCR, not just
-simpler, because it understands context: "LinkedIn post, Qualcomm SWE internship, deadline April
-30" rather than a bag of words.
+**3. No Gemini pass (retired, L7).**
+Until L7, "Gemini reads my memories" (off by default) sent a memory's text, stripped of personal
+details, to one multimodal Flash Lite call for a one-line summary, entities, a kind and dates.
+Search never used it: the phone embeds only what it wrote or read itself. It went with the
+upload queue and the privacy sheet. Summaries copied back before then still show.
 
-**4. On-device OCR, and by default the only reading.**
+**4. On-device OCR, and the only reading.**
 ML Kit reads text locally at save time. Free, instant, offline. The item is searchable on the
-phone, by its words and its embedding, with no network at all. The Gemini pass adds a summary
-afterward only when the person allows it.
+phone, by its words and its embedding, with no network at all.
 
 **5. Hybrid search, never pure vector, on the phone.** EmbeddingGemma 2 embeds memories and the
 phrase on the phone, every vector is scored there (no vector database at this size), and the
@@ -312,8 +292,8 @@ On a share, record the calling app via `Activity.getReferrer()`. That makes *"th
 sent me on WhatsApp"* answerable. Also store the capture time and, for existing files, the
 original creation date. Cheap to store, and it matches how people actually remember things.
 
-**8. On the server, embeddings at 768 dims, not 3,072.** (The phone's EmbeddingGemma 2 gives 768
-too; the two models' vectors are never compared.)
+**8. On the (retired) server, embeddings at 768 dims, not 3,072.** (The phone's EmbeddingGemma 2
+gives 768 too; the two models' vectors are never compared.)
 `gemini-embedding-001` defaults to 3,072 but is Matryoshka-trained: 768 scores barely behind the
 full size on MTEB. On a 512 MB M0 the storage difference matters. M0 also allows **3 search
 indexes per cluster**; one vector index plus one text index fits.
@@ -390,8 +370,8 @@ indexes per cluster**; one vector index plus one text index fits.
   does), have it note what existed before, look only at what it created, and remove only that.
   `WrittenCaptureTest` once deleted everything, and a test run wiped the phone's saved memories
   and, through the upload queue, the server's.
-- **Cleartext HTTP is blocked by default.** The debug build permits it to `localhost` only
-  (`src/debug/res/xml/network_security_config.xml`); release gets nothing.
+- **Cleartext HTTP is blocked**, in every build. The debug build permitted it to `localhost`
+  for the server until L7; there is nothing local to reach now.
 - **"The paging file is too small"** (or a JVM `hs_err_pid` crash log in `android/`): the machine
   is out of memory. Idle Gradle daemons hold ~1 GB each; `./gradlew --stop` frees them. Delete the
   crash log; it is not for committing.
@@ -407,7 +387,11 @@ indexes per cluster**; one vector index plus one text index fits.
   edit the PNGs. The exception is `res/drawable/ic_tile_crumb.xml`, the Quick Settings tile icon:
   a hand-built single-colour vector, because the system tints tile icons.
 
-## Server
+## Server (retired)
+
+**Retired since local-first L7**: the app makes no call to it. The code stays in `server/`,
+never deleted, and still runs and passes its tests (`npm test`); the notes below are for anyone
+who runs it.
 
 - **No build step.** Node 22.18+ runs `.ts` files itself by stripping types; `tsc` only
   type-checks. So `erasableSyntaxOnly` is on (no enums, namespaces or parameter properties), and
@@ -425,24 +409,7 @@ indexes per cluster**; one vector index plus one text index fits.
 
 ## Dev workflow
 
-**The backend is not deployed during development.** Run it locally and bridge the phone to it:
-
-```
-adb reverse tcp:3000 tcp:3000
-```
-
-The phone's `localhost:3000` then forwards to port 3000 on the dev machine, over USB or wireless
-debugging. **The forward is lost whenever the phone reconnects**: re-run it after replugging.
-
-```
-cd server
-npm install
-npm run dev         # node --watch; restarts on save
-npm run reverse     # adb reverse tcp:3000 tcp:3000
-npm run search -- "that internship screenshot from april"   # the ranked list, in the terminal
-npm test
-npm run typecheck
-```
+The app needs nothing but the phone: no server, no `adb reverse`.
 
 ```
 cd android
@@ -453,17 +420,24 @@ adb shell am start -n com.lbc.breadcrumb/com.lbc.breadcrumb.MainActivity
 adb shell am instrument -w com.lbc.breadcrumb.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-**Deployment is deferred.** When it comes: Google Cloud Run scales to zero with a ~2 s cold
-start and 2M requests a month free, but needs a billing account on file; Render's free tier
-cold-starts in 30–60 s after 15 idle minutes. Because of rule 2, a cold start is invisible on the
-ingest path; only search is latency-sensitive.
+The retired server, for anyone who runs it:
+
+```
+cd server
+npm install
+npm run dev         # node --watch; restarts on save
+npm test
+npm run typecheck
+```
+
+**Nothing is deployed**, and nothing needs to be: the app has no server since L7.
 
 ## Repo layout
 
 ```
 breadcrumb-hackinverse/
   android/      Gradle project: run ./gradlew from here
-  server/       Express + TypeScript, its own package.json
+  server/       Express + TypeScript, its own package.json: retired (L7), kept
   docs/         api.md, workstreams/
   tools/        generate_icons.py
   CLAUDE.md

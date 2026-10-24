@@ -1,5 +1,9 @@
 # The phone–server API
 
+> **Retired** (local-first L7): the app makes no call to the server, and nothing below is used by
+> it. The server and this contract stay in the repo as they were; `server/` still runs and
+> passes its tests. The phone's half of the contract (its Kotlin data classes) was removed.
+
 The contract between the Android app and the server. The server's types are in
 [`server/src/api.ts`](../server/src/api.ts); the phone's are hand-written Kotlin data classes
 matching them. **Change all three together.**

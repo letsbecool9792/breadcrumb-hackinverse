@@ -85,23 +85,18 @@ airplane mode.
 Meaning and words together, because the queries people actually type are full of proper nouns:
 "Qualcomm" needs words while the rest of the sentence needs meaning.
 
-**Nothing leaves the phone** by default. What you type stays too: "from April", "screenshot" or
-"on WhatsApp" are read into filters on the phone. Under "privacy" on the home screen, one switch:
-
-- **Gemini reads my memories** (off by default): for one-line summaries. Phone numbers, emails,
-  addresses, cards, IDs and OTPs are stripped first; pictures and saves from banking and
-  password apps never go.
-
-With it off, the app never talks to a server.
+**Nothing leaves the phone.** Not what you save, and not what you type: "from April",
+"screenshot" or "on WhatsApp" are read into filters on the phone. There is no server and no
+account. The phone goes online only to read the page of a link you saved, and once to download
+the embedding model.
 
 ## Stack
 
 | | |
 |---|---|
 | **Mobile** | Native Android: Kotlin, Jetpack Compose, Room (with full-text search), WorkManager |
-| **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures), ML Kit Text Recognition and Entity Extraction |
-| **Backend (optional)** | Node + Express + TypeScript, MongoDB Atlas with Atlas Vector Search |
-| **Cloud AI (optional)** | Gemini Flash Lite (summaries when allowed), `gemini-embedding-001` |
+| **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures), ML Kit Text Recognition |
+| **Backend (retired)** | Node + Express + TypeScript, MongoDB Atlas, Gemini. Kept in `server/`; the app no longer uses it |
 
 Native Android rather than a cross-platform framework: every capture surface is an Android
 platform surface, and every save is a cold start, so a native capture path is the difference
@@ -111,7 +106,7 @@ between saving feeling free and saving feeling like a wait.
 
 ```
 android/    Android app (build it with ./gradlew from this folder)
-server/     Express API
+server/     the Express API the app used until it went mobile only; kept, unused
 docs/       the API contract, and one brief per workstream
 tools/      generate_icons.py, which draws the launcher and splash icons
 ```

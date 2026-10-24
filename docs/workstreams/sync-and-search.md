@@ -1,5 +1,10 @@
 # Workstream: Sync, search screens, integration
 
+> **Sync is retired** (local-first L7): the upload queue, the server client, the server line and
+> capture's upload holds are gone, and memories never leave the phone. The screens below remain;
+> links' pages, which the upload pass read, are read by `ocr/LinkWorker`. The steps are the record
+> of what was built.
+
 **Owner:** Suparno · **Android, Kotlin** · talks to the server
 
 The phone's half of the cloud (the upload queue and the server client), the screens people

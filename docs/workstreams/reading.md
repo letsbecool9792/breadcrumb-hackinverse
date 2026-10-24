@@ -37,7 +37,9 @@ its words seconds after it is saved, before the network has done anything.
   - a way to tell it there is something new to send. After every read, including one that
     found nothing, call `uploadScheduler` (`ocr/UploadSchedule.kt`), which
     `BreadcrumbApp.onCreate` points at `UploadWorker.schedule` before the OCR queue starts. An
-    empty read is exactly the case whose picture gets sent.
+    empty read is exactly the case whose picture gets sent. (Since local-first L7:
+    `workScheduler` in `ocr/WorkSchedule.kt`, scheduling `LinkWorker` and `EmbedWorker`; nothing
+    is sent.)
   - `readingOriginals: MutableStateFlow<Boolean>` on `BreadcrumbApp`: true while the OCR queue
     is working through unread pictures and PDFs, so the uploader holds them back rather than
     send them unread. **Presume true until the queue has looked**, and set false in a `finally`

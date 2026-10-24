@@ -1,5 +1,10 @@
 # Workstream: Server, ingest and search
 
+> **Retired** (local-first L7): the app is mobile only and makes no call to the server. Everything
+> below is the record of what was built; the code stays in `server/`, never deleted, and still
+> runs and passes `npm test`. On the phone, the search client, the text rules and two-stage
+> search (S8 to S10) live on, working from the phone's own ranking.
+
 **Owner:** Ayushi · **Node + Express + TypeScript** · MongoDB Atlas and Gemini
 
 The cloud half: reading what the phone sends with one Gemini call per batch, embedding it, and

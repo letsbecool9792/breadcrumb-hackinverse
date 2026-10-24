@@ -1,10 +1,11 @@
-# Local first: search on the phone, the server only when asked
+# Local first: search on the phone, and then mobile only
 
 The judges asked whether people's saves go to a server and get processed there. Today they do:
 each memory's text, and pictures OCR could barely read, go to our server and on to Gemini's free
 tier, whose terms say not to send personal information. This workstream moves search onto the
-phone. By default nothing leaves the phone; until L6 the search phrase did, for Gemini to take
-apart into filters, and now the phone does that too.
+phone. Until L6 the search phrase still left it, for Gemini to take apart into filters; L6 does
+that on the phone. Until L7 memories could still go when the person turned it on; L7 retired
+that, and with it the server: the app is mobile only.
 
 **Branch:** everything here is built on `local-first`, cut from `main`. Branch from
 `origin/local-first`, open the PR against `local-first` (not `main`), and Suparno merges with
@@ -29,7 +30,7 @@ search → the phone takes the phrase apart, by rules: {query, types, from, to, 
        → its words at once, narrowed by the filters
        → the phone ranks every memory by meaning, fuses with its words, applies the filters
 offline → the same
-the server reads memories only when the person turns it on; what goes is stripped first
+nothing leaves the phone (L7)
 ```
 
 ## Steps
@@ -85,7 +86,7 @@ the server reads memories only when the person turns it on; what goes is strippe
     same `Reply` handling as the other calls, off the main thread.
   - Document both in `docs/api.md`. Tests: `npm test` for the routes, and `ServerClientTest`
     against MockWebServer.
-- [x] **L4. What leaves the phone** (Aritra)
+- [x] **L4. What leaves the phone** (Aritra; retired in L7)
   - A setting, "Gemini reads my memories", off by default, held in SharedPreferences. While it is
     off, the upload pass makes no call to the server, deletes included, except one: turning it
     off sets a persisted "forget pending" flag (`SyncSettings.forgetPending`) and marks every
@@ -153,10 +154,30 @@ the server reads memories only when the person turns it on; what goes is strippe
   - Tests: `PhraseRulesTest` (JVM, on a fixed Saturday), `LocalSearchTest` (both answers, filters
     alone, no model). `EmbedOnPhoneTest` runs the whole search with the real model.
 
+- [x] **L7. Mobile only** (Suparno; after L6)
+  - "Gemini reads my memories" goes, with everything that served it: `UploadPass` and
+    `UploadWorker`, `ServerClient`, `Redactor` and the ML Kit entity model it needed,
+    `SensitiveApps`, the forget, `SyncSettings`, and the privacy sheet with its "privacy" link.
+    The app makes no call to the server; `server/` stays, retired.
+  - What the upload pass did for the phone stays: links' pages are read by `ocr/LinkWorker`
+    (network required, one at a time, again while saves keep arriving), scheduled with the
+    embedding by `workScheduler` after every save and read.
+  - Deletes are plain deletes; `pending_deletes` stays in the schema, unwritten. Undo restores the
+    row as it was, and capture no longer holds memories back while its note is open.
+  - The detail's status says only what is still being read; the count is "17 kept".
+  - The search types move to `embed/Search.kt`; `SearchHit` is only what the phone's ranking gives.
+    `Pictures` moves to `embed/`.
+  - **Before it:** 17 memories uploaded during the hackathon, before L4's switch, were still in
+    Atlas. They aren't reachable from the app any more; delete them with the server's
+    `POST /memories/forget`, or with the cluster.
+  - Tests: the upload pass's, the server client's, redaction's and the payload's went with their
+    code; the rest pass (300 JVM, 145 on the phone).
+
 ## Rules
 
 - **Never commit the model**, and never put it in the APK.
-- **Nothing typed leaves the phone** (L6); nothing else does unless the person turns it on.
+- **Nothing saved or typed leaves the phone** (L6, L7). The network is for a saved link's page
+  and the model's download.
 - **One model for everything.** Vectors from different models can't be compared: a memory
   embedded with another model is embedded again.
 - **The rules in CLAUDE.md still hold**, including tests on the phone never clearing the real

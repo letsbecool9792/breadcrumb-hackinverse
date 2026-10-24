@@ -113,7 +113,7 @@ padding start 6, end 6, top 6, bottom 16, spacing 6:
 - "breadcrumb" in serif 48sp, lineHeight 52. A long press (no ripple, no click action) does a
   LongPress haptic and opens the debug list; with `onLongPress == null` there is no gesture at all.
 - Row, spacing 9, centred: CrumbTrail 15dp (still), then the kept count UPPERCASE in mono 11sp
-  InkOutline, letterSpacing 1.4sp ("17 KEPT · 2 UNSENT").
+  InkOutline, letterSpacing 1.4sp ("17 KEPT").
 
 **The slim strip** takes its place as it scrolls away.
 `collapse = if (firstVisibleIndex > 0) 1 else clamp((offset/mastheadHeight − 0.45) / 0.45, 0, 1)`.
@@ -212,11 +212,11 @@ or "Keep something — a draft is waiting" when there is one, and then a dot at 
 **Two answers in turn.** On every change of the normalised query (trimmed, runs of whitespace as
 one space), with `collectLatest` so a keystroke abandons the search in flight:
 1. Empty → resting (the mosaic).
-2. The phone's word search answers at once (FtsQuery.matchExpression, limit 30): state Searching
-   with status RANKING and no interpretation.
-3. After a 450 ms pause, the server: Found → the joined hits (§Part 2), with the interpretation
-   and status RANKED. Unavailable → the word matches stand, with status OFFLINE when it could
-   not reach the server, else UNAVAILABLE.
+2. The phone's word search answers at once (the words the parse leaves, narrowed by its
+   filters; limit 30): state Searching with status RANKING and no interpretation.
+3. After a 450 ms pause, the phone's ranking (local-first L2, L6): Found → the joined hits
+   (§Part 2), with the interpretation and status RANKED. (Unavailable, with OFFLINE or
+   UNAVAILABLE, was for the server's search; the phone's ranking always answers.)
 
 **The counter line** over the results: `counter(...)` (§17) in mono 11sp InkOutline,
 letterSpacing 0.3, at most 2 lines, padding start 20, end 20, top 18, bottom 12. RANKING and
@@ -250,7 +250,7 @@ top:
   lerps BoneDim → AmberBright and its background HitBackground goes from alpha 0 to 1. A row
   already shown in this search is drawn lit.
 - The words to light: the interpretation's query when it has one, else the phrase, as `words()`.
-- The summary and readText come from the hit when the server ranked it, else the phone's row.
+- The summary and readText come from the phone's row.
 
 ## §10 SheetLayer (the app's own sheet)
 
@@ -320,7 +320,7 @@ Spacing 9. For a link or note, only the summary. Nothing when there is nothing.
   "who sent it, what it's for…" in InkOutline; then "Done" in sans 14sp AmberBright SemiBold,
   aligned to the end, padding 12/7, radius 16, which writes it if changed (blank clears it) and
   hides the keyboard. Closing the sheet mid-edit still writes the draft.
-- A written note re-queues the memory and schedules an upload.
+- A written note has the memory embedded again: the note is part of what is embedded.
 
 **Provenance**, mono and receding: a divider in InkElevated, then rows (padding 11 vertical,
 SpaceBetween: label mono 11sp InkOutline, value mono 11sp BoneDim), divided by InkElevated at
@@ -363,11 +363,10 @@ through `Intent.createChooser`, with Breadcrumb's own share receivers in
 `EXTRA_EXCLUDE_COMPONENTS`, so a memory is never shared back into itself.
 
 **Delete**, with five seconds of Undo instead of a confirmation: the detail closes; the row goes
-at once through `deleteEverywhere` (it leaves the mosaic and results immediately, and is removed
-from the results shown); the original file stays until the five seconds pass. A second delete
-makes the first final. Undo restores the row as PENDING (`restore`) and schedules an upload.
-When the five seconds pass, or the view model is cleared mid-undo, the file is deleted and an
-upload is scheduled (on the application's scope). Deletes and restores run under one mutex, in
+at once (it leaves the mosaic and results immediately, and is removed from the results shown);
+the original file stays until the five seconds pass. A second delete makes the first final.
+Undo restores the row as it was and has it embedded again. When the five seconds pass, or the
+view model is cleared mid-undo, the file is deleted (on the application's scope). Deletes and restores run under one mutex, in
 the order asked.
 
 **The undo bar**, over the search field: a 46dp pill, radius 23, InkElevated, border 1dp
@@ -407,8 +406,8 @@ A SheetLayer whose content is the **composer**:
 **What Keep does**, on the application's scope: text alone is the memory, by the share rules (a
 note, or a link when it holds a URL), with no source app; with files, each file is its own
 memory (copied in as a share would be), and the text is the note on every one. On success: the
-picked files' grants are released, the draft is emptied, the sheet closes, and an upload is
-scheduled. On failure the sheet stays with the failure line.
+picked files' grants are released, the draft is emptied, the sheet closes, and the work that
+follows a save is scheduled (a link's page, the embedding). On failure the sheet stays with the failure line.
 
 **The draft** survives the sheet being swiped away and the app closing, picked files included.
 It is stored as JSON in SharedPreferences (`Draft(text, attachments: [DraftFile(uri, name,
@@ -557,12 +556,10 @@ All in strings.xml.
   days), "Nmo" (under a year), "Ny".
 - **tileMeta**: age · source lowercase. **rowMeta**: age · source · chips joined " + "
   lowercase ("2d · whatsapp · image + link").
-- **status(memory)**: reading: extractedText null and a LINK → "page not read yet"; null and an
-  IMAGE or PDF with a stored file → "still reading it". Sending: FAILED → "the server refused
-  it"; PENDING or UPLOADING → "not sent yet", and nothing while Gemini doesn't read memories
-  (local first); SYNCED → nothing. Joined " · "; null
-  when empty.
-- **kept(total, unsent)**: "17 kept", or "17 kept · 2 unsent".
+- **status(memory)**: extractedText null and a LINK → "page not read yet"; null and an IMAGE or
+  PDF with a stored file → "still reading it"; else null. (Until local-first L7 it also said
+  what was not sent yet.)
+- **kept(total)**: "17 kept".
 - **counter(shown, total, typed, interpretation, today, status)**: "{shown} of {total}", then the
   phrase typed when there is no interpretation; otherwise the query (when not blank), the types
   ("images", "links", "pdfs", "notes", joined " or "), the dates, and "from {source lowercase}";
