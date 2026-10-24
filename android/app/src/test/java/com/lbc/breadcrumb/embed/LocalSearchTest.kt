@@ -3,7 +3,6 @@ package com.lbc.breadcrumb.embed
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.net.Interpretation
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -47,13 +46,13 @@ class LocalSearchTest {
 
     @Test
     fun `memories are ranked by meaning, and the far ones left out`() = runTest {
-        val found = search().search("where priya said to eat", 30)!!
+        val found = search().search("where priya said to eat", 30)
         assertEquals(listOf("burger", "intern", "captioned", "job"), found.hits.map { it.id })
     }
 
     @Test
     fun `a memory placed by both halves rises above one placed first by only one`() = runTest {
-        val found = search(words = listOf(job, intern)).search("job", 30)!!
+        val found = search(words = listOf(job, intern)).search("job", 30)
         assertEquals("intern", found.hits.first().id)
         assertEquals(2, found.hits.first().ranks?.vector)
         assertEquals(2, found.hits.first().ranks?.text)
@@ -61,35 +60,54 @@ class LocalSearchTest {
 
     @Test
     fun `the parse narrows by type, and a link filter takes anything carrying a link`() = runTest {
-        val links = search(parse = { Interpretation(query = "x", types = listOf("LINK")) }).search("that link", 30)!!
+        val links = search(parse = { Interpretation(query = "x", types = listOf("LINK")) }).search("that link", 30)
         assertEquals(setOf("job", "captioned"), links.hits.map { it.id }.toSet())
     }
 
     @Test
     fun `dates are the content's own, or when it was saved`() = runTest {
-        val inApril = search(parse = { Interpretation(from = "2026-04-01", to = "2026-04-30") }).search("from april", 30)!!
+        val inApril = search(parse = { Interpretation(from = "2026-04-01", to = "2026-04-30") }).search("from april", 30)
         assertEquals(setOf("intern", "job"), inApril.hits.map { it.id }.toSet())
     }
 
     @Test
     fun `a source is the app it came from, or a link's site`() = runTest {
-        val whatsapp = search(parse = { Interpretation(sourceApp = "whatsapp") }).search("on whatsapp", 30)!!
+        val whatsapp = search(parse = { Interpretation(sourceApp = "whatsapp") }).search("on whatsapp", 30)
         assertEquals(listOf("burger"), whatsapp.hits.map { it.id })
-        val linkedin = search(parse = { Interpretation(sourceApp = "LinkedIn") }).search("from linkedin", 30)!!
+        val linkedin = search(parse = { Interpretation(sourceApp = "LinkedIn") }).search("from linkedin", 30)
         assertEquals(listOf("job"), linkedin.hits.map { it.id })
     }
 
     @Test
-    fun `a parse that fails or dawdles costs only the filters`() = runTest {
-        val failed = search(parse = { error("offline") }).search("x", 30)!!
-        assertNull(failed.interpretation)
-        assertEquals(4, failed.hits.size)
-        val slow = search(parse = { delay(10_000); Interpretation(types = listOf("PDF")) }).search("x", 30)!!
-        assertEquals(4, slow.hits.size)
+    fun `without the model, the words alone rank`() = runTest {
+        val found = search(words = listOf(job, burger), model = false).search("job", 30)
+        assertEquals(listOf("job", "burger"), found.hits.map { it.id })
+        assertNull(found.hits.first().ranks?.vector)
     }
 
     @Test
-    fun `without the model there is no answer, so the caller falls back`() = runTest {
-        assertNull(search(model = false).search("x", 30))
+    fun `a phrase of filters alone has everything they keep, newest first, model or not`() = runTest {
+        val pictures = Interpretation(types = listOf("IMAGE"))
+        assertEquals(listOf("captioned", "intern"), search(parse = { pictures }).search("screenshots", 30).hits.map { it.id })
+        assertEquals(listOf("captioned", "intern"), search(parse = { pictures }, model = false).search("screenshots", 30).hits.map { it.id })
+        assertEquals(listOf(captioned, intern), search(parse = { pictures }).byWords("screenshots", 30))
+    }
+
+    @Test
+    fun `the first answer is the words left by the parse, narrowed by its filters`() = runTest {
+        var asked = ""
+        val local = LocalSearch(
+            embed = { null },
+            vectors = { vectors },
+            words = { query, _ ->
+                asked = query
+                listOf(burger, job, intern)
+            },
+            parse = { Interpretation(query = "jobs", types = listOf("LINK")) },
+            memories = { all },
+            zone = ZoneOffset.UTC,
+        )
+        assertEquals(listOf(job), local.byWords("job links", 30))
+        assertEquals("jobs", asked)
     }
 }

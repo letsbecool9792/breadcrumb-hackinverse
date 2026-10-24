@@ -8,8 +8,8 @@ import kotlinx.coroutines.flow.callbackFlow
 
 /**
  * What may leave the phone, switched in the privacy sheet (local first):
- * "Gemini reads my memories", off by default, and "Understand searches in the
- * cloud", on by default. With both off the app makes no call to the server.
+ * "Gemini reads my memories", off by default. Off, the app makes no call to the
+ * server. A search never needs one (L6).
  */
 class SyncSettings(
     private val prefs: SharedPreferences,
@@ -22,13 +22,6 @@ class SyncSettings(
         get() = prefs.getBoolean(KEY_GEMINI_READS_MEMORIES, false)
         set(value) {
             prefs.edit().putBoolean(KEY_GEMINI_READS_MEMORIES, value).apply()
-        }
-
-    /** Whether a search phrase goes to the server to be parsed into filters. Off, search runs without them. */
-    var cloudParses: Boolean
-        get() = prefs.getBoolean(KEY_CLOUD_PARSES, true)
-        set(value) {
-            prefs.edit().putBoolean(KEY_CLOUD_PARSES, value).apply()
         }
 
     /**
@@ -52,7 +45,6 @@ class SyncSettings(
     companion object {
         const val PREFS_NAME = "breadcrumb_sync_settings"
         const val KEY_GEMINI_READS_MEMORIES = "gemini_reads_memories"
-        const val KEY_CLOUD_PARSES = "cloud_parses"
         const val KEY_FORGET_PENDING = "forget_pending"
     }
 }
