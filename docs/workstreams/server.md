@@ -175,6 +175,8 @@ the Android build once (CLAUDE.md, "Setting up a machine").
       interpretation, and RANKED. Unavailable leaves the word matches standing, as OFFLINE or
       UNAVAILABLE.
   - Word search, the server and the held rows come in as functions, so the tests can fake them.
+  - Since local-first L2 and L6, the second answer is the phone's own ranking (`rankedSearch`),
+    and the first is narrowed by the phrase's filters too.
   - Tests: `TwoStageSearchTest`, on virtual time (`kotlinx-coroutines-test`, added as a test
     dependency with a comment saying why):
     - each state above;

@@ -150,6 +150,9 @@ Idempotent: returns `{ "deleted": 0 }` when nothing remains.
 
 ## POST /parse
 
+**The app no longer calls this** (local-first L6): the phone takes the phrase apart itself
+(`embed/PhraseRules`). The route stays on the server.
+
 Takes a search phrase and candidate source app names, returning only the parsed interpretation
 without embedding the query or running an Atlas search. Reuses the once-a-day cache per phrase
 and source list.
@@ -179,6 +182,9 @@ A missing or bad phrase (not 1 to 500 characters) or bad `sources` (not an array
 answers 400. A model rate limit or transient failure answers 503; a model refusal answers 502.
 
 ## GET /search?q=…&limit=…
+
+**The app no longer calls this** (local-first L6): search ranks on the phone, by words alone
+until the embedding model is there. The route stays on the server.
 
 A ranked list of memories, never an answer: each result is a way back to the original on the
 phone. `q` is 1 to 500 characters; `limit` is 1 to 50, default 20.

@@ -3,8 +3,8 @@
 The judges asked whether people's saves go to a server and get processed there. Today they do:
 each memory's text, and pictures OCR could barely read, go to our server and on to Gemini's free
 tier, whose terms say not to send personal information. This workstream moves search onto the
-phone. By default nothing leaves the phone but the search phrase, which Gemini still reads so
-that vague phrasings keep working.
+phone. By default nothing leaves the phone; until L6 the search phrase did, for Gemini to take
+apart into filters, and now the phone does that too.
 
 **Branch:** everything here is built on `local-first`, cut from `main`. Branch from
 `origin/local-first`, open the PR against `local-first` (not `main`), and Suparno merges with
@@ -25,10 +25,10 @@ demo phone (Dimensity 7200) through LiteRT-LM 0.18.0, on the CPU:
 ```
 save → OCR, PDF text, link page (as now)
      → the phone embeds the text (and the picture, when OCR found little) and keeps the vector
-search → the phone's words at once (as now)
-       → the server parses the phrase only: {query, types, from, to, sourceApp}
+search → the phone takes the phrase apart, by rules: {query, types, from, to, sourceApp} (L6)
+       → its words at once, narrowed by the filters
        → the phone ranks every memory by meaning, fuses with its words, applies the filters
-offline → the same, without the filters
+offline → the same
 the server reads memories only when the person turns it on; what goes is stripped first
 ```
 
@@ -67,10 +67,11 @@ the server reads memories only when the person turns it on; what goes is strippe
     carrying a link; dates are the content's own, or when it was saved; a source is the app or a
     link's site.
   - It is the second stage of `twoStageSearch`, with the same `SearchState`, so the screens didn't
-    change. Until the model is on the phone, the server still ranks.
+    change. Until the model is on the phone, the server still ranks (L6: the words alone).
   - **The parse:** `ServerClient.parse` (L3), sending the phrase with the names it may mean: the
     apps things were shared from and the most-saved sites, named as the server names them
-    (`embed/Sites`). A parse that fails, or takes over 2.5 s, costs only the filters.
+    (`embed/Sites`). A parse that fails, or takes over 2.5 s, costs only the filters. (L6: the
+    phone parses, and there is no wait.)
   - Tests: `LocalSearchTest` (JVM): fusion, the meaning window, each filter, a failed or slow
     parse, no model. `EmbedOnPhoneTest` runs the whole search with the real model.
 - [x] **L3. Parsing on its own, and forgetting** (Ayushi; server and client)
@@ -92,7 +93,7 @@ the server reads memories only when the person turns it on; what goes is strippe
     answers 200, before it clears the flag. Turned back on before then, the forget still goes
     first. The sheet says "forgetting…" meanwhile.
   - **The privacy sheet** (`ui/home/PrivacySheet`): "privacy" under the wordmark opens two
-    switches, "Understand searches in the cloud" (on by default; off, search runs without the
+    switches (one since L6, which removed the first), "Understand searches in the cloud" (on by default; off, search runs without the
     parsed filters) and "Gemini reads my memories". With both off the app makes no call to the
     server but the forget. "Understand searches in the cloud" sends what is typed and the names
     of the apps and sites the saves came from (`POST /parse`), and the sheet says so.
@@ -126,10 +127,36 @@ the server reads memories only when the person turns it on; what goes is strippe
   - Wired into `ResultText.title`, after the summary, which still wins.
   - Tests (JVM): the OCR text of real screenshots on the phone makes good fixtures.
 
+- [x] **L6. Filters on the phone** (Suparno; after L2)
+  - `embed/PhraseRules` (pure) takes the phrase apart, by rules, into the `Interpretation` that
+    `POST /parse` gave: kinds from their words (screenshot, pdf, link, note…), days (a month is
+    the latest up to today; "last week" is Monday to Sunday; "two weeks ago" that whole week;
+    "on the 5th", "since april", "from 2025"), and a source among the names `Sites.sourcesOf`
+    offers, with short names (insta, yt, tweet). The query is what's left, without the filler
+    ("that", "from", "i saved"), since the word search wants every word of it in a memory.
+  - `LocalSearch` takes it with no wait, and **both answers** use it: the words at once
+    (`byWords`), narrowed by the filters, and the ranking. A phrase of filters alone
+    ("screenshots from last week") lists everything they keep, newest first. Until the model is
+    on the phone, the words alone rank, instead of the server's search.
+  - "Understand searches in the cloud" goes, with its setting. The app no longer calls
+    `POST /parse` or `GET /search`; the server keeps both.
+  - **Measured** before building, on the demo phone, against 67 phrases with known answers (42
+    the rules were written against, 25 written after): rules 24 of 25 new ones right, in
+    microseconds; Gemini through the server 22 of 25, median 3.5 s, and within the search's 2.5 s
+    wait for only 18 of 65; Qwen3-0.6B on the phone through LiteRT-LM wrong on nearly all, at
+    16–28 s a phrase and 1.5 GB. Gemini's misses hid the right memory ("photos of my cat" as the
+    Photos app).
+  - **Pitfalls:** "may" is the month only where it can't be the verb ("rent receipt may", "may
+    3rd", not "may help"); "april fools" is no date; an app named with an everyday word (Photos,
+    Files, X) is the source only as "photos app" or "from photos"; a bare year is words ("2025
+    tax return"), a year after "from" or "in" a filter.
+  - Tests: `PhraseRulesTest` (JVM, on a fixed Saturday), `LocalSearchTest` (both answers, filters
+    alone, no model). `EmbedOnPhoneTest` runs the whole search with the real model.
+
 ## Rules
 
 - **Never commit the model**, and never put it in the APK.
-- **A search phrase still goes to the server**; nothing else does unless the person turns it on.
+- **Nothing typed leaves the phone** (L6); nothing else does unless the person turns it on.
 - **One model for everything.** Vectors from different models can't be compared: a memory
   embedded with another model is embedded again.
 - **The rules in CLAUDE.md still hold**, including tests on the phone never clearing the real

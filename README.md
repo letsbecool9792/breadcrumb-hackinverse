@@ -77,7 +77,7 @@ airplane mode.
               ↓
     fused with the phone's own word search, by rank
               ↓
-    narrowed by date, type and app, when the cloud may read the phrase
+    narrowed by date, type and app, read from the phrase on the phone
               ↓
     ranked memories → tap to open the original
 ```
@@ -85,16 +85,14 @@ airplane mode.
 Meaning and words together, because the queries people actually type are full of proper nouns:
 "Qualcomm" needs words while the rest of the sentence needs meaning.
 
-**What leaves the phone** is up to the person, under "privacy" on the home screen:
+**Nothing leaves the phone** by default. What you type stays too: "from April", "screenshot" or
+"on WhatsApp" are read into filters on the phone. Under "privacy" on the home screen, one switch:
 
-- **Understand searches in the cloud** (on by default): what you type goes, and the names of
-  the apps and sites your saves came from, so that "from April", "screenshot" or "on WhatsApp"
-  become filters.
 - **Gemini reads my memories** (off by default): for one-line summaries. Phone numbers, emails,
   addresses, cards, IDs and OTPs are stripped first; pictures and saves from banking and
   password apps never go.
 
-With both off, the app never talks to a server.
+With it off, the app never talks to a server.
 
 ## Stack
 
@@ -103,7 +101,7 @@ With both off, the app never talks to a server.
 | **Mobile** | Native Android: Kotlin, Jetpack Compose, Room (with full-text search), WorkManager |
 | **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures), ML Kit Text Recognition and Entity Extraction |
 | **Backend (optional)** | Node + Express + TypeScript, MongoDB Atlas with Atlas Vector Search |
-| **Cloud AI (optional)** | Gemini Flash Lite (reading a search phrase; summaries when allowed), `gemini-embedding-001` |
+| **Cloud AI (optional)** | Gemini Flash Lite (summaries when allowed), `gemini-embedding-001` |
 
 Native Android rather than a cross-platform framework: every capture surface is an Android
 platform surface, and every save is a cold start, so a native capture path is the difference
