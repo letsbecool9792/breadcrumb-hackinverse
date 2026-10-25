@@ -37,16 +37,25 @@ brief says:
   server. `server/` stays in the repo, never deleted, and still runs and passes its tests; it is
   simply no longer used.
 
-**Roadmap**, in this order:
+**Roadmap**, in this order (set 2026-10-25):
 
-1. **Seed 500+ real items, then judge search honestly**: a fixed list of about 20 real searches,
-   each with the memory it should find, run after every change to search. Tune the 0.12 meaning
-   window and the fusion against it, not before.
-2. **Check that a clip marked sensitive is never saved**, with a real password manager on the
-   phone. Only the JVM test covers it today.
-3. **OCR reads Latin script only**; ML Kit has bundled Devanagari and other models if that
-   matters.
-4. **Post-V1**, as listed below.
+1. **Saved already.** Saving something the phone already holds says so, and offers to add a note
+   to the one kept, or to keep it again as a memory of its own.
+2. **Voice notes**: recording, playback, audio storage, and making them searchable.
+3. **A first-run screen for the model.** The 388 MB embedding model downloads silently on the
+   first Wi-Fi today, and search by meaning waits for it with nothing said. Show it downloading.
+   Test it on a phone that has never had Breadcrumb (in the manual list below).
+4. **Export and import**: every memory, its originals and vectors, out to one file the person
+   keeps, and back in on a new phone.
+5. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
+   and 1 GB each on the CPU today).
+6. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
+   `READ_MEDIA_IMAGES` and real battery care.
+
+**Later, maybe:** seed 500+ real items and judge search against a fixed list of about 20 real
+searches, tuning the 0.12 meaning window and the fusion against it; check with a real password
+manager that a clip it marks sensitive is never saved (only the JVM test covers it); OCR of
+Devanagari and other scripts (ML Kit has bundled models).
 
 Each brief holds its own checklist; tick a step with the commits that finish it.
 
@@ -133,13 +142,17 @@ it whenever a change needs a manual check, and tick items off when done.
 - [ ] **Seed the phone** (roadmap 1). Search only impresses with a real corpus: put 500+ real
       items on the phone with the importer (reading R5), then leave it on the charger so pictures
       with no words get embedded. It costs nothing.
-- [ ] **Check R3 and R4 on the phone.** The automated tests cannot cover these:
-  - **PDFs:** a scanned PDF is read by OCR. A PDF behind a password shows *no text found*.
-  - **Links:** a bare link gets its page's description, and its title when it had none. A link
-    saved in airplane mode stays unread, and is read when the network is back.
-- [ ] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
-      in the workspace's VS Code settings. Its daemon keeps coming back and breaking command-line
-      builds with the jlink error (see "Android").
+- [x] **Check R3 and R4 on the phone** (2026-10-25): a scanned PDF is read by OCR; a bare link
+      gets its page's description, and its title when it had none; a link saved in airplane mode
+      stays unread, and is read when the network is back.
+  - [ ] Left for later: a PDF behind a password shows *no text found*.
+- [ ] **Instagram links**: a shared reel, post or profile gets its title and thumbnail, and so
+      does one saved before the fix (it is read once more).
+- [ ] **When roadmap 3 is built: the first-run download on a phone that has never had
+      Breadcrumb**, from install to search by meaning.
+- [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
+      in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
+      breaking command-line builds with the jlink error (see "Android").
 
 ---
 
@@ -364,6 +377,11 @@ indexes per cluster**; one vector index plus one text index fits.
   and originals. Install and instrument directly instead (commands below). The test APK runs in
   the app's process, so once `BreadcrumbApp.onCreate` opens the real database, running tests
   migrates it: back up first.
+- **A finished `am instrument` force-stops the app**, and a force-stopped app's WorkManager jobs
+  don't run until it starts again: a link read or an embedding left by a test run waits for the
+  next launch. To run them without opening the app,
+  `adb shell am broadcast -a androidx.work.diagnostics.REQUEST_DIAGNOSTICS -p com.lbc.breadcrumb`
+  starts its process.
 - **An on-phone test never clears, or lists-and-deletes, the real database or `originals/`.** The
   test APK runs in the app's process, so `app.database` is the person's real one. Use an
   in-memory Room database; where a test must go through `app.database` (it exercises code that
@@ -473,18 +491,16 @@ exercises it.
 
 # ══════════ END OF V1 ══════════
 
-## Post-V1: do not build in V1
+## Ideas, not planned
 
-Listed so the ideas are not lost, not so they get pulled forward.
+Listed so the ideas are not lost, not so they get pulled forward. Voice notes and screenshot
+auto-detect were here; they are on the roadmap now.
 
-- **Voice notes**: recording, playback, audio storage.
 - **Browser extension**: a second frontend, a second auth flow and a second capture pipeline for
   maybe 10% of saves.
 - **Real auth**: Google Sign-In, proper user accounts.
 - **Cross-device sync**: needs object storage for originals, which reverses rule 1. A deliberate
   call, not a drive-by change.
-- **Screenshot auto-detect**: a `ContentObserver` on MediaStore offering to save new screenshots.
-  High-leverage, but costs `READ_MEDIA_IMAGES` and real battery care.
 - Multimodal embeddings (embedding the picture itself, for screenshots with little text); a
   reranking pass over the top ~20 hits; iOS; desktop capture.
 

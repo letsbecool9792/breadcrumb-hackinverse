@@ -99,6 +99,12 @@ One PR each, checked on a phone. The debug list shows each row's reading state (
     its description, in `extractedText`.
   - Every answer is final (an error page, a login wall's title, a dead link while online)
     **except losing the network**, which leaves the link for the next pass.
+  - **Instagram walls browsers, not apps** (2026-10-25): read as a browser, a reel's page is
+    titled "Instagram" with no picture; read by a client that says it is not a browser, it has
+    its caption and thumbnail. So a page that comes back bare (no picture, and no title but the
+    site's name) is read once more as "Breadcrumb/1.0 (Android; link preview)", and a `<title>`
+    that is only the site's name gives way to og:title (`LinkRules.pageTitle`). Browser first:
+    some sites' bot filters turn away an unknown app (Zomato times out).
   - Expose it as one step the upload queue runs first on each pass (`LinkReading`), four pages
     at a time.
   - Built so:
