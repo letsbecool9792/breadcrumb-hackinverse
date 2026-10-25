@@ -161,4 +161,54 @@ class HttpLinkReaderTest {
         assertEquals("", result.description)
         assertEquals(0, server.requestCount)
     }
+
+    /** A public-looking host that resolves to the test server, so the page has a site name ("Allowed"). */
+    private fun allowedReader(): Pair<HttpLinkReader, String> {
+        val client = HttpLinkReader.defaultHttpClient().newBuilder()
+            .dns { listOf(InetAddress.getByName("127.0.0.1")) }
+            .build()
+        return HttpLinkReader(client = client, allowLocalhostForTesting = true) to "http://allowed.example:${server.port}/reel/1"
+    }
+
+    private fun page(head: String) = MockResponse(
+        code = 200,
+        headers = okhttp3.Headers.headersOf("Content-Type", "text/html; charset=utf-8"),
+        body = "<html><head>$head</head><body></body></html>",
+    )
+
+    @Test
+    fun aPageWalledToBrowsersIsAskedAgainAsBreadcrumb() = runBlocking {
+        server.enqueue(page("<title>Allowed</title>"))
+        server.enqueue(page("""<title>Allowed</title><meta property="og:title" content="Someone on Allowed: a caption"><meta property="og:image" content="https://cdn.example.com/t.jpg">"""))
+        val (reader, url) = allowedReader()
+
+        val result = reader.readLink(url)
+
+        assertEquals("Someone on Allowed: a caption", result.title)
+        assertEquals("https://cdn.example.com/t.jpg", result.imageUrl)
+        assertEquals(HttpLinkReader.USER_AGENT, server.takeRequest().headers["User-Agent"])
+        assertEquals(HttpLinkReader.APP_USER_AGENT, server.takeRequest().headers["User-Agent"])
+    }
+
+    @Test
+    fun aPageWithItsPreviewIsReadOnce() = runBlocking {
+        server.enqueue(page("""<title>Allowed</title><meta property="og:image" content="https://cdn.example.com/t.jpg">"""))
+        val (reader, url) = allowedReader()
+
+        assertEquals("https://cdn.example.com/t.jpg", reader.readLink(url).imageUrl)
+        assertEquals(1, server.requestCount)
+    }
+
+    @Test
+    fun whenBreadcrumbGetsNoMoreTheBrowsersPageStands() = runBlocking {
+        server.enqueue(page("""<title>Allowed</title><meta name="description" content="Sign in to see this.">"""))
+        server.enqueue(page("<title>Allowed</title>"))
+        val (reader, url) = allowedReader()
+
+        val result = reader.readLink(url)
+
+        assertEquals("Allowed", result.title)
+        assertEquals("Sign in to see this.", result.description)
+        assertEquals(2, server.requestCount)
+    }
 }

@@ -58,8 +58,9 @@ class LinkPreviews(
     }
 
     /**
-     * Links read before previews existed: each is read again once, for its
-     * picture and, where it had none, its title.
+     * Links with no picture: each is read again once, for its picture and,
+     * where it had none or only the site's name, its title. Once per [TRIED]:
+     * a change to how links are read gives every one of them another try.
      */
     suspend fun fillIn(reader: LinkReader = HttpLinkReader()) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -72,7 +73,7 @@ class LinkPreviews(
             } catch (_: java.io.IOException) {
                 return // offline: the rest wait for the next pass
             }
-            read.title?.let { dao.fillLinkTitle(memory.id, it, read.description) }
+            read.title?.let { dao.fillLinkTitle(memory.id, it, read.description, bare = LinkRules.siteName(url).orEmpty()) }
             read.imageUrl?.let { save(memory.id, it) }
             prefs.edit().putStringSet(TRIED, prefs.getStringSet(TRIED, emptySet()).orEmpty() + memory.id).apply()
         }
@@ -81,6 +82,7 @@ class LinkPreviews(
     private companion object {
         const val MAX_BYTES = 3L * 1024 * 1024
         const val PREFS = "link_previews"
-        const val TRIED = "tried"
+        // "tried" before walled pages were asked again as Breadcrumb (Instagram).
+        const val TRIED = "tried_app_agent"
     }
 }

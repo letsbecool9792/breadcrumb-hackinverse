@@ -289,8 +289,8 @@ class LinkReadingTest {
             return 1
         }
 
-        override suspend fun fillLinkTitle(id: String, title: String, text: String, updatedAt: Long): Int {
-            val mem = memories[id]?.takeIf { it.title.isNullOrEmpty() } ?: return 0
+        override suspend fun fillLinkTitle(id: String, title: String, text: String, bare: String, updatedAt: Long): Int {
+            val mem = memories[id]?.takeIf { it.title.isNullOrEmpty() || it.title == bare } ?: return 0
             val words = if (mem.extractedText.isNullOrEmpty()) text else mem.extractedText
             memories[id] = mem.copy(title = title, extractedText = words, updatedAt = updatedAt)
             return 1

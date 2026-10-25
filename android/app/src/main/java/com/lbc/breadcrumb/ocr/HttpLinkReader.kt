@@ -40,63 +40,77 @@ class HttpLinkReader(
         if (isYouTube(normalized)) youTube(normalized)?.let { return@withContext it }
 
         try {
-            val request = Request.Builder()
-                .url(normalized)
-                .header("User-Agent", USER_AGENT)
-                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-                .header("Accept-Language", "en-US,en;q=0.5")
-                .build()
-
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) {
-                    return@withContext LinkReadResult.EMPTY
-                }
-                val body = response.body ?: return@withContext LinkReadResult.EMPTY
-                val contentType = response.header("Content-Type")?.lowercase()
-                if (contentType != null &&
-                    !contentType.contains("text/html") &&
-                    !contentType.contains("application/xhtml+xml")
-                ) {
-                    return@withContext LinkReadResult.EMPTY
-                }
-
-                val charset = body.contentType()?.charset() ?: Charsets.UTF_8
-                val outputStream = ByteArrayOutputStream()
-                val buffer = ByteArray(8192)
-                var totalRead = 0L
-
-                val inputStream = body.byteStream()
-                while (totalRead < MAX_BYTES) {
-                    val toRead = minOf(buffer.size.toLong(), MAX_BYTES - totalRead).toInt()
-                    val read = inputStream.read(buffer, 0, toRead)
-                    if (read == -1) break
-                    outputStream.write(buffer, 0, read)
-                    totalRead += read
-
-                    // Stop early as soon as </head> is seen
-                    val currentHtml = outputStream.toString(charset.name())
-                    if (currentHtml.contains("</head>", ignoreCase = true)) {
-                        break
-                    }
-                }
-
-                val html = outputStream.toString(charset.name())
-                val head = LinkRules.extractHeadContent(html)
-                val title = LinkRules.extractTitle(head)
-                val description = LinkRules.extractDescription(head)
-
-                LinkReadResult(
-                    title = title,
-                    description = description,
-                    imageUrl = LinkRules.extractImage(head, response.request.url.toString()),
-                )
+            val page = readPage(normalized, USER_AGENT) ?: return@withContext LinkReadResult.EMPTY
+            if (!page.isBare(normalized)) return@withContext page
+            // Some sites wall a browser that isn't signed in, and give an app that says what it is the
+            // page's preview (Instagram's reels, posts and profiles): ask once more, as Breadcrumb.
+            val asApp = try {
+                readPage(normalized, APP_USER_AGENT)
+            } catch (_: IOException) {
+                null
             }
+            asApp?.takeUnless { it.isBare(normalized) } ?: page
         } catch (_: IllegalArgumentException) {
             LinkReadResult.EMPTY
         } catch (_: SecurityException) {
             LinkReadResult.EMPTY
         }
     }
+
+    /** The page's head read as [agent], or null when the answer is not a page (an error, another content type). */
+    private fun readPage(url: String, agent: String): LinkReadResult? {
+        val request = Request.Builder()
+            .url(url)
+            .header("User-Agent", agent)
+            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+            .header("Accept-Language", "en-US,en;q=0.5")
+            .build()
+
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return null
+            val body = response.body
+            val contentType = response.header("Content-Type")?.lowercase()
+            if (contentType != null &&
+                !contentType.contains("text/html") &&
+                !contentType.contains("application/xhtml+xml")
+            ) {
+                return null
+            }
+
+            val charset = body.contentType()?.charset() ?: Charsets.UTF_8
+            val outputStream = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            var totalRead = 0L
+
+            val inputStream = body.byteStream()
+            while (totalRead < MAX_BYTES) {
+                val toRead = minOf(buffer.size.toLong(), MAX_BYTES - totalRead).toInt()
+                val read = inputStream.read(buffer, 0, toRead)
+                if (read == -1) break
+                outputStream.write(buffer, 0, read)
+                totalRead += read
+
+                // Stop early as soon as </head> is seen
+                val currentHtml = outputStream.toString(charset.name())
+                if (currentHtml.contains("</head>", ignoreCase = true)) {
+                    break
+                }
+            }
+
+            val html = outputStream.toString(charset.name())
+            val head = LinkRules.extractHeadContent(html)
+            val pageUrl = response.request.url.toString()
+            return LinkReadResult(
+                title = LinkRules.pageTitle(head, pageUrl),
+                description = LinkRules.extractDescription(head),
+                imageUrl = LinkRules.extractImage(head, pageUrl),
+            )
+        }
+    }
+
+    /** No picture, and no title but the site's name: what a walled page shows. */
+    private fun LinkReadResult.isBare(url: String): Boolean =
+        imageUrl == null && (title == null || title.equals(LinkRules.siteName(url), ignoreCase = true))
 
     private fun isYouTube(url: String): Boolean {
         val host = runCatching { java.net.URI(url).host?.lowercase() }.getOrNull() ?: return false
@@ -127,6 +141,9 @@ class HttpLinkReader(
 
         const val MAX_BYTES = 512L * 1024L // 512 KB
         const val USER_AGENT = "Mozilla/5.0 (Android; Mobile; rv:124.0) Gecko/124.0 Firefox/124.0"
+
+        /** Breadcrumb as itself, for a page that walls the browser ([USER_AGENT]). */
+        const val APP_USER_AGENT = "Breadcrumb/1.0 (Android; link preview)"
 
         fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)

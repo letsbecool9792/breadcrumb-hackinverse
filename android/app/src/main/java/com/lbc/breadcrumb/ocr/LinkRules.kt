@@ -110,6 +110,40 @@ object LinkRules {
     }
 
     /**
+     * The page's title: its `<title>`, unless that is only the site's name
+     * (Instagram titles every post "Instagram"), and then its og:title or
+     * twitter:title. A good `<title>` wins: og:title is often a share line
+     * ("Check out this chat").
+     */
+    fun pageTitle(htmlHead: String, pageUrl: String): String? {
+        val title = extractTitle(htmlHead)
+        val siteNames = listOfNotNull(metaContent(htmlHead, "og:site_name"), siteName(pageUrl))
+        if (title != null && siteNames.none { it.equals(title, ignoreCase = true) }) return title
+        return metaContent(htmlHead, "og:title") ?: metaContent(htmlHead, "twitter:title") ?: title
+    }
+
+    /** What a page's host is called ("Instagram" for www.instagram.com), as search names sites. */
+    fun siteName(pageUrl: String): String? =
+        runCatching { java.net.URI(pageUrl).host }.getOrNull()?.let(com.lbc.breadcrumb.embed.Sites::name)
+
+    /** The cleaned content of the first `<meta>` whose property or name is [key]. */
+    private fun metaContent(htmlHead: String, key: String): String? {
+        val metaRegex = Regex("""(?is)<meta\s+([^>]*?)>""")
+        for (match in metaRegex.findAll(htmlHead)) {
+            val attrs = match.groupValues[1]
+            val named = (getAttribute(attrs, "property") ?: getAttribute(attrs, "name"))?.lowercase()
+            if (named != key) continue
+            val content = getAttribute(attrs, "content")
+                ?.replace(Regex("<[^>]+>"), "")
+                ?.let { decodeHtmlEntities(it) }
+                ?.replace(Regex("""\s+"""), " ")
+                ?.trim()
+            if (!content.isNullOrEmpty()) return content
+        }
+        return null
+    }
+
+    /**
      * Extracts the page description from `<meta>` tags:
      * 1. `<meta name="description" content="...">`
      * 2. `<meta property="og:description" content="...">`

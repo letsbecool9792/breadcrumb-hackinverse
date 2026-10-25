@@ -184,4 +184,30 @@ class LinkRulesTest {
         )
         assertNull(LinkRules.extractImage("""<meta name="description" content="no picture">""", "https://example.com/a"))
     }
+
+    @Test
+    fun `a page titled only with its site's name takes its og title, then its twitter title`() {
+        val reel = "https://www.instagram.com/reel/De2SEI7JP8r/"
+        assertEquals(
+            "Michael on Instagram: \"the full guide\"",
+            LinkRules.pageTitle("""<title>Instagram</title><meta property="og:title" content="Michael on Instagram: &quot;the full guide&quot;">""", reel),
+        )
+        assertEquals(
+            "Michael (@millee.md) • Instagram reel",
+            LinkRules.pageTitle("""<title>Instagram</title><meta name="twitter:title" content="Michael (&#064;millee.md) &#x2022; Instagram reel">""", reel),
+        )
+        assertEquals(
+            "Devcon side events",
+            LinkRules.pageTitle("""<title>The Daily</title><meta property="og:site_name" content="The Daily"><meta property="og:title" content="Devcon side events">""", "https://example.com/a"),
+        )
+        assertEquals("Instagram", LinkRules.pageTitle("<title>Instagram</title>", reel))
+    }
+
+    @Test
+    fun `a title that is more than the site's name wins over og title`() {
+        assertEquals(
+            "ChatGPT - Cocktail Taste Descriptions",
+            LinkRules.pageTitle("""<title>ChatGPT - Cocktail Taste Descriptions</title><meta property="og:title" content="Check out this chat">""", "https://chatgpt.com/share/x"),
+        )
+    }
 }

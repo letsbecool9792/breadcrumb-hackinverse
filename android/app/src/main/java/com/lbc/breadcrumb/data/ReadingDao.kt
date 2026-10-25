@@ -62,16 +62,19 @@ interface ReadingDao {
     @Query("UPDATE memories SET localUri = :localUri, updatedAt = :updatedAt WHERE id = :id AND type = 'LINK' AND localUri IS NULL")
     suspend fun setLinkPreview(id: String, localUri: String, updatedAt: Long = System.currentTimeMillis()): Int
 
-    /** A title read later (a video's, from oEmbed), only where there was none; its words too, where there were none. */
+    /**
+     * A title read later (a video's, from oEmbed; a walled page's, read again), only where there was
+     * none or only [bare], the site's name; its words too, where there were none.
+     */
     @Query(
         """
         UPDATE memories SET title = :title,
             extractedText = CASE WHEN extractedText IS NULL OR extractedText = '' THEN :text ELSE extractedText END,
             updatedAt = :updatedAt
-        WHERE id = :id AND (title IS NULL OR title = '')
+        WHERE id = :id AND (title IS NULL OR title = '' OR title = :bare)
         """,
     )
-    suspend fun fillLinkTitle(id: String, title: String, text: String, updatedAt: Long = System.currentTimeMillis()): Int
+    suspend fun fillLinkTitle(id: String, title: String, text: String, bare: String = "", updatedAt: Long = System.currentTimeMillis()): Int
 
     /**
      * Targeted update of [Memory.extractedText].
