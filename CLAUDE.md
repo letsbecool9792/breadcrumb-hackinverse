@@ -42,7 +42,9 @@ brief says:
 1. **Saved already.** Saving something the phone already holds says so, and offers to add a note
    to the one kept, or to keep it again as a memory of its own. Built as capture C10, waiting on
    its check by hand (below); the "+" composer doesn't check yet.
-2. **Voice notes**: recording, playback, audio storage, and making them searchable.
+2. **Voice notes**: recording, playback, audio storage, and making them searchable. Built
+   ([`docs/workstreams/voice-notes.md`](docs/workstreams/voice-notes.md)), heard by the phone's
+   own speech recognizer offline; waiting on its check by hand (below).
 3. **A first-run screen for the model.** The 388 MB embedding model downloads silently on the
    first Wi-Fi today, and search by meaning waits for it with nothing said. Show it downloading.
    Test it on a phone that has never had Breadcrumb (in the manual list below).
@@ -93,6 +95,8 @@ search against what the phone holds.
   `readingOriginals` and starts the OCR queue in `onCreate`.
 - `workScheduler(context)` (`ocr/WorkSchedule.kt`): capture and reading call it after a save or
   a read; it schedules `LinkWorker` (links' pages) and `EmbedWorker`.
+- `voice/ListenQueue`, started in `BreadcrumbApp.onCreate`: hears voice notes into
+  `extractedText`, as the OCR queue reads pictures.
 - `BreadcrumbDatabase`: each workstream registers its own DAO there (one abstract function).
 - `AndroidManifest.xml` and `strings.xml`: each adds its own entries, with a comment saying why.
 - The schema: **every column is already there.** A change is a version bump with an
@@ -150,6 +154,8 @@ it whenever a change needs a manual check, and tick items off when done.
 - [x] **Instagram links** (2026-10-27): a shared reel, post or profile gets its title and
       thumbnail, and so does one saved before the fix (it is read once more).
 - [ ] **Saved already** (capture C10): the brief's *check* line.
+- [ ] **Voice notes** (roadmap 2): V3's *check* line in
+      [`voice-notes.md`](docs/workstreams/voice-notes.md).
 - [ ] **When roadmap 3 is built: the first-run download on a phone that has never had
       Breadcrumb**, from install to search by meaning.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
@@ -202,7 +208,7 @@ The product should feel like a personal search engine, not a digital notebook.
 | Layer | Choice |
 |---|---|
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
-| On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled) |
+| On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled); the phone's own speech recognizer, offline only, for voice notes |
 | Query parsing | **On the phone, by rules** (`embed/PhraseRules`) |
 | Server (**retired**, L7) | Node + Express + TypeScript, MongoDB Atlas (M0) with Atlas Vector Search, Gemini 3.1 and 3.5 Flash Lite, `gemini-embedding-001`. Kept in `server/`; the app makes no call to it |
 
@@ -484,8 +490,8 @@ nice-to-haves included.
   over a function tested on its own.
 - Search UI is search-bar-first. No dashboard, no feed, no folder tree.
 
-**V1 excludes voice notes.** The ingest call handles audio in principle (rule 3), but recording
-UI, playback and audio storage are their own slice of work.
+**V1 excluded voice notes**: recording UI, playback and audio storage were their own slice of
+work. They came after, as roadmap 2.
 
 **Why seeding is not optional:** a personal memory search engine is worthless until it holds a
 few hundred items. Seed 500+ real items, so search is judged against a corpus that actually

@@ -65,6 +65,10 @@ Small glyphs on a 16-unit grid (u = size/16), round caps and joins:
   (10,4); body polyline (3.8,4) (4.8,14) (11.2,14) (12.2,4).
 - **Leaves the app** (15dp, stroke 1.6u): box polyline (6,3) (3,3) (3,13) (13,13) (13,10); arrow
   head (9.5,2.5) (13.5,2.5) (13.5,6.5); shaft (13,3)–(7.5,8.5).
+- **Voice**: five upright strokes at x 2, 5, 8, 11, 14, centred on y 8, 4, 8, 12, 7 and 3 units
+  tall, stroke 1.6u, round caps. The voice note's mark everywhere.
+- **Play**: a filled triangle (5,3) (13,8) (5,13), its corners rounded by a 1.4u stroke.
+  **Pause**: two bars 3u × 10u at x 4 and 9 from y 3, radius 1u.
 - **Clear ×**: two diagonals across the box, stroke 1.5dp, round caps.
 - **Plus**: two lines across the box's centre lines, round caps.
 
@@ -100,7 +104,8 @@ Layout, top to bottom, on Ink with statusBarsPadding:
    has no focus and nothing is typed: enter `fadeIn(180) + expandHorizontally(220)`, exit
    `fadeOut(120) + shrinkHorizontally(200)`.
 3. **Two SheetLayers** over all of it: the detail (§11) for the opened memory, and the "+" sheet
-   (§13), whose content is the composer or, after its quiet line, the import panel (§14).
+   (§13), whose content is the composer or, after its quiet line, the import panel (§14), or after
+   its voice chip, the voice panel (§13).
 
 Back clears a search before it leaves the app. Opening a memory hides the keyboard and clears
 focus first, so the sheet never rises behind the keyboard. One `now` per screenful
@@ -162,6 +167,11 @@ clickable (opens the detail). By kind:
 - **Note** (TEXT): padding start 14, end 14, top 8, bottom 13, spacing 6: an opening quote mark
   "“" in sans 34sp AmberBright Medium lineHeight 26; the text (rawText, else the title) in sans
   15sp lineHeight 21, at most 7 lines; the meta with 3dp top padding.
+- **Voice note** (AUDIO): padding 14 horizontal, 13 vertical, spacing 9: a Row, spacing 8: a 26dp
+  AmberContainerDark circle holding the voice glyph 14dp in AmberBright, then the length ("0:42")
+  in mono 10sp BoneDim; then what was said in sans 15sp lineHeight 21, at most 6 lines;
+  "listening…" in mono 11sp InkOutline until it is heard; when nothing was made out, its title
+  ("Voice note") in sans 15sp BoneDim. Then the meta.
 
 The meta is `tileMeta` (§17): "2d · whatsapp".
 
@@ -241,7 +251,8 @@ InkElevated for the top row once RANKED, else transparent; clickable; Row, spaci
 top:
 - **Thumbnail**: 46dp, radius 7, InkMedia, border 1dp InkBorder, centred. A picture or PDF page
   (140px, Crop TopCenter, travelling); a PDF without one: DocumentGlyph 24×30; a link: the host's
-  initial uppercase (or "↗") in mono 16sp AmberBright; a note: NoteGlyph padded 9dp.
+  initial uppercase (or "↗") in mono 16sp AmberBright; a note: NoteGlyph padded 9dp; a voice
+  note: the voice glyph 22dp in AmberBright.
 - Column, weight 1, spacing 5: the **title** (§17, with the hit's summary) in sans 16sp Medium
   Bone lineHeight 21, at most 2 lines. Then **why it matched**, in mono 11sp BoneDim lineHeight
   16, at most 3 lines: the fragment (§17) with its hit lit, or for a match by meaning alone the
@@ -302,6 +313,17 @@ appears in place.
   **serif** 23sp lineHeight 28; when the memory has a title, the URL text beneath in mono 11sp
   InkOutline lineHeight 17, at most 6 lines, selectable.
 - **Note**: InkMedia, padding 22/24, the text whole in **serif** 20sp lineHeight 28, selectable.
+- **Voice note**: InkMedia, padding 22/24, spacing 18: the **player** (when its file is on the
+  phone), then what was said, whole, in **serif** 20sp lineHeight 28, selectable; "listening…"
+  until it is heard, "no words heard" when nothing was made out, both mono 12sp InkOutline. Its
+  words are not repeated under found text.
+- **The player** (`VoicePlayer`): a Row, spacing 14, centred: a 52dp AmberBright circle holding
+  play or pause 18dp in AmberOnContainer ("Play" / "Pause"); then a Column, weight 1, spacing 2:
+  the track, 24dp tall: a 3dp round line in InkBorder inset by the knob, AmberBright as far as it
+  has played, and a 10dp AmberBright knob there, read while drawing; a tap or a drag seeks. Under
+  it, SpaceBetween, the time gone and the length in mono 11sp InkOutline. One MediaPlayer, made at
+  the first play (usage media, content speech); it pauses when the app leaves the screen and
+  goes with the player; at the end it returns to 0:00.
 
 **Heading**: for a picture or PDF, its title (§17, with the summary) in **serif** 27sp lineHeight
 32; then the caption (rawText, when it differs from the title) in sans 15sp lineHeight 22,
@@ -336,7 +358,7 @@ searched).
 
 **Actions**: Row, padding 22 horizontal, top 18, bottom 22, spacing 10:
 - **The one action**, weight 1: 52dp tall, radius 26, AmberBright, clickable; its label in sans
-  15sp SemiBold AmberOnContainer: "Open original" (a picture or PDF), "Open link" (a link with a
+  15sp SemiBold AmberOnContainer: "Open original" (a picture, PDF or voice note), "Open link" (a link with a
   URL), "Copy text" (a note, or a link without a URL); for the first two the "leaves the app"
   glyph follows after 8dp. With nothing to hand back, "Original isn't on this phone", disabled, on
   InkElevated with InkOutline text.
@@ -346,15 +368,17 @@ searched).
 
 ## §12 Opening, sharing, deleting
 
-**The action** (`OriginalAction`): IMAGE or PDF → ViewFile(file, mime) when the stored file
-exists, else Missing; LINK → ViewUrl(first URL; a bare "www." gets https://) else CopyText(rawText)
+**The action** (`OriginalAction`): IMAGE, PDF or AUDIO → ViewFile(file, mime) when the stored
+file exists, else Missing; LINK → ViewUrl(first URL; a bare "www." gets https://) else CopyText(rawText)
 else Missing; TEXT → CopyText(rawText) else Missing. MIME: application/pdf for a PDF; by
-extension jpg/jpeg → image/jpeg, png, webp, gif, heic, heif; otherwise image/*. ViewFile opens
+extension jpg/jpeg → image/jpeg, png, webp, gif, heic, heif; otherwise image/*; for a voice note
+m4a → audio/mp4, mp3 → audio/mpeg, ogg and opus → audio/ogg, aac, amr, 3gp → audio/3gpp, wav,
+flac, webm; otherwise audio/*. ViewFile opens
 ACTION_VIEW with the FileProvider content URI and FLAG_GRANT_READ_URI_PERMISSION. CopyText puts
 the text on the clipboard; below Android 13 it toasts "Copied" (13+ confirms by itself). No app
 able to open it → toast "No app here can open this".
 
-**Sharing onward** (`ShareOut`): a picture or PDF goes as the file (content URI, read grant,
+**Sharing onward** (`ShareOut`): a picture, PDF or voice note goes as the file (content URI, read grant,
 `ClipData.newRawUri` so the sheet can preview it) with the person's note as EXTRA_TEXT (its
 caption); a link goes as text: the note on the line before the URL, the page title as
 EXTRA_SUBJECT and EXTRA_TITLE (a link without a URL falls back to its words); a note goes as its
@@ -395,7 +419,9 @@ A SheetLayer whose content is the **composer**:
 - The bottom row, navigationBarsPadding, padding 22 horizontal, top 16, bottom 20, spacing 8:
   two chips, "photo" (picture glyph) and "pdf" (DocumentGlyph 12×15): 40dp tall, radius 20,
   InkElevated, border InkFieldBorder, padding 14 horizontal, spacing 8, the glyph in a 16dp box,
-  the label in mono 12sp BoneDim; a spacer; then **Keep**: 48dp, radius 24, padding 22
+  the label in mono 12sp BoneDim; the **voice chip**, a 40dp circle of the same, holding the
+  voice glyph 16dp in BoneDim, content description "voice note" (no label, so three chips and
+  Keep fit a 360dp phone); a spacer; then **Keep**: 48dp, radius 24, padding 22
   horizontal, AmberBright when there is something to keep (or while keeping) else InkElevated;
   "Keep" in sans 15sp SemiBold, AmberOnContainer or InkOutline. While keeping, a walking
   CrumbTrail 15dp (end padding 9) appears before the word (fade + expand) and the button is
@@ -408,6 +434,31 @@ note, or a link when it holds a URL), with no source app; with files, each file 
 memory (copied in as a share would be), and the text is the note on every one. On success: the
 picked files' grants are released, the draft is emptied, the sheet closes, and the work that
 follows a save is scheduled (a link's page, the embedding). On failure the sheet stays with the failure line.
+
+**The voice panel**, in the sheet in place of the composer, after the voice chip or the "Say
+something" shortcut: Grabber; a Column, padding 22 horizontal, top 6, spacing 18:
+- A Row: "Say it" in serif 26sp lineHeight 30, and at the right "discard" while recording, else
+  "back", in mono 12sp BoneDim, padding 10/6, radius 14: it throws away what was recorded and
+  goes back to the composer.
+- **The trace**, full width, 88dp tall: a bar a loudness sample (every 70 ms, the recorder's
+  peak since the last, on a square-root scale), 3dp wide with 3dp between, newest at the right,
+  centred, as tall as it was loud (3dp at the least); the newest AmberBright, the rest Bone at
+  alpha 0.85 fading by 0.6 across the width. Read while drawing.
+- A Row, SpaceBetween: while recording, a 7dp AmberBright dot breathing (alpha 1 → 0.3, 700 ms,
+  reversing, in graphicsLayer) and "recording" in mono 12sp BoneDim, spacing 8; at the right the
+  time in mono 13sp Bone.
+- Refused the microphone: "breadcrumb needs the microphone to keep a voice note" in sans 15sp
+  lineHeight 22, and a chip "allow the microphone" (mono 12sp BoneDim, InkElevated, border
+  InkFieldBorder, radius 20, padding 14/11): it asks again, or once refused for good, opens the
+  app's settings.
+- Nothing recorded, or kept: "couldn't record that — try again?" in mono 11sp AmberBright; a tap
+  records again.
+- The bottom row as the composer's, with only Keep, at the end: lit while recording, walking
+  while it is kept.
+
+Recording starts as the panel opens, once the microphone is allowed (asked the first time).
+Keep stops it and keeps it (on the application's scope), and the sheet closes. Swiping the sheet
+down, the app leaving the screen, or half an hour's limit keeps it too; "discard" doesn't.
 
 **The draft** survives the sheet being swiped away and the app closing, picked files included.
 It is stored as JSON in SharedPreferences (`Draft(text, attachments: [DraftFile(uri, name,
@@ -424,7 +475,11 @@ applicationId), targetClass `com.lbc.breadcrumb.MainActivity`; icon an adaptive 
 `M54,38 L54,70 M38,54 L70,54`; declared as `android.app.shortcuts` meta-data on MainActivity.
 MainActivity counts requests: each intent with that action (onCreate when not restored, and
 onNewIntent) adds one, and the count is saved across rotation. The screen opens the sheet for each
-new count, closing any open detail, and the debug list gives way first.
+new count, closing any open detail, and the debug list gives way first. A second shortcut, "Say
+something" (short label "Say it"), action `com.lbc.breadcrumb.action.VOICE`, its icon the voice
+glyph over the same 32 units as the plus (strokes 5, `M38,48.67 L38,59.33 M46,43.33 L46,64.67
+M54,38 L54,70 M62,44.67 L62,63.33 M70,50 L70,58`), is counted the same way and opens the sheet on
+the voice panel.
 
 ## §14 Bringing in what's already on the phone
 
@@ -508,6 +563,9 @@ Over the app the share came from. Behaviour as it is now. The look:
     primary; the headline (the page title, else the text) in 16sp Medium lineHeight 22
     onSurface, at most 3 lines; when there is a title, the URL in mono 11sp outline, one line.
   - Text: padding 16, the text in 16sp lineHeight 23 onSurface, at most 6 lines (2 while compact).
+  - A voice note: as a PDF, with a 44dp AmberContainerDark circle holding the voice glyph 20dp in
+    primary in the document's place, "Voice note" (or its title), and "ogg · 0:42" (extension ·
+    length). Among several files, its tile holds the voice glyph 30dp in primary.
 - **CrumbMark(play, size)**, on a 46-unit square: crumbs (8, 37) r 3.2 CrumbFaint; (17, 30) r 4.4
   CrumbDim; (27.5, 21) r 5.8 CrumbMid; (37, 10) r 7 CrumbBright. Not playing: all at alpha 0.35.
   Playing (on Saved): the brightest drops in, p 0→1 over 700 ms on `CubicBezierEasing(0.34, 1.4,
@@ -526,11 +584,12 @@ Over the app the share came from. Behaviour as it is now. The look:
 | Words only | No saved words match / ranked search is out of reach, so this\nlooked for the words themselves |
 | Detail actions | Open original / Open link / Copy text / Original isn't on this phone / Share / Delete |
 | Detail labels | saved / from / taken / status / text found / from the page / what it shows / your note / edit / Done |
+| Voice notes | Play / Pause / listening… / no words heard / Voice note / voice note / Say it / back / discard / recording / breadcrumb needs the microphone to keep a voice note / allow the microphone / couldn't record that — try again? |
 | Toasts | Copied / No app here can open this |
 | Undo bar | deleted / Undo |
 | "+" | Keep something / Keep something — a draft is waiting / a thought, a link, anything… / a note about it — who sent it, what it's for… / photo / pdf / Keep / Remove / couldn't keep that — try again? / bring in what's already on the phone |
 | Import | Bring in / back / A whole folder / every picture and PDF in it — screenshots, usually / Only these pictures / pick them yourself / PDFs, or a bookmarks export / from the file picker |
-| Shortcut | Keep / Keep something |
+| Shortcut | Keep / Keep something / Say it / Say something |
 | Capture | Saving… / Saved / Saved %d / Saved %d of %d / Removed / Undo / Done / Close / +%d / Document / add a note / who sent it, what it's for… / Nothing to save / Couldn't save that / Kept already / Keep again / add another note |
 
 All in strings.xml.
@@ -548,7 +607,7 @@ All in strings.xml.
   28 characters before it, cut at a word and prefixed "…"; the tail the next 80, cut at a word
   with "…". Null when no word appears (a match by meaning).
 - **title(memory, summary)**: LINK: title ?: firstLine(rawText) ?: "Link". TEXT: firstLine(rawText)
-  ?: title ?: "Note". IMAGE: title ?: firstLine(rawText) ?: summary ?: headline ?: "Image". PDF: title ?: summary ?:
+  ?: title ?: "Note". AUDIO: title ?: firstLine(what was said) ?: "Voice note". IMAGE: title ?: firstLine(rawText) ?: summary ?: headline ?: "Image". PDF: title ?: summary ?:
   headline ?: "Document". **headline** (`Headline`, for when there is no summary): a picture's
   first real line of OCR text, skipping the clock, network and battery lines, lone app words
   ("Inbox", "to me") and lines mostly symbols; a PDF's first real line.
@@ -561,12 +620,13 @@ All in strings.xml.
 - **tileMeta**: age · source lowercase. **rowMeta**: age · source · chips joined " + "
   lowercase ("2d · whatsapp · image + link").
 - **status(memory)**: extractedText null and a LINK → "page not read yet"; null and an IMAGE or
-  PDF with a stored file → "still reading it"; else null. (Until local-first L7 it also said
+  PDF with a stored file → "still reading it"; null and a voice note with a stored file → "still
+  listening to it"; else null. (Until local-first L7 it also said
   what was not sent yet.)
 - **kept(total)**: "17 kept".
 - **counter(shown, total, typed, interpretation, today, status)**: "{shown} of {total}", then the
   phrase typed when there is no interpretation; otherwise the query (when not blank), the types
-  ("images", "links", "pdfs", "notes", joined " or "), the dates, and "from {source lowercase}";
+  ("images", "links", "pdfs", "notes", "voice notes", joined " or "), the dates, and "from {source lowercase}";
   then the status. Joined " · ": "1 of 17 · internship · images · apr".
 - **dates(from, to, today)**: a whole calendar month → "apr" ("apr 2025" when not this year); one
   day → "18 sep"; a range → "1 apr – 15 may"; only from → "since 1 apr"; only to → "until 30 apr".
