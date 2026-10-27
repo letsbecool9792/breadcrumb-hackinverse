@@ -146,8 +146,8 @@ it whenever a change needs a manual check, and tick items off when done.
       gets its page's description, and its title when it had none; a link saved in airplane mode
       stays unread, and is read when the network is back.
   - [ ] Left for later: a PDF behind a password shows *no text found*.
-- [ ] **Instagram links**: a shared reel, post or profile gets its title and thumbnail, and so
-      does one saved before the fix (it is read once more).
+- [x] **Instagram links** (2026-10-27): a shared reel, post or profile gets its title and
+      thumbnail, and so does one saved before the fix (it is read once more).
 - [ ] **When roadmap 3 is built: the first-run download on a phone that has never had
       Breadcrumb**, from install to search by meaning.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
