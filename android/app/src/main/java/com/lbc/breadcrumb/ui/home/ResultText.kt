@@ -136,7 +136,7 @@ object ResultText {
      * TEXT: firstLine(rawText) ?: title ?: "Note"
      * IMAGE: title ?: firstLine(rawText) ?: summary ?: "Image"
      * PDF: title ?: "Document"
-     * AUDIO (fallback): title ?: "Audio"
+     * AUDIO: title ?: firstLine(what was said) ?: "Voice note"
      */
     fun title(memory: Memory, summary: String? = memory.summary): String {
         return when (memory.type) {
@@ -156,7 +156,8 @@ object ResultText {
                 ?: Headline.of(memory)
                 ?: "Document"
             MemoryType.AUDIO -> memory.title?.takeIf { it.isNotBlank() }
-                ?: "Audio"
+                ?: memory.extractedText?.let { firstLine(it) }
+                ?: "Voice note"
         }
     }
 
@@ -258,7 +259,8 @@ object ResultText {
 
     /**
      * status(memory): extractedText null and a LINK → "page not read yet"; null
-     * and an IMAGE or PDF with a stored file → "still reading it"; else null.
+     * and an IMAGE or PDF with a stored file → "still reading it"; null and a
+     * voice note with a stored file → "still listening to it"; else null.
      */
     fun status(memory: Memory): String? {
         val parts = mutableListOf<String>()
@@ -269,6 +271,7 @@ object ResultText {
                 (memory.type == MemoryType.IMAGE || memory.type == MemoryType.PDF) && memory.localUri != null -> {
                     parts.add("still reading it")
                 }
+                memory.type == MemoryType.AUDIO && memory.localUri != null -> parts.add("still listening to it")
             }
         }
 
@@ -403,6 +406,7 @@ object ResultText {
                         "LINK" -> "links"
                         "PDF" -> "pdfs"
                         "TEXT" -> "notes"
+                        "AUDIO" -> "voice notes"
                         else -> t.lowercase(Locale.ROOT)
                     }
                 }

@@ -81,4 +81,10 @@ class SheetTextTest {
         assertEquals("image · kept just now", SheetText.keptLine(listOf(Memory(type = MemoryType.IMAGE, capturedAt = now)), now))
         assertEquals("2 images · kept before", SheetText.keptLine(List(2) { memory(MemoryType.IMAGE) }, now))
     }
+
+    @Test
+    fun `a voice note is called one`() {
+        assertEquals("voice note · from whatsapp", SheetText.kindLine(listOf(memory(MemoryType.AUDIO, "WhatsApp"))))
+        assertEquals("2 voice notes", SheetText.kindLine(listOf(memory(MemoryType.AUDIO), memory(MemoryType.AUDIO))))
+    }
 }

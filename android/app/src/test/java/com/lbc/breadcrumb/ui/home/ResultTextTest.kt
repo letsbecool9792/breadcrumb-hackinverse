@@ -214,4 +214,15 @@ class ResultTextTest {
         val busyLine = ResultText.counter(3, 10, "internship", null, today, status = SearchStatus.UNAVAILABLE)
         assertEquals("3 of 10 · internship · search busy · words only", busyLine)
     }
+
+    @Test
+    fun `a voice note is titled by what was said, and listened to until it is heard`() {
+        val listening = Memory(type = MemoryType.AUDIO, localUri = "file:///originals/a.m4a")
+        assertEquals("Voice note", ResultText.title(listening))
+        assertEquals("still listening to it", ResultText.status(listening))
+        val heard = listening.copy(extractedText = "The ramen place near the station is closed on Mondays.\nPriya says.")
+        assertEquals("The ramen place near the station is closed on Mondays.", ResultText.title(heard))
+        assertNull(ResultText.status(heard))
+        assertEquals("Voice note", ResultText.title(listening.copy(extractedText = "")))
+    }
 }

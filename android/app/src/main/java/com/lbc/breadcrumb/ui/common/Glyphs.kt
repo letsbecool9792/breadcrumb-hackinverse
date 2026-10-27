@@ -455,3 +455,73 @@ fun Grabber(
             .background(color = color, shape = RoundedCornerShape(2.dp)),
     )
 }
+
+/**
+ * Voice (design §2): five upright strokes on the 16-unit grid, the shape of
+ * something said: at x 2, 5, 8, 11 and 14, centred on y 8, 4, 8, 12, 7 and 3
+ * units tall; stroke 1.6u, round caps.
+ */
+@Composable
+fun VoiceGlyph(
+    modifier: Modifier = Modifier,
+    color: Color = BoneDim,
+) {
+    Canvas(modifier = modifier) {
+        val u = minOf(size.width, size.height) / 16f
+        if (u <= 0f) return@Canvas
+        val left = (size.width - 16f * u) / 2f
+        val top = (size.height - 16f * u) / 2f
+        VOICE_HEIGHTS.forEachIndexed { i, h ->
+            val x = left + (2f + 3f * i) * u
+            drawLine(
+                color = color,
+                start = Offset(x, top + (8f - h / 2f) * u),
+                end = Offset(x, top + (8f + h / 2f) * u),
+                strokeWidth = 1.6f * u,
+                cap = StrokeCap.Round,
+            )
+        }
+    }
+}
+
+private val VOICE_HEIGHTS = floatArrayOf(4f, 8f, 12f, 7f, 3f)
+
+/** Play (design §2): a triangle on the 16-unit grid, (5, 3) (13, 8) (5, 13), filled, its corners rounded by a 1.4u stroke. */
+@Composable
+fun PlayGlyph(
+    modifier: Modifier = Modifier,
+    color: Color = BoneDim,
+) {
+    Canvas(modifier = modifier) {
+        val u = minOf(size.width, size.height) / 16f
+        if (u <= 0f) return@Canvas
+        val triangle = Path().apply {
+            moveTo(5f * u, 3f * u)
+            lineTo(13f * u, 8f * u)
+            lineTo(5f * u, 13f * u)
+            close()
+        }
+        drawPath(triangle, color)
+        drawPath(triangle, color, style = Stroke(width = 1.4f * u, join = StrokeJoin.Round))
+    }
+}
+
+/** Pause (design §2): two bars on the 16-unit grid, 3u wide and 10u tall at x 4 and 9, from y 3, radius 1u. */
+@Composable
+fun PauseGlyph(
+    modifier: Modifier = Modifier,
+    color: Color = BoneDim,
+) {
+    Canvas(modifier = modifier) {
+        val u = minOf(size.width, size.height) / 16f
+        if (u <= 0f) return@Canvas
+        for (x in floatArrayOf(4f, 9f)) {
+            drawRoundRect(
+                color = color,
+                topLeft = Offset(x * u, 3f * u),
+                size = Size(3f * u, 10f * u),
+                cornerRadius = CornerRadius(u, u),
+            )
+        }
+    }
+}

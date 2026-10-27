@@ -84,12 +84,12 @@ data class Memory(
      */
     val note: String? = null,
 
-    /** App-private copy of the original file, for images and PDFs ([OriginalStore]). */
+    /** App-private copy of the original file, for images, PDFs and voice notes ([OriginalStore]). */
     val localUri: String? = null,
 
     /**
      * What the phone read out of the thing: OCR of a picture, a PDF's text, a
-     * link's page description. **Null means not read yet; empty means read,
+     * link's page description, what was said in a voice note. **Null means not read yet; empty means read,
      * and holding no text.** The reading queues find their work by that null,
      * so never write empty to mean anything else.
      */
@@ -157,7 +157,7 @@ enum class MemoryType {
     IMAGE,
     PDF,
 
-    /** Out of scope for V1, declared now so enabling it needs no migration. */
+    /** A voice note, recorded in the app or shared in. Declared in V1, so it came without a migration. */
     AUDIO,
 }
 

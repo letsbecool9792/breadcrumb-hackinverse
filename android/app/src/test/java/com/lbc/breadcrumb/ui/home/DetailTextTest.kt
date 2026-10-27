@@ -132,4 +132,9 @@ class DetailTextTest {
         assertEquals(NoteEdit.Unchanged, DetailText.noteEdit("", null))
         assertEquals(NoteEdit.Write("new"), DetailText.noteEdit("new", "old"))
     }
+
+    @Test
+    fun `a voice note's words are in its card, not again under text found`() {
+        assertEquals(emptyList<Pair<Found, String>>(), DetailText.foundText(Memory(type = MemoryType.AUDIO, extractedText = "closed on mondays")))
+    }
 }

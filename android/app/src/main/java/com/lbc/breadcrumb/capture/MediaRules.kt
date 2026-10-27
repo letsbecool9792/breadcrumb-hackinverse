@@ -16,12 +16,13 @@ internal object MediaRules {
     fun mimeOf(providerType: String?, declaredType: String?): String? =
         providerType?.takeIf { it.isNotBlank() } ?: declaredType?.takeIf { it.isNotBlank() }
 
-    /** IMAGE for any image, PDF for a PDF, null for anything else: it is skipped. */
+    /** IMAGE for any image, PDF for a PDF, AUDIO for sound (a voice note), null for anything else: it is skipped. */
     fun kindOf(mime: String?): MemoryType? {
-        val type = mime?.lowercase(Locale.ROOT) ?: return null
+        val type = bare(mime) ?: return null
         return when {
             type == "application/pdf" -> MemoryType.PDF
             type.startsWith("image/") -> MemoryType.IMAGE
+            type.startsWith("audio/") || type == "application/ogg" -> MemoryType.AUDIO
             else -> null
         }
     }
@@ -29,10 +30,19 @@ internal object MediaRules {
     /**
      * The stored file's extension, from a fixed map, never from anything the
      * sender wrote. An image of a type the map lacks, or of no named type at
-     * all, is stored as jpg, the likeliest.
+     * all, is stored as jpg, the likeliest; sound as m4a. The phone reads a
+     * file by its contents, so the guess only names it.
      */
     fun extensionFor(mime: String?): String =
-        EXTENSIONS[mime?.lowercase(Locale.ROOT)] ?: if (kindOf(mime) == MemoryType.PDF) "pdf" else "jpg"
+        EXTENSIONS[bare(mime)] ?: when (kindOf(mime)) {
+            MemoryType.PDF -> "pdf"
+            MemoryType.AUDIO -> "m4a"
+            else -> "jpg"
+        }
+
+    /** The type without its parameters: WhatsApp sends "audio/ogg; codecs=opus". */
+    private fun bare(mime: String?): String? =
+        mime?.substringBefore(';')?.trim()?.lowercase(Locale.ROOT)?.takeIf { it.isNotEmpty() }
 
     /** Shared text rides on a file only when exactly one came: with several, it is no one file's. */
     fun captionFor(text: String?, fileCount: Int): String? =
@@ -74,5 +84,9 @@ internal object MediaRules {
         "image/heic" to "heic", "image/heif" to "heif", "image/avif" to "avif",
         "image/bmp" to "bmp", "image/x-ms-bmp" to "bmp",
         "application/pdf" to "pdf",
+        "audio/mp4" to "m4a", "audio/m4a" to "m4a", "audio/x-m4a" to "m4a", "audio/aac" to "aac",
+        "audio/mpeg" to "mp3", "audio/mp3" to "mp3", "audio/ogg" to "ogg", "application/ogg" to "ogg",
+        "audio/opus" to "opus", "audio/amr" to "amr", "audio/3gpp" to "3gp", "audio/wav" to "wav",
+        "audio/x-wav" to "wav", "audio/flac" to "flac", "audio/webm" to "webm",
     )
 }

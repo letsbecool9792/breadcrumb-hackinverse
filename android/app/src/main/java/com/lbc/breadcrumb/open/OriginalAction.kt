@@ -19,7 +19,7 @@ import java.io.File
 
 /**
  * What tapping the main action on a memory's detail does (docs/design.md §12):
- * - IMAGE or PDF -> [ViewFile] when stored file exists, else [Missing].
+ * - IMAGE, PDF or AUDIO -> [ViewFile] when stored file exists, else [Missing].
  * - LINK -> [ViewUrl] (first URL; a bare "www." gets https://) else [CopyText] (rawText) else [Missing].
  * - TEXT -> [CopyText] (rawText) else [Missing].
  *
@@ -120,7 +120,7 @@ sealed interface OriginalAction {
         /** Decides the action purely from the memory and its stored file (JVM-testable). */
         fun decide(memory: Memory, file: File?): OriginalAction {
             return when (memory.type) {
-                MemoryType.IMAGE, MemoryType.PDF -> {
+                MemoryType.IMAGE, MemoryType.PDF, MemoryType.AUDIO -> {
                     if (file != null && file.exists() && file.isFile) {
                         ViewFile(file, mimeFor(memory.type, file))
                     } else {
@@ -149,7 +149,6 @@ sealed interface OriginalAction {
                         Missing
                     }
                 }
-                else -> Missing
             }
         }
 
@@ -161,6 +160,20 @@ sealed interface OriginalAction {
         fun mimeFor(type: MemoryType, file: File): String {
             if (type == MemoryType.PDF || file.extension.equals("pdf", ignoreCase = true)) {
                 return "application/pdf"
+            }
+            if (type == MemoryType.AUDIO) {
+                return when (file.extension.lowercase()) {
+                    "m4a" -> "audio/mp4"
+                    "mp3" -> "audio/mpeg"
+                    "ogg", "opus" -> "audio/ogg"
+                    "aac" -> "audio/aac"
+                    "amr" -> "audio/amr"
+                    "3gp" -> "audio/3gpp"
+                    "wav" -> "audio/wav"
+                    "flac" -> "audio/flac"
+                    "webm" -> "audio/webm"
+                    else -> "audio/*"
+                }
             }
             return when (file.extension.lowercase()) {
                 "jpg", "jpeg" -> "image/jpeg"

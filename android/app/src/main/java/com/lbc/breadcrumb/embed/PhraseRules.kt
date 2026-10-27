@@ -85,7 +85,12 @@ object PhraseRules {
             "webpage", "blog", "reel", "reels",
         ),
         "TEXT" to setOf("note", "notes", "message", "messages", "msg", "msgs"),
+        "AUDIO" to setOf("audio", "recording", "recordings", "voicenote", "voicenotes"),
     )
+
+    /** "voice note", "audio message", "voice memo": one kind, not a note and a sound. */
+    private val VOICE = setOf("voice", "audio")
+    private val VOICE_KINDS = setOf("note", "notes", "message", "messages", "memo", "memos", "recording", "recordings", "clip", "clips")
 
     private fun typesOf(words: List<String>, used: BooleanArray): List<String> {
         val types = linkedSetOf<String>()
@@ -93,6 +98,12 @@ object PhraseRules {
             if (used[i]) continue
             if (words[i] == "screen" && words.getOrNull(i + 1) in setOf("shot", "shots")) {
                 types += "IMAGE"
+                used[i] = true
+                used[i + 1] = true
+                continue
+            }
+            if (words[i] in VOICE && words.getOrNull(i + 1) in VOICE_KINDS) {
+                types += "AUDIO"
                 used[i] = true
                 used[i + 1] = true
                 continue

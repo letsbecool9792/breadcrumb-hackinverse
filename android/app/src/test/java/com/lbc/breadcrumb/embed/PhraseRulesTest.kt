@@ -26,6 +26,15 @@ class PhraseRulesTest {
     }
 
     @Test
+    fun `a voice note is one kind, however it is called`() {
+        assertEquals(Interpretation(query = "ramen", types = listOf("AUDIO")), parse("that voice note about ramen"))
+        assertEquals(Interpretation(query = "priya", types = listOf("AUDIO"), sourceApp = "WhatsApp"), parse("audio message from priya on whatsapp"))
+        assertEquals(Interpretation(query = "lecture", types = listOf("AUDIO")), parse("lecture recording"))
+        // A note alone is still written.
+        assertEquals(Interpretation(query = "ramen", types = listOf("TEXT")), parse("note about ramen"))
+    }
+
+    @Test
     fun `a month is the latest one up to today`() {
         assertEquals("2025-12-01" to "2025-12-31", days("photos from december"))
         assertEquals("2026-10-01" to "2026-10-24", days("notes from october"))

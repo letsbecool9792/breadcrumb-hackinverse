@@ -81,7 +81,8 @@
             </intent-filter>
         </activity>
 
-        <!-- Capture workstream: receive images and PDFs -->
+        <!-- Capture workstream: receive images and PDFs, and sound: a voice note from WhatsApp,
+             a recording -->
         <activity
             android:name=".capture.MediaReceiverActivity"
             android:label="@string/app_name"
@@ -99,12 +100,16 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/ogg" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="image/*" />
                 <data android:mimeType="application/pdf" />
+                <data android:mimeType="audio/*" />
+                <data android:mimeType="application/ogg" />
             </intent-filter>
         </activity>
 

@@ -198,4 +198,26 @@ class DetailTest {
         }
         assertNull(line)
     }
+
+    @Test
+    fun aVoiceNoteShowsWhatWasSaidOnceAndIsListenedToUntilThen() {
+        val heard = Memory(id = "voice", type = MemoryType.AUDIO, extractedText = "The ramen place is closed on Mondays", capturedAt = now)
+        var shown by mutableStateOf(heard.copy(extractedText = null, localUri = "file:///gone.m4a"))
+        val actions = DetailActions(OriginalAction.Missing, {}, null, {}, {})
+        compose.setContent {
+            BreadcrumbTheme(darkTheme = true) {
+                SheetLayer(item = shown, onDismiss = {}, modifier = Modifier.fillMaxSize()) { memory, visibility ->
+                    MemoryDetail(memory, now, visibility, actions)
+                }
+            }
+        }
+
+        compose.onNodeWithText("listening…").assertExists()
+        compose.onNodeWithText("still listening to it").assertExists()
+
+        shown = heard
+        compose.onNodeWithText("The ramen place is closed on Mondays").assertExists()
+        // Said once, in the card: not again as text found.
+        compose.onNodeWithText("TEXT FOUND").assertDoesNotExist()
+    }
 }

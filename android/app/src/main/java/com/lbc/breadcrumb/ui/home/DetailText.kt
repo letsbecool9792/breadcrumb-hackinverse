@@ -63,10 +63,10 @@ internal object DetailText {
     /**
      * The text found, by section: what the phone read ("from the page" for a
      * link), and what the model saw in a picture. Long text shows its first
-     * 1,600 characters, cut at a word.
+     * 1,600 characters, cut at a word. A voice note's words are its card's.
      */
     fun foundText(memory: Memory): List<Pair<Found, String>> = buildList {
-        memory.extractedText?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        memory.extractedText?.trim()?.takeIf { it.isNotEmpty() && memory.type != MemoryType.AUDIO }?.let {
             add((if (memory.type == MemoryType.LINK) Found.FROM_THE_PAGE else Found.TEXT_FOUND) to ResultText.opening(it, FOUND_TEXT_LIMIT))
         }
         memory.readText?.trim()?.takeIf { it.isNotEmpty() }?.let {

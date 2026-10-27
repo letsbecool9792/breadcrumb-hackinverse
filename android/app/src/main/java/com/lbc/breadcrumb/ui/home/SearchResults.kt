@@ -48,6 +48,7 @@ import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.common.CrumbTrail
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
 import com.lbc.breadcrumb.ui.common.NoteGlyph
+import com.lbc.breadcrumb.ui.common.VoiceGlyph
 import com.lbc.breadcrumb.ui.common.rememberThumbnail
 import com.lbc.breadcrumb.ui.theme.AmberBright
 import com.lbc.breadcrumb.ui.theme.BoneDim
@@ -223,7 +224,7 @@ private fun ResultRow(
     }
 }
 
-/** The 46 dp mark at the left of a row: the picture, the page, the host's initial, or a note's lines. */
+/** The 46 dp mark at the left of a row: the picture, the page, the host's initial, a note's lines, or the voice mark. */
 @Composable
 private fun ResultThumbnail(memory: Memory) {
     val shape = RoundedCornerShape(7.dp)
@@ -256,7 +257,8 @@ private fun ResultThumbnail(memory: Memory) {
                 memory.rawText?.let(ResultText::host)?.first()?.uppercase(Locale.ROOT) ?: "↗",
                 style = monoStyle(16.sp, AmberBright),
             )
-            MemoryType.TEXT, MemoryType.AUDIO -> NoteGlyph(Modifier.fillMaxSize().padding(9.dp))
+            MemoryType.TEXT -> NoteGlyph(Modifier.fillMaxSize().padding(9.dp))
+            MemoryType.AUDIO -> VoiceGlyph(Modifier.size(22.dp), AmberBright)
         }
     }
 }

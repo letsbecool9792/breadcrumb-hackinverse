@@ -50,6 +50,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -61,6 +62,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
@@ -70,6 +72,7 @@ import com.lbc.breadcrumb.ui.common.DocumentGlyph
 import com.lbc.breadcrumb.ui.common.Grabber
 import com.lbc.breadcrumb.ui.common.LeavesTheAppGlyph
 import com.lbc.breadcrumb.ui.common.ShareGlyph
+import com.lbc.breadcrumb.ui.common.VoicePlayer
 import com.lbc.breadcrumb.ui.common.rememberThumbnail
 import com.lbc.breadcrumb.ui.theme.AmberBright
 import com.lbc.breadcrumb.ui.theme.AmberOnContainer
@@ -143,7 +146,8 @@ private fun Artifact(memory: Memory, visibility: AnimatedVisibilityScope, onOpen
         MemoryType.IMAGE -> PictureArtifact(memory, visibility, onOpen)
         MemoryType.PDF -> PageArtifact(memory, visibility, onOpen)
         MemoryType.LINK -> LinkCard(memory, onOpen)
-        MemoryType.TEXT, MemoryType.AUDIO -> NoteCard(memory)
+        MemoryType.TEXT -> NoteCard(memory)
+        MemoryType.AUDIO -> VoiceCard(memory)
     }
 }
 
@@ -265,6 +269,32 @@ private fun NoteCard(memory: Memory) {
     ) {
         SelectionContainer {
             Text(memory.rawText ?: memory.title ?: "", style = serif(20.sp, lineHeight = 28.sp))
+        }
+    }
+}
+
+/**
+ * A voice note: the player, then what was said, whole, in the serif;
+ * "listening…" until it is heard, "no words heard" when nothing was made out.
+ * No player when its file isn't on the phone.
+ */
+@Composable
+private fun VoiceCard(memory: Memory) {
+    val originals = (LocalContext.current.applicationContext as BreadcrumbApp).originals
+    val file = remember(memory.localUri) { originals.fileFor(memory) }
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(InkMedia)
+            .padding(horizontal = 22.dp, vertical = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(18.dp),
+    ) {
+        if (file != null) VoicePlayer(file, Modifier.fillMaxWidth())
+        val said = memory.extractedText?.trim()
+        when {
+            said == null -> Text(stringResource(R.string.voice_listening), style = monoStyle(12.sp, InkOutline))
+            said.isEmpty() -> Text(stringResource(R.string.voice_no_words), style = monoStyle(12.sp, InkOutline))
+            else -> SelectionContainer { Text(said, style = serif(20.sp, lineHeight = 28.sp)) }
         }
     }
 }

@@ -13,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,14 +26,18 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
+import com.lbc.breadcrumb.ui.common.VoiceGlyph
+import com.lbc.breadcrumb.ui.common.rememberAudioLength
 import com.lbc.breadcrumb.ui.common.rememberThumbnail
 import com.lbc.breadcrumb.ui.theme.AmberBright
 import com.lbc.breadcrumb.ui.theme.AmberContainerDark
@@ -41,6 +47,7 @@ import com.lbc.breadcrumb.ui.theme.InkBorder
 import com.lbc.breadcrumb.ui.theme.InkElevated
 import com.lbc.breadcrumb.ui.theme.InkMedia
 import com.lbc.breadcrumb.ui.theme.InkOutline
+import com.lbc.breadcrumb.voice.AudioLength
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -49,7 +56,8 @@ private const val THUMBNAIL_PX = 360
 
 /**
  * One memory in the mosaic (design §6): by kind, a picture that is all picture,
- * a document's first page, a link's host, or a note's own words.
+ * a document's first page, a link's host, a note's own words, or what was said
+ * in a voice note.
  */
 @Composable
 internal fun MemoryTile(memory: Memory, now: Long, onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -65,7 +73,8 @@ internal fun MemoryTile(memory: Memory, now: Long, onClick: () -> Unit, modifier
             MemoryType.IMAGE -> PictureTile(memory, now)
             MemoryType.PDF -> DocumentTile(memory, now)
             MemoryType.LINK -> LinkTile(memory, now)
-            MemoryType.TEXT, MemoryType.AUDIO -> NoteTile(memory, now)
+            MemoryType.TEXT -> NoteTile(memory, now)
+            MemoryType.AUDIO -> VoiceTile(memory, now)
         }
     }
 }
@@ -237,6 +246,47 @@ private fun NoteTile(memory: Memory, now: Long) {
             overflow = TextOverflow.Ellipsis,
         )
         Meta(memory, now, Modifier.padding(top = 3.dp))
+    }
+}
+
+/**
+ * A voice note: the voice mark in a small amber circle and how long it plays,
+ * then what was said; "listening…" until it is heard, and its title ("Voice
+ * note") when nothing could be made out.
+ */
+@Composable
+private fun VoiceTile(memory: Memory, now: Long) {
+    val length by rememberAudioLength(memory)
+    Column(
+        Modifier.padding(start = 14.dp, end = 14.dp, top = 13.dp, bottom = 13.dp),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(26.dp).clip(CircleShape).background(AmberContainerDark),
+                contentAlignment = Alignment.Center,
+            ) {
+                VoiceGlyph(Modifier.size(14.dp), AmberBright)
+            }
+            Text(length?.let(AudioLength::clock).orEmpty(), style = monoStyle(10.sp, BoneDim))
+        }
+        val said = memory.extractedText?.trim()
+        when {
+            said == null -> Text(stringResource(R.string.voice_listening), style = monoStyle(11.sp, InkOutline))
+            said.isNotEmpty() -> Text(
+                said,
+                style = sans(15.sp, lineHeight = 21.sp),
+                maxLines = 6,
+                overflow = TextOverflow.Ellipsis,
+            )
+            else -> Text(
+                ResultText.title(memory),
+                style = sans(15.sp, BoneDim, lineHeight = 21.sp),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Meta(memory, now)
     }
 }
 

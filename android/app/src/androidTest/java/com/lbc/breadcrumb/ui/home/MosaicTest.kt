@@ -139,4 +139,15 @@ class MosaicTest {
 
         compose.onNodeWithText("40 KEPT").assertIsDisplayed()
     }
+
+    @Test
+    fun aVoiceNoteIsWhatWasSaidOrThatItIsBeingListenedTo() {
+        val heard = Memory(id = "heard", type = MemoryType.AUDIO, extractedText = "The ramen place is closed on Mondays", capturedAt = now - 1_000)
+        val listening = Memory(id = "listening", type = MemoryType.AUDIO, localUri = "file:///gone.m4a", capturedAt = now)
+
+        show(listOf(listening, heard))
+
+        compose.onNodeWithText("The ramen place is closed on Mondays").assertIsDisplayed()
+        compose.onNodeWithText("listening…").assertIsDisplayed()
+    }
 }

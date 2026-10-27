@@ -89,4 +89,17 @@ class MediaRulesTest {
         assertEquals(listOf("c", "d"), MediaRules.sharedFiles(emptyList(), listOf("c", "d", "c")))
         assertEquals(emptyList<String>(), MediaRules.sharedFiles(emptyList<String>(), emptyList()))
     }
+
+    @Test
+    fun `sound is a voice note, whatever its parameters, stored by its type`() {
+        assertEquals(MemoryType.AUDIO, MediaRules.kindOf("audio/ogg; codecs=opus"))
+        assertEquals(MemoryType.AUDIO, MediaRules.kindOf("audio/mpeg"))
+        assertEquals(MemoryType.AUDIO, MediaRules.kindOf("application/ogg"))
+        assertEquals("ogg", MediaRules.extensionFor("audio/ogg; codecs=opus"))
+        assertEquals("m4a", MediaRules.extensionFor("audio/mp4"))
+        assertEquals("mp3", MediaRules.extensionFor("AUDIO/MPEG"))
+        assertEquals("m4a", MediaRules.extensionFor("audio/x-something-new"))
+        // A voice note has no title from its file's name: "PTT-20261027-WA0003.opus" says nothing.
+        assertNull(MediaRules.titleFor(null, "PTT-20261027-WA0003.opus", MemoryType.AUDIO))
+    }
 }

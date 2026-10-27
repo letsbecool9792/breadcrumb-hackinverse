@@ -60,6 +60,7 @@ object Headline {
             }
             MemoryType.AUDIO -> {
                 memory.title?.takeIf { it.isNotBlank() }
+                    ?: memory.extractedText?.let { ResultText.firstLine(it) }
             }
         }
         return candidate?.let { ResultText.firstLine(it) }

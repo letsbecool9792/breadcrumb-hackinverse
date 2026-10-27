@@ -213,4 +213,17 @@ class OriginalsTest {
         assertEquals("image/heif", OriginalAction.mimeFor(MemoryType.IMAGE, File("photo.heif")))
         assertEquals("image/*", OriginalAction.mimeFor(MemoryType.IMAGE, File("unknown.xyz")))
     }
+
+    @Test
+    fun aVoiceNoteOpensAndGoesAsItsFile() {
+        val file = tempFolder.newFile("note.opus")
+        val memory = Memory(type = MemoryType.AUDIO, note = "from priya")
+
+        val action = OriginalAction.decide(memory, file)
+        assertEquals(OriginalAction.ViewFile(file, "audio/ogg"), action)
+        assertEquals(ShareOut.File(file, "audio/ogg", "from priya"), ShareOut.decide(memory, file))
+        assertEquals("audio/mp4", OriginalAction.mimeFor(MemoryType.AUDIO, File("a.m4a")))
+        assertEquals(OriginalAction.Missing, OriginalAction.decide(memory, null))
+        assertNull(ShareOut.decide(memory, null))
+    }
 }

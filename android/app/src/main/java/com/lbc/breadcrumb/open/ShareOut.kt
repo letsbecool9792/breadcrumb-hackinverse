@@ -18,7 +18,7 @@ import java.io.File
 
 /**
  * Sharing onward from a memory's detail (docs/design.md §12):
- * - Picture or PDF goes as the file (content URI, read grant, ClipData.newRawUri so the sheet can preview it)
+ * - Picture, PDF or voice note goes as the file (content URI, read grant, ClipData.newRawUri so the sheet can preview it)
  *   with the person's note as EXTRA_TEXT (its caption).
  * - Link goes as text: the note on the line before the URL, the page title as EXTRA_SUBJECT and EXTRA_TITLE
  *   (a link without a URL falls back to its words).
@@ -79,7 +79,7 @@ sealed interface ShareOut {
         /** Decides the onward share purely from [memory] and stored [file] (JVM-testable). */
         fun decide(memory: Memory, file: java.io.File?): ShareOut? {
             return when (memory.type) {
-                MemoryType.IMAGE, MemoryType.PDF -> {
+                MemoryType.IMAGE, MemoryType.PDF, MemoryType.AUDIO -> {
                     if (file != null && file.exists() && file.isFile) {
                         File(
                             file = file,
@@ -125,7 +125,6 @@ sealed interface ShareOut {
                         null
                     }
                 }
-                else -> null
             }
         }
 

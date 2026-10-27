@@ -51,7 +51,8 @@ internal object SheetText {
         }
     }
 
-    private fun word(type: MemoryType): String = type.name.lowercase(Locale.ROOT)
+    private fun word(type: MemoryType): String =
+        if (type == MemoryType.AUDIO) "voice note" else type.name.lowercase(Locale.ROOT)
 
     data class LinkCard(val host: String, val headline: String?, val url: String)
 

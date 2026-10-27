@@ -5,7 +5,7 @@ import android.net.Uri
 import androidx.core.content.IntentCompat
 import com.lbc.breadcrumb.R
 
-/** Pictures and PDFs, one or many, from the share sheet. */
+/** Pictures, PDFs and voice notes, one or many, from the share sheet. */
 class MediaReceiverActivity : CaptureActivity() {
 
     override fun capture() {

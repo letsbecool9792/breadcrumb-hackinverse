@@ -65,10 +65,13 @@ import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
+import com.lbc.breadcrumb.ui.common.VoiceGlyph
+import com.lbc.breadcrumb.ui.common.rememberAudioLength
 import com.lbc.breadcrumb.ui.home.monoStyle
 import com.lbc.breadcrumb.ui.home.sans
 import com.lbc.breadcrumb.ui.home.serif
 import com.lbc.breadcrumb.ui.theme.*
+import com.lbc.breadcrumb.voice.AudioLength
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -622,6 +625,7 @@ private fun SavedPreview(
         first.type == MemoryType.IMAGE -> SinglePhoto(first, isCompact)
         first.type == MemoryType.PDF -> PdfCard(first, isCompact)
         first.type == MemoryType.LINK -> LinkCard(first)
+        first.type == MemoryType.AUDIO -> VoiceCard(first, isCompact)
         else -> TextPreview(first, isCompact)
     }
 }
@@ -710,6 +714,8 @@ private fun TileRow(memories: List<Memory>) {
                         alignment = Alignment.TopCenter,
                         modifier = Modifier.fillMaxSize(),
                     )
+                } else if (memory.type == MemoryType.AUDIO) {
+                    VoiceGlyph(Modifier.size(30.dp), MaterialTheme.colorScheme.primary)
                 } else {
                     DocumentGlyph(
                         modifier = Modifier.size(width = 34.dp, height = 44.dp),
@@ -856,6 +862,79 @@ private fun LinkCard(memory: Memory) {
                 text = card.url,
                 style = monoStyle(11.sp, color = MaterialTheme.colorScheme.outline),
                 maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+/**
+ * A voice note: padding 16, spacing 12: a Row, spacing 14: the voice mark 20dp in primary in
+ * a 44dp circle of AmberContainerDark, then "Voice note" (or its title) in 16sp Medium over
+ * "ogg · 0:42" (extension · length) in mono 11sp outline; the caption below as for a picture.
+ */
+@Composable
+private fun VoiceCard(
+    memory: Memory,
+    isCompact: Boolean,
+) {
+    val length by rememberAudioLength(memory)
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(44.dp).clip(CircleShape).background(AmberContainerDark),
+                contentAlignment = Alignment.Center,
+            ) {
+                VoiceGlyph(Modifier.size(20.dp), MaterialTheme.colorScheme.primary)
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = memory.title ?: stringResource(R.string.capture_voice_note),
+                    style = sans(
+                        16.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        weight = FontWeight.Medium,
+                        lineHeight = 21.sp,
+                    ),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                val subtitle = listOfNotNull(
+                    memory.localUri?.substringAfterLast('.')?.lowercase()?.takeIf { it.length in 1..5 },
+                    length?.let(AudioLength::clock),
+                ).joinToString(" · ")
+                Text(
+                    text = subtitle,
+                    style = monoStyle(11.sp, color = MaterialTheme.colorScheme.outline),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        val caption = memory.rawText?.trim()?.takeIf { it.isNotEmpty() }
+        if (caption != null && !isCompact) {
+            Text(
+                text = caption,
+                style = sans(
+                    14.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp,
+                ),
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
         }

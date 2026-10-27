@@ -55,6 +55,11 @@
     <string name="detail_your_note">your note</string>
     <string name="detail_edit">edit</string>
     <string name="detail_delete">Delete</string>
+    <!-- Voice notes: the player, and what a note says before and when nothing was made out. -->
+    <string name="voice_play">Play</string>
+    <string name="voice_pause">Pause</string>
+    <string name="voice_listening">listening…</string>
+    <string name="voice_no_words">no words heard</string>
     <string name="undo_deleted">deleted</string>
 
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the
@@ -77,6 +82,7 @@
     <string name="capture_picture">Saved picture</string>
     <string name="capture_document">Document</string>
     <string name="capture_pdf">PDF</string>
+    <string name="capture_voice_note">Voice note</string>
     <string name="capture_nothing_to_save">Nothing to save</string>
 
     <!-- Capture workstream: why the sheet saved nothing, each its own message,
