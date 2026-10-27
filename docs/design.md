@@ -343,6 +343,16 @@ Spacing 9. For a link or note, only the summary. Nothing when there is nothing.
   aligned to the end, padding 12/7, radius 16, which writes it if changed (blank clears it) and
   hides the keyboard. Closing the sheet mid-edit still writes the draft.
 - A written note has the memory embedded again: the note is part of what is embedded.
+- **Said, not written** (voice notes V4): beside "add a note", at the end of its Row, **"say it"**:
+  the voice glyph 13dp in AmberBright and "say it" in mono 12sp BoneDim, spacing 7, no ripple;
+  with a note, "say it" in mono 10sp AmberBright beside "edit" (spacing 16). It opens **saying a
+  note** in place of the row: under the label, a box, radius 12, InkElevated, padding 14/12,
+  spacing 10: the breathing dot and "recording", the time at the end (mono 12sp Bone); the trace
+  (§13) 36dp tall; then at the end "discard" (mono 12sp BoneDim, padding 10/7) and "Done" (sans
+  14sp AmberBright SemiBold, padding 12/7). Done, the sheet closing or the app leaving keeps it.
+- **A note said over it**, under the label: the player (§11), then "listening…" (mono 11sp
+  InkOutline) until it is heard and at the end "remove" (mono 10sp BoneDim, padding 8/5); then the
+  note with its rule. Once heard, what was said is under the note's own words.
 
 **Provenance**, mono and receding: a divider in InkElevated, then rows (padding 11 vertical,
 SpaceBetween: label mono 11sp InkOutline, value mono 11sp BoneDim), divided by InkElevated at
@@ -539,6 +549,10 @@ Over the app the share came from. Behaviour as it is now. The look:
      ("link · kept 3d ago", "image · kept just now", "2 images · kept before").
   2. Saved: the **preview** (below), compact while the note is being written; the **note**; then
      a Row, spacing 10, of two equal buttons: "Undo" (secondary) and "Done" (primary).
+     The note's Row has "say it" at its end (§11); saying a note takes the note's place, the
+     preview compact meanwhile, and once kept the end of the Row says "note said" (the voice glyph
+     13dp in primary, mono 12sp outline). It goes on every memory saved, or on what is kept
+     already.
      Kept already (nothing new written; capture C10): the same, with the preview of what is kept,
      the note's closed label "add another note" when it has a note already, and "Keep again" in
      Undo's place. The CrumbMark does not play.
@@ -584,7 +598,7 @@ Over the app the share came from. Behaviour as it is now. The look:
 | Words only | No saved words match / ranked search is out of reach, so this\nlooked for the words themselves |
 | Detail actions | Open original / Open link / Copy text / Original isn't on this phone / Share / Delete |
 | Detail labels | saved / from / taken / status / text found / from the page / what it shows / your note / edit / Done |
-| Voice notes | Play / Pause / listening… / no words heard / Voice note / voice note / Say it / back / discard / recording / breadcrumb needs the microphone to keep a voice note / allow the microphone / couldn't record that — try again? |
+| Voice notes | Play / Pause / listening… / no words heard / Voice note / voice note / Say it / back / discard / recording / breadcrumb needs the microphone to keep a voice note / allow the microphone / couldn't record that — try again? / say it / remove / note said |
 | Toasts | Copied / No app here can open this |
 | Undo bar | deleted / Undo |
 | "+" | Keep something / Keep something — a draft is waiting / a thought, a link, anything… / a note about it — who sent it, what it's for… / photo / pdf / Keep / Remove / couldn't keep that — try again? / bring in what's already on the phone |

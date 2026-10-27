@@ -4,8 +4,9 @@ Roadmap 2. A voice note is a memory like any other: recorded in the app, or shar
 voice note, a recording), kept as its file, and found by what was said in it. What was said is
 heard on the phone, by the phone's own speech recognizer, offline: nothing said leaves the phone.
 
-The type was declared in V1 (`MemoryType.AUDIO`), so none of this changes the schema: the file is
-the memory's original, and what was said is its `extractedText`, as a picture's OCR is.
+The type was declared in V1 (`MemoryType.AUDIO`), so a voice note changes nothing in the schema:
+the file is the memory's original, and what was said is its `extractedText`, as a picture's OCR
+is. A note said over another memory (V4) is the one change: a `spoken_notes` table, schema 3.
 
 ## How it fits
 
@@ -67,6 +68,36 @@ share a voice note in ────────────────┴→ a r
     opens recording. Share a WhatsApp voice note to Breadcrumb: the sheet shows "Voice note ·
     ogg · 0:12", and the tile its words.
 
+- [x] **V4. A note said over any memory** (Suparno, 2026-10-27)
+  - Beside "add a note", "say it": in the detail, and in the capture sheet once something is
+    saved or found kept already. It records in place (`SayANote`): Done, the sheet going or the
+    app leaving keeps it; discard doesn't. A share that saved several gets a copy each.
+  - Schema version 3: `spoken_notes` (`memoryId`, `recordedAt`, `heardAt`), deleted with its
+    memory. The AutoMigration is one `CREATE TABLE`; every other table is as it was. Checked
+    against a copy of the demo phone's database (`MigrationOnACopyTest`: every row of every table
+    the same after as before), and then the phone's own, pulled and compared row by row with the
+    backup taken just before: 30 memories, 30 vectors, 4 import keys, 12 pending deletes, all
+    identical.
+  - The recording is `<memory id>.spoken.m4a` in the original store (`OriginalStore.spokenFile`),
+    so `OriginalStore.delete` takes it with the memory's own original, without the database.
+    Recording again replaces it, and it is heard again. "remove" takes the recording away; what
+    was said stays in the note.
+  - The listen queue is generic: a second one hears spoken notes, and `SpokenNoteDao.heard`
+    marks one heard and adds what was said under the memory's note, in one transaction, once.
+    The two share one recognizer, one note at a time.
+  - Undo of a delete in the home screen brings the spoken note back with its memory (held aside
+    for the five seconds; its file goes with the original when the delete is final).
+  - `ui/common/Recording.kt` holds what records (the state, the trace, the dot, the microphone
+    refused), shared by the voice panel and both places a note is said.
+  - Tests: `SpokenNoteDaoTest` (heard once, into the note, found by a word of it; gone with its
+    memory); `MigrationOnACopyTest`; "say it" in `DetailTest` and `CaptureSheetTest`. Nothing
+    records.
+  - *Check:* open a photo, "say it", say "Priya's flat, the one with the balcony", Done: the
+    player shows with "listening…", and within seconds the note reads what you said; search
+    "balcony" finds the photo. Share a screenshot in, "say it" on the sheet, Done: "note said";
+    open it in the app: the same. "remove" takes the player away and leaves the words. Delete
+    the photo and Undo: the spoken note comes back with it.
+
 ## Rules
 
 - **Nothing said leaves the phone.** Only the on-device recognizer, only with
@@ -74,3 +105,5 @@ share a voice note in ────────────────┴→ a r
 - **extractedText null is not heard yet; empty is heard, with no words.** The queue finds its work
   by the null, as the reading queues do.
 - **A test never records**, and never keeps into `app.database`: the fixtures play from the cache.
+- **A spoken note's file is named by its memory** (`<id>.spoken.m4a`), never stored in a column:
+  whatever deletes a memory's original deletes it too.

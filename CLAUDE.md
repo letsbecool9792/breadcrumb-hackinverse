@@ -42,9 +42,10 @@ brief says:
 1. **Saved already.** Saving something the phone already holds says so, and offers to add a note
    to the one kept, or to keep it again as a memory of its own. Built as capture C10, waiting on
    its check by hand (below); the "+" composer doesn't check yet.
-2. **Voice notes**: recording, playback, audio storage, and making them searchable. Built
+2. **Voice notes**: recording, playback, audio storage, and making them searchable; and a note
+   said over any memory, not only written. Built
    ([`docs/workstreams/voice-notes.md`](docs/workstreams/voice-notes.md)), heard by the phone's
-   own speech recognizer offline; waiting on its check by hand (below).
+   own speech recognizer offline; waiting on its checks by hand (below).
 3. **A first-run screen for the model.** The 388 MB embedding model downloaded silently, and
    search by meaning waited for it with nothing said. Built as local-first L8: it downloads from
    the first launch, and the first-run screen and a bar show it coming. Test it on a phone that
@@ -101,7 +102,9 @@ search against what the phone holds.
 - `BreadcrumbDatabase`: each workstream registers its own DAO there (one abstract function).
 - `AndroidManifest.xml` and `strings.xml`: each adds its own entries, with a comment saying why.
 - The schema: **every column is already there.** A change is a version bump with an
-  AutoMigration; talk to Suparno first.
+  AutoMigration; talk to Suparno first. Version 3 (voice notes V4) added the `spoken_notes`
+  table. Before installing a bump, back the phone up, and run `MigrationOnACopyTest` against a
+  copy of its database (the test says how).
 
 ---
 
@@ -155,7 +158,7 @@ it whenever a change needs a manual check, and tick items off when done.
 - [x] **Instagram links** (2026-10-27): a shared reel, post or profile gets its title and
       thumbnail, and so does one saved before the fix (it is read once more).
 - [ ] **Saved already** (capture C10): the brief's *check* line.
-- [ ] **Voice notes** (roadmap 2): V3's *check* line in
+- [ ] **Voice notes** (roadmap 2): V3's and V4's *check* lines in
       [`voice-notes.md`](docs/workstreams/voice-notes.md).
 - [ ] **The first-run download on a phone that has never had Breadcrumb** (roadmap 3, L8's
       *check* line in [`local-first.md`](docs/workstreams/local-first.md)), from install to
