@@ -63,6 +63,7 @@ internal fun Mosaic(
     onLongPressWordmark: (() -> Unit)?,
     modifier: Modifier = Modifier,
     bottomPadding: Dp = 56.dp,
+    onKept: (() -> Unit)? = null,
 ) {
     if (memories.isEmpty()) {
         Column(modifier.padding(horizontal = 14.dp)) {
@@ -91,7 +92,7 @@ internal fun Mosaic(
             verticalItemSpacing = 10.dp,
         ) {
             item(key = MASTHEAD_KEY, span = StaggeredGridItemSpan.FullLine) {
-                Masthead(kept, onLongPressWordmark, Modifier.onSizeChanged { mastheadHeight = it.height })
+                Masthead(kept, onLongPressWordmark, Modifier.onSizeChanged { mastheadHeight = it.height }, onKept)
             }
             itemsIndexed(memories, key = { _, memory -> memory.id }) { index, memory ->
                 // Decided once, the first time this tile is drawn.

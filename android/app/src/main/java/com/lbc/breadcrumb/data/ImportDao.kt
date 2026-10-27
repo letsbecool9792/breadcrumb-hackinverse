@@ -29,6 +29,10 @@ interface ImportDao {
     @Query("SELECT COUNT(*) FROM imported_sources")
     suspend fun count(): Int
 
+    /** Everything taken in, for a backup: restored, the importer still skips it. */
+    @Query("SELECT * FROM imported_sources")
+    suspend fun getAll(): List<ImportedSource>
+
     /** The text of every memory carrying a link, to find the pages already saved by hand. */
     @Query("SELECT rawText FROM memories WHERE (type = 'LINK' OR hasLink = 1) AND rawText IS NOT NULL")
     suspend fun linkTexts(): List<String>

@@ -42,6 +42,8 @@ import androidx.compose.ui.platform.SoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lbc.breadcrumb.backup.BackupBar
+import com.lbc.breadcrumb.backup.KeptSheet
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.embed.ModelStatus
 import com.lbc.breadcrumb.imports.ImportBar
@@ -79,6 +81,8 @@ fun HomeScreen(
     var openedId by rememberSaveable { mutableStateOf<String?>(null) }
     // The "+" sheet's panel while it is open. The draft outlives the sheet: it is stored as it changes.
     var plus by rememberSaveable { mutableStateOf<PlusPanel?>(null) }
+    // Everything kept, from the masthead's count: backing up and restoring (design §20).
+    var keptOpen by rememberSaveable { mutableStateOf(false) }
     val keepState = rememberKeepState()
 
     var query by rememberSaveable { mutableStateOf("") }
@@ -180,6 +184,11 @@ fun HomeScreen(
                                     state = gridState,
                                     onOpen = open,
                                     onLongPressWordmark = onOpenDebug,
+                                    onKept = {
+                                        keyboard?.hide()
+                                        focus.clearFocus()
+                                        keptOpen = true
+                                    },
                                     modifier = Modifier.fillMaxSize(),
                                 )
                             }
@@ -205,6 +214,7 @@ fun HomeScreen(
                 ) {
                     ModelBar(status = modelStatus, onOpen = onModelBar)
                     ImportBar(importer = viewModel.importer)
+                    BackupBar(backups = viewModel.backups)
                     UndoBar(
                         what = pendingDelete?.let { undoLine(ResultText.title(it)) },
                         onUndo = viewModel::undoDelete,
@@ -245,6 +255,11 @@ fun HomeScreen(
                 }
                 val spoken by remember(memory.id) { viewModel.spokenNote(memory.id) }.collectAsStateWithLifecycle(null)
                 MemoryDetail(memory, now, visibility, actions, spoken)
+            }
+
+            // Everything kept: a backup out, or one back in.
+            SheetLayer(item = if (keptOpen) Unit else null, onDismiss = { keptOpen = false }) { _, _ ->
+                KeptSheet(kept = ResultText.kept(memories?.size ?: 0), onPicked = { keptOpen = false })
             }
 
             // Keeping something from inside the app, or bringing in what's already on the phone.

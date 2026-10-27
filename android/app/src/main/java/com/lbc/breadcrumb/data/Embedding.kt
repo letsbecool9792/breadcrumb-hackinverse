@@ -55,6 +55,10 @@ interface EmbeddingDao {
     @Query("SELECT memoryId, vector FROM embeddings")
     suspend fun vectors(): List<StoredVector>
 
+    /** Every vector whole, for a backup. */
+    @Query("SELECT * FROM embeddings")
+    suspend fun getAll(): List<Embedding>
+
     @Query("SELECT COUNT(*) AS count, MAX(embeddedAt) AS latest FROM embeddings")
     suspend fun version(): EmbeddingsVersion
 }

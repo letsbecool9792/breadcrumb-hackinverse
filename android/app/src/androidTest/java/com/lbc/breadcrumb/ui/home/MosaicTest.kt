@@ -44,7 +44,9 @@ class MosaicTest {
     private var opened: Memory? = null
     private var longPresses = 0
 
-    private fun show(memories: List<Memory>, kept: String = "${memories.size} kept", withLongPress: Boolean = true) {
+    private var keptTaps = 0
+
+    private fun show(memories: List<Memory>, kept: String = "${memories.size} kept", withLongPress: Boolean = true, withKept: Boolean = false) {
         compose.setContent {
             BreadcrumbTheme(darkTheme = true) {
                 val entrances = remember { MosaicEntrances() }
@@ -58,6 +60,7 @@ class MosaicTest {
                     onOpen = { opened = it },
                     onLongPressWordmark = if (withLongPress) ({ longPresses++ }) else null,
                     modifier = Modifier.fillMaxSize(),
+                    onKept = if (withKept) ({ keptTaps++ }) else null,
                 )
             }
         }
@@ -149,5 +152,15 @@ class MosaicTest {
 
         compose.onNodeWithText("The ramen place is closed on Mondays").assertIsDisplayed()
         compose.onNodeWithText("listening…").assertIsDisplayed()
+    }
+
+    @Test
+    fun theCountOffersABackup() {
+        show(listOf(note, link, pdf), withKept = true)
+
+        compose.onNodeWithText("BACK UP").assertIsDisplayed()
+        compose.onNodeWithText("3 KEPT").performClick()
+
+        assertEquals(1, keptTaps)
     }
 }

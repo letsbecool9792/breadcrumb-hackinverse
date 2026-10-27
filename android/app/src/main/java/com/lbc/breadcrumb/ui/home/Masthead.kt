@@ -1,6 +1,8 @@
 package com.lbc.breadcrumb.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -9,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -28,13 +31,15 @@ import java.util.Locale
 /**
  * The mosaic's first item (design §5): the wordmark large in the serif, and
  * under it the count kept, in capitals. A long press on the wordmark opens the
- * debug list; with [onLongPress] null there is no gesture at all.
+ * debug list; with [onLongPress] null there is no gesture at all. A tap on the
+ * count, which ends in "BACK UP", is [onKept]: everything kept, out to a file.
  */
 @Composable
 internal fun Masthead(
     kept: String,
     onLongPress: (() -> Unit)?,
     modifier: Modifier = Modifier,
+    onKept: (() -> Unit)? = null,
 ) {
     val haptic = LocalHapticFeedback.current
     Column(
@@ -56,8 +61,22 @@ internal fun Masthead(
                 }
             },
         )
+        val backUp = stringResource(R.string.kept_back_up)
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier
+                .fillMaxWidth()
+                .then(
+                    if (onKept == null) {
+                        Modifier
+                    } else {
+                        Modifier.clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClickLabel = backUp,
+                            onClick = onKept,
+                        )
+                    },
+                ),
             horizontalArrangement = Arrangement.spacedBy(9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -67,6 +86,9 @@ internal fun Masthead(
                 style = monoStyle(11.sp, InkOutline, letterSpacing = 1.4.sp),
                 modifier = Modifier.weight(1f),
             )
+            if (onKept != null) {
+                Text(backUp.uppercase(Locale.ROOT), style = monoStyle(11.sp, InkOutline, letterSpacing = 1.4.sp))
+            }
         }
     }
 }

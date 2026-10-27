@@ -90,6 +90,15 @@ fun ColumnScope.ImportPanel(
         }
     }
 
+    // 4. A backup (roadmap 4)
+    val backups = (LocalContext.current.applicationContext as BreadcrumbApp).backups
+    val backupLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            backups.restore(uri)
+            onPicked()
+        }
+    }
+
     // 3. Document picker (application/pdf and text/html)
     val fileLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenMultipleDocuments(),
@@ -176,6 +185,13 @@ fun ColumnScope.ImportPanel(
             },
         )
 
+        // A breadcrumb backup (roadmap 4): where a new phone starts.
+        ChoiceCard(
+            label = stringResource(R.string.import_choice_backup),
+            detail = stringResource(R.string.import_choice_backup_detail),
+            onClick = { backupLauncher.launch(BACKUP_TYPES) },
+        )
+
         // The import's line in mono 12sp AmberBright when there is one
         val line = importLine(progress)
         if (line != null) {
@@ -195,7 +211,7 @@ fun ColumnScope.ImportPanel(
 }
 
 @Composable
-private fun ChoiceCard(
+internal fun ChoiceCard(
     label: String,
     detail: String,
     onClick: () -> Unit,
@@ -220,3 +236,6 @@ private fun ChoiceCard(
         )
     }
 }
+
+/** What a backup may be called by the picker: a zip, by whatever name its provider gives the type. */
+internal val BACKUP_TYPES = arrayOf("application/zip", "application/x-zip-compressed", "application/octet-stream")

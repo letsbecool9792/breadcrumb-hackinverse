@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lbc.breadcrumb.BreadcrumbApp
+import com.lbc.breadcrumb.backup.Backups
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.SpokenNote
 import com.lbc.breadcrumb.embed.EmbedWorker
@@ -38,6 +39,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Bringing in what is already on the phone; its line shows over the search field. */
     internal val importer: BulkImporter get() = app.importer
+
+    /** Everything kept, out to a file and back in; its line shows over the search field too. */
+    internal val backups: Backups get() = app.backups
 
     /** Held here, not by the composition, so a rotation replays no entrance. */
     internal val entrances = MosaicEntrances()

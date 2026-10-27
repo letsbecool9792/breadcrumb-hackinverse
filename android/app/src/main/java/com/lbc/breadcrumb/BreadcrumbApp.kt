@@ -3,6 +3,7 @@ package com.lbc.breadcrumb
 import android.app.Activity
 import android.app.Application
 import android.os.Bundle
+import com.lbc.breadcrumb.backup.Backups
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.OriginalStore
@@ -64,6 +65,9 @@ class BreadcrumbApp : Application() {
 
     /** EmbeddingGemma 2 on the phone: memories are embedded, and searched, here (local-first L1). */
     val embedder: Embedder by lazy { Embedder(models::ready, cacheDir, applicationScope) }
+
+    /** Everything kept, out to one file and back in (roadmap 4). */
+    val backups: Backups by lazy { Backups(this, database, originals, applicationScope) }
 
     /** Bulk importer for bringing in content already on the phone (reading R5). */
     val importer: BulkImporter by lazy { BulkImporter(this) }

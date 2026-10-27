@@ -20,6 +20,7 @@ class EmbedPassTest {
         override suspend fun keys() = rows.values.map { EmbeddingKey(it.memoryId, it.key) }
         override suspend fun vectors() = rows.values.map { StoredVector(it.memoryId, it.vector) }
         override suspend fun version() = EmbeddingsVersion(rows.size, rows.values.maxOfOrNull { it.embeddedAt })
+        override suspend fun getAll() = rows.values.toList()
     }
 
     private class Model(var present: Boolean = true) : Embeddings {

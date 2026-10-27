@@ -15,6 +15,17 @@
     <string name="import_choice_photos_detail">pick them yourself</string>
     <string name="import_choice_files">PDFs, or a bookmarks export</string>
     <string name="import_choice_files_detail">from the file picker</string>
+    <string name="import_choice_backup">A breadcrumb backup</string>
+    <string name="import_choice_backup_detail">from another phone, or one you saved</string>
+
+    <!-- Roadmap 4: everything kept, out to one file and back in (design §20). -->
+    <string name="kept_back_up">back up</string>
+    <string name="kept_title">Everything kept</string>
+    <string name="kept_summary">%1$s · %2$s on this phone</string>
+    <string name="backup_save">Save a backup</string>
+    <string name="backup_save_detail">every memory, its originals and what the phone made of them, in one file you keep</string>
+    <string name="backup_restore">Restore a backup</string>
+    <string name="backup_restore_detail">its memories join these; nothing here is replaced</string>
 
     <!-- Local first L8: the model's first run (design §19). -->
     <string name="first_run_title">Getting search ready</string>

@@ -58,6 +58,10 @@ interface MemoryDao {
     @Query("SELECT COUNT(*) FROM memories")
     suspend fun count(): Int
 
+    /** Every memory's id: what a restore leaves as it is. */
+    @Query("SELECT id FROM memories")
+    suspend fun ids(): List<String>
+
     @Query("SELECT COUNT(*) FROM memories")
     fun observeCount(): Flow<Int>
 
