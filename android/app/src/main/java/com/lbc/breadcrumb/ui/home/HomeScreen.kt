@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.embed.ModelStatus
 import com.lbc.breadcrumb.imports.ImportBar
 import com.lbc.breadcrumb.open.Originals
 import com.lbc.breadcrumb.ui.keep.rememberKeepState
@@ -56,13 +57,16 @@ import com.lbc.breadcrumb.ui.theme.Ink
  * [onOpenDebug] is passed only in debug builds; null, the wordmark has no
  * gesture at all. [keepRequests] counts the launcher shortcut's requests; each
  * new one opens the "+" sheet. [voiceRequests] counts "Say something"'s; each
- * new one opens it on the voice panel.
+ * new one opens it on the voice panel. While the model isn't ready, [modelStatus]
+ * shows over the search field, and a tap on it is [onModelBar].
  */
 @Composable
 fun HomeScreen(
     onOpenDebug: (() -> Unit)?,
     keepRequests: Int = 0,
     voiceRequests: Int = 0,
+    modelStatus: ModelStatus = ModelStatus.Ready,
+    onModelBar: () -> Unit = {},
     viewModel: HomeViewModel = viewModel(),
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
@@ -199,6 +203,7 @@ fun HomeScreen(
                         .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
+                    ModelBar(status = modelStatus, onOpen = onModelBar)
                     ImportBar(importer = viewModel.importer)
                     UndoBar(
                         what = pendingDelete?.let { undoLine(ResultText.title(it)) },

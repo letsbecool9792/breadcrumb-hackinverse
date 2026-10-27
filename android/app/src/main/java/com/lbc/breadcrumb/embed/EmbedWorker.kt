@@ -90,7 +90,11 @@ class EmbedWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
     }
 }
 
-/** Downloads the embedding model once, on an unmetered network, then embeds what is waiting. */
+/**
+ * Downloads the embedding model once, then embeds what is waiting: on an
+ * unmetered network, unless the person asked for it on mobile data from the
+ * first-run screen.
+ */
 class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -109,12 +113,18 @@ class ModelDownloadWorker(context: Context, params: WorkerParameters) : Coroutin
     companion object {
         private const val NAME = "embedding-model"
 
-        fun schedule(context: Context) {
+        /**
+         * Waits for Wi-Fi; [anyNetwork] (asked for on mobile data) takes the place of a download
+         * still waiting for it. Only ever offered while it waits, so nothing running is replaced.
+         */
+        fun schedule(context: Context, anyNetwork: Boolean = false) {
+            val network = if (anyNetwork) NetworkType.CONNECTED else NetworkType.UNMETERED
             val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.UNMETERED).build())
+                .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
                 .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, Duration.ofMinutes(1))
                 .build()
-            WorkManager.getInstance(context).enqueueUniqueWork(NAME, ExistingWorkPolicy.KEEP, request)
+            val policy = if (anyNetwork) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
+            WorkManager.getInstance(context).enqueueUniqueWork(NAME, policy, request)
         }
     }
 }

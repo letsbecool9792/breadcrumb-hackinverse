@@ -16,6 +16,15 @@
     <string name="import_choice_files">PDFs, or a bookmarks export</string>
     <string name="import_choice_files_detail">from the file picker</string>
 
+    <!-- Local first L8: the model's first run (design §19). -->
+    <string name="first_run_title">Getting search ready</string>
+    <string name="first_run_ready">Search is ready</string>
+    <string name="first_run_body">Breadcrumb finds what you kept by what it means, with a small model that runs on this phone. It downloads once, 388 MB, and works offline from then on. Nothing you keep leaves the phone.</string>
+    <string name="first_run_mobile_data">download it on mobile data now</string>
+    <string name="first_run_hint">saving, and search by words, work already;\nsearch by meaning joins in when this is done</string>
+    <string name="first_run_start">Start keeping</string>
+    <string name="first_run_done">Done</string>
+
     <!-- The debug list. Lowercase mono chrome, as the search screens will be. -->
     <string name="debug_title">breadcrumb · debug</string>
     <string name="debug_empty">Nothing saved yet. Tap + for a sample, or share something to Breadcrumb.</string>

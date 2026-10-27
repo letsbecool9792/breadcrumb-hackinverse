@@ -7,7 +7,10 @@ import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.Embedder
+import com.lbc.breadcrumb.embed.ModelDownloadWorker
+import com.lbc.breadcrumb.embed.ModelStatus
 import com.lbc.breadcrumb.embed.ModelStore
+import com.lbc.breadcrumb.embed.ModelWatch
 import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.ocr.LinkWorker
 import com.lbc.breadcrumb.ocr.OcrQueue
@@ -18,6 +21,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class BreadcrumbApp : Application() {
@@ -40,6 +46,16 @@ class BreadcrumbApp : Application() {
 
     /** The embedding model's file, downloaded once (local-first L1). */
     val models: ModelStore by lazy { ModelStore(this) }
+
+    /** Where the model is, for the first-run screen and the model's bar (local-first L8). */
+    val modelStatus: StateFlow<ModelStatus> by lazy {
+        val ready = models.ready() != null
+        ModelWatch(this, models).status.stateIn(
+            applicationScope,
+            SharingStarted.WhileSubscribed(5_000),
+            if (ready) ModelStatus.Ready else ModelStatus.Waiting(models.downloaded(), ModelStatus.Why.STARTING),
+        )
+    }
 
     /** EmbeddingGemma 2 on the phone: memories are embedded, and searched, here (local-first L1). */
     val embedder: Embedder by lazy { Embedder(models::ready, cacheDir, applicationScope) }
@@ -94,6 +110,8 @@ class BreadcrumbApp : Application() {
         applicationScope.launch {
             LinkWorker.schedule(this@BreadcrumbApp)
             EmbedWorker.schedule(this@BreadcrumbApp)
+            // From the first launch, not the first save: search by meaning waits for it (L8).
+            if (models.ready() == null) ModelDownloadWorker.schedule(this@BreadcrumbApp)
         }
     }
 }
