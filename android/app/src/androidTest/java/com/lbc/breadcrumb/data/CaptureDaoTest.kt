@@ -34,6 +34,34 @@ class CaptureDaoTest {
     fun close() = db.close()
 
     @Test
+    fun anotherNoteGoesUnderTheNoteKeptAlready() = runBlocking {
+        memories.upsertAll(
+            listOf(
+                Memory(id = "a", type = MemoryType.LINK, note = "from priya"),
+                Memory(id = "b", type = MemoryType.LINK),
+            ),
+        )
+
+        assertEquals(2, capture.addNote(listOf("a", "b"), "for the trip"))
+
+        assertEquals("from priya\nfor the trip", memories.getById("a")?.note)
+        assertEquals("for the trip", memories.getById("b")?.note)
+    }
+
+    @Test
+    fun aSaveIsComparedWithMemoriesOfItsKindNewestFirst() = runBlocking {
+        memories.upsertAll(
+            listOf(
+                Memory(id = "old", type = MemoryType.TEXT, capturedAt = 1_000),
+                Memory(id = "new", type = MemoryType.TEXT, capturedAt = 2_000),
+                Memory(id = "link", type = MemoryType.LINK, capturedAt = 3_000),
+            ),
+        )
+
+        assertEquals(listOf("new", "old"), capture.ofType(MemoryType.TEXT).map { it.id })
+    }
+
+    @Test
     fun aNoteKeepsTextReadAfterTheSave() = runBlocking {
         val saved = Memory(id = "p1", type = MemoryType.IMAGE)
         memories.upsert(saved)

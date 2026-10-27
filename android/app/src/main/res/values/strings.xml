@@ -69,6 +69,11 @@
     <string name="capture_close">Close</string>
     <string name="capture_add_note">add a note</string>
     <string name="capture_note_hint">who sent it, what it\'s for…</string>
+    <!-- Saved already (roadmap 1): what was shared is kept already; nothing new is written
+         unless Keep again is tapped, and a note goes on the one kept. -->
+    <string name="capture_kept_already">Kept already</string>
+    <string name="capture_keep_again">Keep again</string>
+    <string name="capture_add_another_note">add another note</string>
     <string name="capture_picture">Saved picture</string>
     <string name="capture_document">Document</string>
     <string name="capture_pdf">PDF</string>

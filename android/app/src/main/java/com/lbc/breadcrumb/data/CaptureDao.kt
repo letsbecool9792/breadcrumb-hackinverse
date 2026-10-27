@@ -17,10 +17,9 @@ interface CaptureDao {
      * may already have written a picture's text, and writing the saved row
      * back would wipe it. Like any UPDATE, it keeps the word index in step.
      *
-     * Only where the note actually changes, and there it puts the memory back
-     * in the upload queue (syncState PENDING): the server embeds the note. An
-     * unchanged note touches nothing, so it costs no upload. Returns the rows
-     * changed.
+     * Only where the note actually changes, so an unchanged note costs no new
+     * embedding. (syncState PENDING is the retired upload queue's mark; nothing
+     * reads it since local-first L7.) Returns the rows changed.
      */
     @Query(
         """
@@ -30,4 +29,23 @@ interface CaptureDao {
         """,
     )
     suspend fun setNote(ids: List<String>, note: String?, updatedAt: Long = System.currentTimeMillis()): Int
+
+    /**
+     * Adds [note] under the note [ids] already have, on a line of its own, or
+     * as their note when they have none: the sheet's "add another note" on a
+     * memory kept already (roadmap 1). Returns the rows changed.
+     */
+    @Query(
+        """
+        UPDATE memories
+        SET note = CASE WHEN note IS NULL OR note = '' THEN :note ELSE note || char(10) || :note END,
+            updatedAt = :updatedAt
+        WHERE id IN (:ids)
+        """,
+    )
+    suspend fun addNote(ids: List<String>, note: String, updatedAt: Long = System.currentTimeMillis()): Int
+
+    /** Every memory of [type], newest first: what a save is compared with, to say it is kept already. */
+    @Query("SELECT * FROM memories WHERE type = :type ORDER BY capturedAt DESC")
+    suspend fun ofType(type: MemoryType): List<Memory>
 }

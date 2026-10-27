@@ -47,6 +47,12 @@ abstract class CaptureActivity : ComponentActivity() {
     private val saved = mutableListOf<Memory>()
     private var ended = false
 
+    // What was shared and is kept already (roadmap 1): the memories kept, and how to keep each share
+    // again as its own. A note typed then goes on the kept ones, once. Guarded by this.
+    private val keptAlready = mutableListOf<Memory>()
+    private val keepAgainWrites = mutableListOf<suspend () -> Memory?>()
+    private var noteAdded = false
+
     private var saving: Job? = null
 
     /** Captures what this activity was opened for. Called once, from onCreate. */
@@ -75,6 +81,7 @@ abstract class CaptureActivity : ComponentActivity() {
                     note = typed,
                     onNoteChange = { note.value = it },
                     onUndo = ::undo,
+                    onKeepAgain = ::keepAgain,
                     onDismiss = ::dismiss,
                 )
             }
@@ -95,11 +102,16 @@ abstract class CaptureActivity : ComponentActivity() {
         state.value = CaptureState.Failed(reason)
     }
 
-    /** Saves one memory made from shared or copied text. */
+    /** Saves one memory made from shared or copied text, unless the same is kept already. */
     protected fun saveText(memory: Memory) {
         startSaving(total = 1) {
-            app.database.memoryDao().upsert(memory)
-            keep(memory)
+            val kept = SameMemory.keptLike(memory, app.database.captureDao().ofType(memory.type))
+            if (kept != null) {
+                keptAlready(kept) { memory.also { app.database.memoryDao().upsert(it) } }
+            } else {
+                app.database.memoryDao().upsert(memory)
+                keep(memory)
+            }
         }
     }
 
@@ -108,7 +120,8 @@ abstract class CaptureActivity : ComponentActivity() {
      * its row written, before the next. content:// only: an exported activity
      * handed a file:// URI would copy the app's own private files. Anything
      * that is not a picture or a PDF is skipped. [text] goes on the file only
-     * when exactly one is saved; [subject] titles each file it suits.
+     * when exactly one is saved; [subject] titles each file it suits. A file
+     * whose bytes are kept already writes no row, and its copy goes at once.
      */
     protected fun saveFiles(
         uris: List<Uri>,
@@ -132,18 +145,26 @@ abstract class CaptureActivity : ComponentActivity() {
             val caption = MediaRules.captionFor(text, files.size)
             val hasLink = caption?.let { TextRules.parseText(it).second } ?: false
             for ((uri, _, _) in files) {
-                val memory = CaptureStorage.saveFile(
-                    app = app,
-                    uri = uri,
-                    declaredType = declaredType,
-                    rawText = caption,
-                    hasLink = hasLink,
-                    subject = subject,
-                    sourceApp = source.first,
-                    sourceAppLabel = source.second,
-                )
-                if (memory != null) {
-                    keep(memory)
+                val copy: suspend () -> Memory? = {
+                    CaptureStorage.copyFile(
+                        app = app,
+                        uri = uri,
+                        declaredType = declaredType,
+                        rawText = caption,
+                        hasLink = hasLink,
+                        subject = subject,
+                        sourceApp = source.first,
+                        sourceAppLabel = source.second,
+                    )
+                }
+                val copied = copy() ?: continue
+                val kept = CaptureStorage.keptFile(app, copied)
+                if (kept != null) {
+                    // Keep again copies it once more, while the share's grant still holds.
+                    app.originals.delete(copied)
+                    keptAlready(kept) { copy()?.let { CaptureStorage.write(app, it) } }
+                } else {
+                    CaptureStorage.write(app, copied)?.let(::keep)
                 }
             }
         }
@@ -152,9 +173,12 @@ abstract class CaptureActivity : ComponentActivity() {
     private fun startSaving(total: Int, work: suspend () -> Unit) {
         saving = app.applicationScope.launch {
             work()
-            val kept = synchronized(this@CaptureActivity) { saved.toList() }
+            val (kept, already, repeats) = synchronized(this@CaptureActivity) {
+                Triple(saved.toList(), keptAlready.toList(), keepAgainWrites.size)
+            }
             state.value = when {
-                kept.isNotEmpty() -> CaptureState.Saved(kept, total)
+                kept.isNotEmpty() -> CaptureState.Saved(kept, total, keptAlready = repeats)
+                already.isNotEmpty() -> CaptureState.KeptAlready(already)
                 state.value is CaptureState.Failed -> state.value
                 total == 0 -> CaptureState.Failed(app.getString(R.string.capture_nothing_to_save))
                 else -> CaptureState.Failed(app.getString(R.string.capture_failed))
@@ -165,6 +189,34 @@ abstract class CaptureActivity : ComponentActivity() {
     /** A memory is saved: remembered, for the note and for an undo. */
     private fun keep(memory: Memory) {
         synchronized(this) { saved += memory }
+    }
+
+    /** What was shared is kept already as [kept]: nothing is written, unless [again] is asked for. */
+    private fun keptAlready(kept: Memory, again: suspend () -> Memory?) {
+        synchronized(this) {
+            if (keptAlready.none { it.id == kept.id }) keptAlready += kept
+            keepAgainWrites += again
+        }
+    }
+
+    /** "Keep again": what was kept already is saved once more, each a memory of its own. */
+    private fun keepAgain() {
+        val writes = synchronized(this) {
+            keptAlready.clear()
+            keepAgainWrites.toList().also { keepAgainWrites.clear() }
+        }
+        state.value = CaptureState.Saving
+        val before = saving
+        saving = app.applicationScope.launch {
+            before?.join()
+            for (write in writes) write()?.let(::keep)
+            val kept = synchronized(this@CaptureActivity) { saved.toList() }
+            state.value = if (kept.isNotEmpty()) {
+                CaptureState.Saved(kept)
+            } else {
+                CaptureState.Failed(app.getString(R.string.capture_failed))
+            }
+        }
     }
 
     /**
@@ -194,7 +246,8 @@ abstract class CaptureActivity : ComponentActivity() {
      * The sheet is going, dismissed or left: write whatever note is typed, then
      * schedule what follows a save (a link's page, the embedding), so the note
      * is in what is embedded. The call happens once; the note whenever it is
-     * typed.
+     * typed. With nothing new saved, the note is added under the note of what
+     * is kept already, once.
      */
     private fun end() {
         val typed = note.value.trim()
@@ -202,9 +255,14 @@ abstract class CaptureActivity : ComponentActivity() {
         val writes = saving
         app.applicationScope.launch {
             writes?.join()
-            val ids = synchronized(this@CaptureActivity) { saved.map { it.id } }
+            val (ids, keptIds) = synchronized(this@CaptureActivity) {
+                val keptIds = keptAlready.map { it.id }.takeIf { saved.isEmpty() && typed.isNotEmpty() && !noteAdded }.orEmpty()
+                if (keptIds.isNotEmpty()) noteAdded = true
+                saved.map { it.id } to keptIds
+            }
             if (typed.isNotEmpty() && ids.isNotEmpty()) app.database.captureDao().setNote(ids, typed)
-            if (first) workScheduler(app)
+            if (keptIds.isNotEmpty()) app.database.captureDao().addNote(keptIds, typed)
+            if (first || keptIds.isNotEmpty()) workScheduler(app)
         }
     }
 

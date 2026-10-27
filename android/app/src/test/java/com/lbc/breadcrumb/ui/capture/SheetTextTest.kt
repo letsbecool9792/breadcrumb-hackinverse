@@ -66,4 +66,19 @@ class SheetTextTest {
         assertNull(SheetText.linkCard("Try the brewery burger in Indiranagar", "A title"))
         assertNull(SheetText.linkCard(null, null))
     }
+
+    @Test
+    fun `a share with some kept already says how many`() {
+        val two = List(2) { memory(MemoryType.IMAGE, "Photos") }
+        assertEquals("2 images · from photos · 1 kept already", SheetText.kindLine(two, keptAlready = 1))
+    }
+
+    @Test
+    fun `kept already says what it is and when it was kept`() {
+        val day = 86_400_000L
+        val now = 10 * day
+        assertEquals("link · kept 3d ago", SheetText.keptLine(listOf(Memory(type = MemoryType.LINK, capturedAt = now - 3 * day)), now))
+        assertEquals("image · kept just now", SheetText.keptLine(listOf(Memory(type = MemoryType.IMAGE, capturedAt = now)), now))
+        assertEquals("2 images · kept before", SheetText.keptLine(List(2) { memory(MemoryType.IMAGE) }, now))
+    }
 }

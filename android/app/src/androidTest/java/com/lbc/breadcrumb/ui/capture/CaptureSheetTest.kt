@@ -33,6 +33,7 @@ class CaptureSheetTest {
     )
 
     private var dismissed = 0
+    private var keptAgain = 0
 
     // The note lives with the activity; here, with the test.
     private val note = mutableStateOf("")
@@ -46,6 +47,7 @@ class CaptureSheetTest {
                     onNoteChange = { note.value = it },
                     onUndo = {},
                     onDismiss = { dismissed++ },
+                    onKeepAgain = { keptAgain++ },
                 )
             }
         }
@@ -99,6 +101,32 @@ class CaptureSheetTest {
         )
 
         compose.onNodeWithText("text · from whatsapp").assertExists()
+    }
+
+    @Test
+    fun whatIsKeptAlreadySaysSoAndCanBeKeptAgain() {
+        show(CaptureState.KeptAlready(listOf(Memory(type = MemoryType.TEXT, rawText = "Try the brewery burger"))))
+
+        compose.onNodeWithText("Kept already").assertExists()
+        compose.onNodeWithText("text · kept just now").assertExists()
+        compose.onNodeWithText("add a note").assertExists()
+        compose.onNodeWithText("Keep again").performClick()
+        assertEquals(1, keptAgain)
+    }
+
+    @Test
+    fun aNoteOnWhatIsKeptAlreadyIsAnotherNote() {
+        show(CaptureState.KeptAlready(listOf(Memory(type = MemoryType.LINK, rawText = "https://example.com", note = "from priya"))))
+
+        compose.onNodeWithText("add another note").assertExists()
+    }
+
+    @Test
+    fun aShareWithSomeKeptAlreadyIsNotSavedSomeOfMore() {
+        show(CaptureState.Saved(saved.memories, total = 2, keptAlready = 1))
+
+        compose.onNodeWithText("Saved").assertExists()
+        compose.onNodeWithText("text · 1 kept already").assertExists()
     }
 
     @Test

@@ -3,6 +3,7 @@ package com.lbc.breadcrumb.ui.capture
 import android.net.Uri
 import android.text.format.Formatter
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.CubicBezierEasing
@@ -75,10 +76,15 @@ import kotlin.math.roundToInt
 
 sealed class CaptureState {
     object Saving : CaptureState()
-    /** [memories] saved of the [total] offered: fewer when some could not be read or kept. */
-    data class Saved(val memories: List<Memory>, val total: Int = memories.size) : CaptureState() {
+    /**
+     * [memories] saved of the [total] offered: fewer when some could not be read
+     * or kept, or when [keptAlready] of them were kept already.
+     */
+    data class Saved(val memories: List<Memory>, val total: Int = memories.size, val keptAlready: Int = 0) : CaptureState() {
         val count: Int get() = memories.size
     }
+    /** All that was shared is kept already, as [memories]; nothing new was written (roadmap 1). */
+    data class KeptAlready(val memories: List<Memory>) : CaptureState()
     data class Failed(val reason: String) : CaptureState()
     object Removed : CaptureState()
 }
@@ -96,8 +102,10 @@ fun CaptureSheet(
     onNoteChange: (String) -> Unit,
     onUndo: () -> Unit,
     onDismiss: () -> Unit,
+    onKeepAgain: () -> Unit = {},
 ) {
     var showNoteField by remember { mutableStateOf(false) }
+    val now = remember { System.currentTimeMillis() }
     // Not while saving: a shared content:// URI is readable only while the activity lives.
     val canClose = state !is CaptureState.Saving
 
@@ -265,8 +273,9 @@ fun CaptureSheet(
                         ) {
                             val titleText = when (state) {
                                 is CaptureState.Saving -> stringResource(R.string.capture_saving)
+                                is CaptureState.KeptAlready -> stringResource(R.string.capture_kept_already)
                                 is CaptureState.Saved -> when {
-                                    state.count < state.total -> stringResource(
+                                    state.count + state.keptAlready < state.total -> stringResource(
                                         R.string.capture_saved_some,
                                         state.count,
                                         state.total
@@ -286,16 +295,18 @@ fun CaptureSheet(
                                 ),
                                 modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                             )
-                            if (state is CaptureState.Saved) {
-                                val kind = SheetText.kindLine(state.memories)
-                                if (kind.isNotEmpty()) {
-                                    Text(
-                                        text = kind,
-                                        style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                    )
-                                }
+                            val kind = when (state) {
+                                is CaptureState.Saved -> SheetText.kindLine(state.memories, keptAlready = state.keptAlready)
+                                is CaptureState.KeptAlready -> SheetText.keptLine(state.memories, now)
+                                else -> ""
+                            }
+                            if (kind.isNotEmpty()) {
+                                Text(
+                                    text = kind,
+                                    style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
                             }
                         }
                     }
@@ -305,117 +316,34 @@ fun CaptureSheet(
                             // Saving: nothing more
                         }
 
-                        is CaptureState.Saved -> {
-                            // Preview (compact while note is being written)
-                            SavedPreview(
-                                memories = state.memories,
-                                isCompact = showNoteField,
-                            )
+                        is CaptureState.Saved -> SavedBody(
+                            memories = state.memories,
+                            noteOpen = showNoteField,
+                            onOpenNote = { showNoteField = true },
+                            note = note,
+                            onNoteChange = onNoteChange,
+                            noteLabel = R.string.capture_add_note,
+                            secondaryLabel = R.string.capture_undo,
+                            onSecondary = onUndo,
+                            onDone = close,
+                        )
 
-                            // Note
-                            if (!showNoteField) {
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .clickable { showNoteField = true }
-                                        .padding(horizontal = 4.dp, vertical = 2.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Text("+", style = monoStyle(15.sp, color = AmberBright))
-                                    Text(
-                                        stringResource(R.string.capture_add_note),
-                                        style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
-                                    )
-                                }
+                        // Kept already: what is kept is shown, a note goes on it, or it is kept again.
+                        is CaptureState.KeptAlready -> SavedBody(
+                            memories = state.memories,
+                            noteOpen = showNoteField,
+                            onOpenNote = { showNoteField = true },
+                            note = note,
+                            onNoteChange = onNoteChange,
+                            noteLabel = if (state.memories.any { !it.note.isNullOrBlank() }) {
+                                R.string.capture_add_another_note
                             } else {
-                                val focusRequester = remember { FocusRequester() }
-                                LaunchedEffect(Unit) { focusRequester.requestFocus() }
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                                ) {
-                                    BasicTextField(
-                                        value = note,
-                                        onValueChange = onNoteChange,
-                                        textStyle = sans(
-                                            size = 15.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            lineHeight = 21.sp,
-                                        ),
-                                        cursorBrush = SolidColor(AmberBright),
-                                        keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
-                                        maxLines = 5,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .focusRequester(focusRequester),
-                                        decorationBox = { innerTextField ->
-                                            if (note.isEmpty()) {
-                                                Text(
-                                                    stringResource(R.string.capture_note_hint),
-                                                    style = sans(
-                                                        size = 15.sp,
-                                                        color = MaterialTheme.colorScheme.outline,
-                                                        lineHeight = 21.sp,
-                                                    ),
-                                                )
-                                            }
-                                            innerTextField()
-                                        },
-                                    )
-                                }
-                            }
-
-                            // Buttons: Row, spacing 10, of two equal buttons: Undo (secondary) and Done (primary)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                Button(
-                                    onClick = onUndo,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(26.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                        contentColor = MaterialTheme.colorScheme.onSurface,
-                                    ),
-                                ) {
-                                    Text(
-                                        stringResource(R.string.capture_undo),
-                                        style = sans(
-                                            15.sp,
-                                            color = MaterialTheme.colorScheme.onSurface,
-                                            weight = FontWeight.SemiBold,
-                                        ),
-                                    )
-                                }
-                                Button(
-                                    onClick = close,
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(52.dp),
-                                    shape = RoundedCornerShape(26.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = AmberBright,
-                                        contentColor = AmberOnContainer,
-                                    ),
-                                ) {
-                                    Text(
-                                        stringResource(R.string.capture_done),
-                                        style = sans(
-                                            15.sp,
-                                            color = AmberOnContainer,
-                                            weight = FontWeight.SemiBold,
-                                        ),
-                                    )
-                                }
-                            }
-                        }
+                                R.string.capture_add_note
+                            },
+                            secondaryLabel = R.string.capture_keep_again,
+                            onSecondary = onKeepAgain,
+                            onDone = close,
+                        )
 
                         is CaptureState.Failed -> {
                             // Failed: one full-width Close (secondary)
@@ -452,6 +380,135 @@ fun CaptureSheet(
             }
         }
     }
+}
+
+/**
+ * What the sheet shows once something is kept (design §15): the preview,
+ * compact while the note is open; the note; then the secondary button (Undo,
+ * or Keep again when it was kept already) beside Done.
+ */
+@Composable
+private fun SavedBody(
+    memories: List<Memory>,
+    noteOpen: Boolean,
+    onOpenNote: () -> Unit,
+    note: String,
+    onNoteChange: (String) -> Unit,
+    @StringRes noteLabel: Int,
+    @StringRes secondaryLabel: Int,
+    onSecondary: () -> Unit,
+    onDone: () -> Unit,
+) {
+    // Preview (compact while note is being written)
+    SavedPreview(
+        memories = memories,
+        isCompact = noteOpen,
+    )
+
+    // Note
+    if (!noteOpen) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .clickable(onClick = onOpenNote)
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("+", style = monoStyle(15.sp, color = AmberBright))
+            Text(
+                stringResource(noteLabel),
+                style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
+            )
+        }
+    } else {
+        val focusRequester = remember { FocusRequester() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+        ) {
+            BasicTextField(
+                value = note,
+                onValueChange = onNoteChange,
+                textStyle = sans(
+                    size = 15.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 21.sp,
+                ),
+                cursorBrush = SolidColor(AmberBright),
+                keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
+                maxLines = 5,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                decorationBox = { innerTextField ->
+                    if (note.isEmpty()) {
+                        Text(
+                            stringResource(R.string.capture_note_hint),
+                            style = sans(
+                                size = 15.sp,
+                                color = MaterialTheme.colorScheme.outline,
+                                lineHeight = 21.sp,
+                            ),
+                        )
+                    }
+                    innerTextField()
+                },
+            )
+        }
+    }
+
+    // Buttons: Row, spacing 10, of two equal buttons: Undo or Keep again (secondary) and Done (primary)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Button(
+            onClick = onSecondary,
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
+            Text(
+                stringResource(secondaryLabel),
+                style = sans(
+                    15.sp,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    weight = FontWeight.SemiBold,
+                ),
+            )
+        }
+        Button(
+            onClick = onDone,
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp),
+            shape = RoundedCornerShape(26.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = AmberBright,
+                contentColor = AmberOnContainer,
+            ),
+        ) {
+            Text(
+                stringResource(R.string.capture_done),
+                style = sans(
+                    15.sp,
+                    color = AmberOnContainer,
+                    weight = FontWeight.SemiBold,
+                ),
+            )
+        }
+    }
+
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
