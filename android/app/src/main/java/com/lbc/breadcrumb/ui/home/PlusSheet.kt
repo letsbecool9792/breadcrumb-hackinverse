@@ -6,6 +6,7 @@ import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.imports.ImportPanel
 import com.lbc.breadcrumb.ui.keep.KeepComposer
 import com.lbc.breadcrumb.ui.keep.KeepState
+import com.lbc.breadcrumb.ui.keep.VoicePanel
 
 /** What the "+" sheet shows (design §13, §14). */
 internal enum class PlusPanel {
@@ -14,6 +15,9 @@ internal enum class PlusPanel {
 
     /** Reading's import panel: what is already on the phone. */
     IMPORT,
+
+    /** A voice note, recorded as soon as it opens. */
+    VOICE,
     ;
 
     companion object {
@@ -26,9 +30,9 @@ internal enum class PlusPanel {
 }
 
 /**
- * The "+" sheet's content: the composer, or after its quiet line the import panel.
- * [onPanel] switches between the two; [onClose] closes the sheet, once something
- * is kept or picked to bring in.
+ * The "+" sheet's content: the composer, or after its quiet line the import panel,
+ * or after its voice chip the voice panel. [onPanel] switches between them;
+ * [onClose] closes the sheet, once something is kept or picked to bring in.
  */
 @Composable
 internal fun ColumnScope.PlusSheet(
@@ -42,6 +46,11 @@ internal fun ColumnScope.PlusSheet(
         PlusPanel.COMPOSER -> KeepComposer(
             state = keepState,
             onBringIn = { onPanel(PlusPanel.IMPORT) },
+            onKept = onClose,
+            onVoice = { onPanel(PlusPanel.VOICE) },
+        )
+        PlusPanel.VOICE -> VoicePanel(
+            onBack = { onPanel(PlusPanel.COMPOSER) },
             onKept = onClose,
         )
         PlusPanel.IMPORT -> ImportPanel(

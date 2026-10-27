@@ -104,9 +104,21 @@
     <string name="keep_hint_files">a note about it — who sent it, what it\'s for…</string>
     <string name="keep_chip_photo">photo</string>
     <string name="keep_chip_pdf">pdf</string>
+    <string name="keep_chip_voice">voice note</string>
     <string name="keep_action">Keep</string>
     <string name="keep_remove">Remove</string>
     <string name="keep_failed">couldn\'t keep that — try again?</string>
     <string name="keep_bring_in">bring in what\'s already on the phone</string>
+
+    <!-- Voice notes: the "+" sheet's voice panel, and its launcher shortcut. -->
+    <string name="voice_title">Say it</string>
+    <string name="voice_back">back</string>
+    <string name="voice_discard">discard</string>
+    <string name="voice_recording">recording</string>
+    <string name="voice_needs_microphone">breadcrumb needs the microphone to keep a voice note</string>
+    <string name="voice_allow_microphone">allow the microphone</string>
+    <string name="voice_failed">couldn\'t record that — try again?</string>
+    <string name="shortcut_voice_short">Say it</string>
+    <string name="shortcut_voice_long">Say something</string>
 
 </resources>

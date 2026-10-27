@@ -8,6 +8,10 @@
     <!-- Reading R4: whether the phone is online when a link's page fails to load.
          Offline, the link waits for the next pass; online, the answer is final. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!-- Voice notes: recording one in the "+" sheet. Asked for the first time "voice" is
+         tapped; a phone without a microphone still installs, and keeps shared voice notes. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 
     <!-- Each workstream adds its own entries here: capture its activities, its
          Quick Settings tile and the <queries> block for source apps; search the

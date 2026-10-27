@@ -74,6 +74,7 @@ import com.lbc.breadcrumb.capture.MediaHelper
 import com.lbc.breadcrumb.ui.common.ClearGlyph
 import com.lbc.breadcrumb.ui.common.CrumbTrail
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
+import com.lbc.breadcrumb.ui.common.VoiceGlyph
 import com.lbc.breadcrumb.ui.common.Grabber
 import com.lbc.breadcrumb.ui.common.PictureGlyph
 import com.lbc.breadcrumb.ui.home.monoStyle
@@ -227,7 +228,7 @@ fun rememberKeepState(
  * - Error line when last keep saved nothing
  * - Quiet line "bring in what's already on the phone"
  * Bottom row:
- * - Chips for photo and pdf
+ * - Chips for photo and pdf, and the voice chip (a voice note, [onVoice])
  * - Keep button (48dp, radius 24, AmberBright when active, disabled with CrumbTrail while keeping)
  */
 @Composable
@@ -236,6 +237,7 @@ fun ColumnScope.KeepComposer(
     onBringIn: () -> Unit,
     onKept: () -> Unit,
     modifier: Modifier = Modifier,
+    onVoice: () -> Unit = {},
 ) {
     val context = LocalContext.current
 
@@ -407,60 +409,91 @@ fun ColumnScope.KeepComposer(
             )
         }
 
+        // The voice chip: the glyph alone, so three chips and Keep fit a 360dp phone.
+        val voiceLabel = stringResource(R.string.keep_chip_voice)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(InkElevated)
+                .border(1.dp, InkFieldBorder, CircleShape)
+                .clickable(role = Role.Button, onClick = onVoice)
+                .semantics { contentDescription = voiceLabel },
+            contentAlignment = Alignment.Center,
+        ) {
+            VoiceGlyph(Modifier.size(16.dp), BoneDim)
+        }
+
         Spacer(modifier = Modifier.weight(1f))
 
         // Keep button
         val hasContentToKeep = state.text.isNotBlank() || state.attachments.isNotEmpty()
-        val isLit = hasContentToKeep || state.keeping
-        val canKeep = hasContentToKeep && !state.keeping
+        KeepButton(
+            lit = hasContentToKeep || state.keeping,
+            keeping = state.keeping,
+            enabled = hasContentToKeep && !state.keeping,
+            onClick = { state.keep(onKept) },
+        )
+    }
+}
 
-        val buttonBg = if (isLit) AmberBright else InkElevated
-        val buttonTextColor = if (isLit) AmberOnContainer else InkOutline
+/**
+ * Keep (design §13): 48dp, radius 24, padding 22 horizontal; AmberBright when [lit], else
+ * InkElevated; while [keeping], a walking CrumbTrail before the word. Disabled unless [enabled].
+ */
+@Composable
+internal fun KeepButton(
+    lit: Boolean,
+    keeping: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val buttonBg = if (lit) AmberBright else InkElevated
+    val buttonTextColor = if (lit) AmberOnContainer else InkOutline
 
-        Box(
-            modifier = Modifier
-                .height(48.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(buttonBg)
-                .semantics(mergeDescendants = true) {
-                    role = Role.Button
-                    if (!canKeep) {
-                        disabled()
-                    }
+    Box(
+        modifier = Modifier
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .background(buttonBg)
+            .semantics(mergeDescendants = true) {
+                role = Role.Button
+                if (!enabled) {
+                    disabled()
                 }
-                .then(
-                    if (canKeep) {
-                        Modifier.clickable(
-                            role = Role.Button,
-                            onClick = { state.keep(onKept) },
-                        )
-                    } else {
-                        Modifier
-                    }
-                )
-                .padding(horizontal = 22.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                AnimatedVisibility(
-                    visible = state.keeping,
-                    enter = fadeIn() + expandHorizontally(),
-                    exit = fadeOut() + shrinkHorizontally(),
-                ) {
-                    CrumbTrail(
-                        modifier = Modifier
-                            .padding(end = 9.dp)
-                            .size(15.dp),
-                        walking = true,
+            }
+            .then(
+                if (enabled) {
+                    Modifier.clickable(
+                        role = Role.Button,
+                        onClick = onClick,
                     )
+                } else {
+                    Modifier
                 }
-                Text(
-                    text = stringResource(R.string.keep_action),
-                    style = sans(15.sp, color = buttonTextColor, weight = FontWeight.SemiBold),
+            )
+            .padding(horizontal = 22.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AnimatedVisibility(
+                visible = keeping,
+                enter = fadeIn() + expandHorizontally(),
+                exit = fadeOut() + shrinkHorizontally(),
+            ) {
+                CrumbTrail(
+                    modifier = Modifier
+                        .padding(end = 9.dp)
+                        .size(15.dp),
+                    walking = true,
                 )
             }
+            Text(
+                text = stringResource(R.string.keep_action),
+                style = sans(15.sp, color = buttonTextColor, weight = FontWeight.SemiBold),
+            )
         }
     }
 }

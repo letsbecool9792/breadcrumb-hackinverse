@@ -55,12 +55,14 @@ import com.lbc.breadcrumb.ui.theme.Ink
  *
  * [onOpenDebug] is passed only in debug builds; null, the wordmark has no
  * gesture at all. [keepRequests] counts the launcher shortcut's requests; each
- * new one opens the "+" sheet.
+ * new one opens the "+" sheet. [voiceRequests] counts "Say something"'s; each
+ * new one opens it on the voice panel.
  */
 @Composable
 fun HomeScreen(
     onOpenDebug: (() -> Unit)?,
     keepRequests: Int = 0,
+    voiceRequests: Int = 0,
     viewModel: HomeViewModel = viewModel(),
 ) {
     val memories by viewModel.memories.collectAsStateWithLifecycle()
@@ -109,6 +111,16 @@ fun HomeScreen(
             focus.clearFocus()
             openedId = null
             plus = PlusPanel.COMPOSER
+        }
+    }
+    var voiceRequestsAnswered by rememberSaveable { mutableIntStateOf(0) }
+    LaunchedEffect(voiceRequests) {
+        if (voiceRequests > voiceRequestsAnswered) {
+            voiceRequestsAnswered = voiceRequests
+            keyboard?.hide()
+            focus.clearFocus()
+            openedId = null
+            plus = PlusPanel.VOICE
         }
     }
 

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The voice mark (design §2) over the same 32 units as the keep shortcut's plus. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M38,48.67 L38,59.33 M46,43.33 L46,64.67 M54,38 L54,70 M62,44.67 L62,63.33 M70,50 L70,58"
+        android:strokeColor="#FFFFC46B"
+        android:strokeWidth="5"
+        android:strokeLineCap="round" />
+</vector>
