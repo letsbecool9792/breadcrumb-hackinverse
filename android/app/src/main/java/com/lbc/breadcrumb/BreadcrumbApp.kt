@@ -4,7 +4,9 @@ import android.app.Activity
 import android.app.Application
 import android.os.Bundle
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
+import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.OriginalStore
+import com.lbc.breadcrumb.data.SpokenNote
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.Embedder
 import com.lbc.breadcrumb.embed.ModelDownloadWorker
@@ -17,6 +19,7 @@ import com.lbc.breadcrumb.ocr.OcrQueue
 import com.lbc.breadcrumb.ocr.workScheduler
 import com.lbc.breadcrumb.voice.ListenQueue
 import com.lbc.breadcrumb.voice.OnDeviceTranscriber
+import com.lbc.breadcrumb.voice.Transcriber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -25,6 +28,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 class BreadcrumbApp : Application() {
 
@@ -95,15 +100,34 @@ class BreadcrumbApp : Application() {
         OcrQueue.launchIn(applicationScope, readingOriginals) { OcrQueue(this) }
         // Voice notes are heard on the phone, as they come and whenever the app comes to the front.
         registerActivityLifecycleCallbacks(FrontCounter(inFront))
+        // One at a time: the recognizer serves one session.
+        val hearing = Mutex()
+        val phone = OnDeviceTranscriber(this)
+        val transcriber = Transcriber { file -> hearing.withLock { phone.transcribe(file) } }
         applicationScope.launch {
             val reading = database.readingDao()
             ListenQueue(
                 unheard = reading.observeUnheard(),
                 wakes = inFront,
                 newest = reading::getNewestUnheard,
+                idOf = Memory::id,
                 fileOf = originals::fileFor,
                 write = { id, words -> reading.updateExtractedText(id, words) },
-                transcriber = OnDeviceTranscriber(this@BreadcrumbApp),
+                transcriber = transcriber,
+                scheduleWork = { workScheduler(this@BreadcrumbApp) },
+            ).run()
+        }
+        // And notes said over a memory, into the memory's note.
+        applicationScope.launch {
+            val spoken = database.spokenNoteDao()
+            ListenQueue(
+                unheard = spoken.observeUnheard(),
+                wakes = inFront,
+                newest = spoken::getNewestUnheard,
+                idOf = SpokenNote::memoryId,
+                fileOf = { note -> originals.spokenFile(note.memoryId)?.takeIf { it.isFile } },
+                write = { id, words -> spoken.heard(id, words) },
+                transcriber = transcriber,
                 scheduleWork = { workScheduler(this@BreadcrumbApp) },
             ).run()
         }

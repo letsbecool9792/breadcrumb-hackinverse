@@ -220,4 +220,12 @@ class DetailTest {
         // Said once, in the card: not again as text found.
         compose.onNodeWithText("TEXT FOUND").assertDoesNotExist()
     }
+
+    @Test
+    fun aNoteCanBeSaidAsWellAsWritten() {
+        show(picture, OriginalAction.Missing)
+
+        compose.onNodeWithText("add a note").assertExists()
+        compose.onNodeWithText("say it").assertExists()
+    }
 }

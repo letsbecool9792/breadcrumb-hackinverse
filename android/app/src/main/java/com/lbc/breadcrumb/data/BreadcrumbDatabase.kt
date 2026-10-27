@@ -18,12 +18,14 @@ import androidx.room.TypeConverters
  * Each workstream adds its own DAO here: one abstract function per DAO.
  */
 @Database(
-    entities = [Memory::class, MemoryFts::class, PendingDelete::class, ImportedSource::class, Embedding::class],
-    version = 2,
+    entities = [Memory::class, MemoryFts::class, PendingDelete::class, ImportedSource::class, Embedding::class, SpokenNote::class],
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // Local-first L1: the embeddings table.
         AutoMigration(from = 1, to = 2),
+        // Voice notes V4: the spoken_notes table. The memories table is untouched.
+        AutoMigration(from = 2, to = 3),
     ],
 )
 @TypeConverters(Converters::class)
@@ -42,6 +44,9 @@ abstract class BreadcrumbDatabase : RoomDatabase() {
 
     // Local first: the vectors made on the phone
     abstract fun embeddingDao(): EmbeddingDao
+
+    // Voice notes: notes said over any memory
+    abstract fun spokenNoteDao(): SpokenNoteDao
 
     companion object {
         private const val DB_NAME = "breadcrumb.db"

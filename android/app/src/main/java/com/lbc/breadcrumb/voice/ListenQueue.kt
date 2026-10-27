@@ -1,6 +1,5 @@
 package com.lbc.breadcrumb.voice
 
-import com.lbc.breadcrumb.data.Memory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -9,9 +8,11 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import java.io.File
 
 /**
- * Hears the voice notes not heard yet, newest first, and writes what was said
- * as their extractedText: word search finds them by it, and the phone embeds
- * it. Runs in [com.lbc.breadcrumb.BreadcrumbApp.onCreate], in every process.
+ * Hears the voice notes not heard yet, newest first, and writes what was said:
+ * a voice note's as its extractedText, a note said over a memory's into that
+ * memory's note ([T] is which). Word search finds them by it, and the phone
+ * embeds it. Runs in [com.lbc.breadcrumb.BreadcrumbApp.onCreate], in every
+ * process, one queue for each.
  *
  * It watches Room for notes not heard yet, and looks again at every [wakes] (an
  * activity of the app starting): a note that had to wait (the recognizer busy,
@@ -20,11 +21,12 @@ import java.io.File
  * gone, is marked heard with no words: it is embedded by its note, and stops
  * saying it is being listened to.
  */
-class ListenQueue(
+class ListenQueue<T>(
     private val unheard: Flow<List<String>>,
     private val wakes: Flow<*>,
-    private val newest: suspend (limit: Int) -> List<Memory>,
-    private val fileOf: (Memory) -> File?,
+    private val newest: suspend (limit: Int) -> List<T>,
+    private val idOf: (T) -> String,
+    private val fileOf: (T) -> File?,
     /** Writes the words where the note is still not heard; the rows written. */
     private val write: suspend (id: String, words: String) -> Int,
     private val transcriber: Transcriber,
@@ -48,8 +50,9 @@ class ListenQueue(
     internal suspend fun pass() {
         val waiting = mutableSetOf<String>()
         while (true) {
-            val memory = newest(waiting.size + 1).firstOrNull { it.id !in waiting } ?: return
-            val file = fileOf(memory)
+            val note = newest(waiting.size + 1).firstOrNull { idOf(it) !in waiting } ?: return
+            val id = idOf(note)
+            val file = fileOf(note)
             val heard = if (file == null) {
                 Heard.Words("")
             } else {
@@ -62,9 +65,9 @@ class ListenQueue(
                 }
             }
             when (heard) {
-                is Heard.Words -> if (write(memory.id, heard.text) > 0) scheduleWork()
-                Heard.Never -> if (write(memory.id, "") > 0) scheduleWork()
-                is Heard.NotNow -> waiting += memory.id
+                is Heard.Words -> if (write(id, heard.text) > 0) scheduleWork()
+                Heard.Never -> if (write(id, "") > 0) scheduleWork()
+                is Heard.NotNow -> waiting += id
             }
         }
     }

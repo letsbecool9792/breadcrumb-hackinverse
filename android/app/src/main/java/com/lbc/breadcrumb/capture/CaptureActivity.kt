@@ -21,6 +21,8 @@ import com.lbc.breadcrumb.ocr.workScheduler
 import com.lbc.breadcrumb.ui.capture.CaptureSheet
 import com.lbc.breadcrumb.ui.capture.CaptureState
 import com.lbc.breadcrumb.ui.theme.BreadcrumbTheme
+import com.lbc.breadcrumb.voice.Recording
+import com.lbc.breadcrumb.voice.SpokenNotes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -82,6 +84,7 @@ abstract class CaptureActivity : ComponentActivity() {
                     onNoteChange = { note.value = it },
                     onUndo = ::undo,
                     onKeepAgain = ::keepAgain,
+                    onSay = ::say,
                     onDismiss = ::dismiss,
                 )
             }
@@ -217,6 +220,16 @@ abstract class CaptureActivity : ComponentActivity() {
                 CaptureState.Failed(app.getString(R.string.capture_failed))
             }
         }
+    }
+
+    /**
+     * A note said over what was saved, or over what is kept already: a copy of
+     * the recording for each. The listen queue hears it into their note.
+     */
+    private suspend fun say(recording: Recording): Boolean {
+        saving?.join()
+        val ids = synchronized(this) { saved.ifEmpty { keptAlready }.map { it.id } }
+        return SpokenNotes.keep(app, ids, recording)
     }
 
     /**

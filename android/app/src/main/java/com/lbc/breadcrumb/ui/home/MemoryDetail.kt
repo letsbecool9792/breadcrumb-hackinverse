@@ -66,12 +66,16 @@ import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
+import com.lbc.breadcrumb.data.SpokenNote
 import com.lbc.breadcrumb.open.OriginalAction
 import com.lbc.breadcrumb.ui.common.BinGlyph
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
 import com.lbc.breadcrumb.ui.common.Grabber
 import com.lbc.breadcrumb.ui.common.LeavesTheAppGlyph
+import com.lbc.breadcrumb.ui.common.SayANote
+import com.lbc.breadcrumb.ui.common.SayIt
 import com.lbc.breadcrumb.ui.common.ShareGlyph
+import com.lbc.breadcrumb.ui.common.SpokenNotePlayer
 import com.lbc.breadcrumb.ui.common.VoicePlayer
 import com.lbc.breadcrumb.ui.common.rememberThumbnail
 import com.lbc.breadcrumb.ui.theme.AmberBright
@@ -81,6 +85,7 @@ import com.lbc.breadcrumb.ui.theme.InkElevated
 import com.lbc.breadcrumb.ui.theme.InkLabel
 import com.lbc.breadcrumb.ui.theme.InkMedia
 import com.lbc.breadcrumb.ui.theme.InkOutline
+import com.lbc.breadcrumb.voice.Recording
 import java.util.Locale
 
 /**
@@ -96,6 +101,10 @@ internal class DetailActions(
     val onDelete: () -> Unit,
     /** Write the note; null clears it. */
     val onNote: (String?) -> Unit,
+    /** Keep a note said over it; false when it couldn't be. */
+    val onSay: suspend (Recording) -> Boolean = { false },
+    /** Take the note said over it away; what was said stays in the note. */
+    val onRemoveSpoken: () -> Unit = {},
 )
 
 /**
@@ -112,6 +121,7 @@ internal fun ColumnScope.MemoryDetail(
     now: Long,
     visibility: AnimatedVisibilityScope,
     actions: DetailActions,
+    spoken: SpokenNote? = null,
 ) {
     Grabber(Modifier.align(Alignment.CenterHorizontally))
     Column(
@@ -132,7 +142,7 @@ internal fun ColumnScope.MemoryDetail(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             Heading(memory)
-            NoteSection(memory, onNote = actions.onNote)
+            NoteSection(memory, spoken, actions)
             Provenance(memory, now)
             FoundText(memory)
         }
@@ -317,11 +327,17 @@ private fun SectionLabel(text: String, modifier: Modifier = Modifier) {
 
 /**
  * The person's own words about it, the only thing editable here. A tap starts
- * editing; Done, or the sheet closing mid-edit, writes it.
+ * editing; Done, or the sheet closing mid-edit, writes it. "say it" records a
+ * note said over it instead: its player shows above the note, and once heard,
+ * what was said is in the note.
  */
 @Composable
-private fun NoteSection(memory: Memory, onNote: (String?) -> Unit) {
+private fun NoteSection(memory: Memory, spoken: SpokenNote?, actions: DetailActions) {
+    val onNote = actions.onNote
     var editing by remember { mutableStateOf(false) }
+    var saying by remember { mutableStateOf(false) }
+    val originals = (LocalContext.current.applicationContext as BreadcrumbApp).originals
+    val spokenFile = remember(memory.id, spoken) { spoken?.let { originals.spokenFile(memory.id)?.takeIf { it.isFile } } }
     var draft by remember { mutableStateOf(memory.note.orEmpty()) }
     val keyboard = LocalSoftwareKeyboardController.current
     val currentNote by rememberUpdatedState(memory.note)
@@ -375,19 +391,36 @@ private fun NoteSection(memory: Memory, onNote: (String?) -> Unit) {
                         .padding(horizontal = 12.dp, vertical = 7.dp),
                 )
             }
-            !memory.note.isNullOrBlank() -> {
+            saying -> {
+                SectionLabel(stringResource(R.string.detail_your_note))
+                SayANote(keep = actions.onSay, onDone = { saying = false }, onCancel = { saying = false })
+            }
+            !memory.note.isNullOrBlank() || spokenFile != null -> {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     SectionLabel(stringResource(R.string.detail_your_note))
-                    Text(
-                        stringResource(R.string.detail_edit),
-                        style = monoStyle(10.sp, AmberBright),
-                        modifier = Modifier.clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                        ) { draft = memory.note.orEmpty(); editing = true },
-                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Text(
+                            stringResource(R.string.spoken_say),
+                            style = monoStyle(10.sp, AmberBright),
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { saying = true },
+                        )
+                        Text(
+                            stringResource(R.string.detail_edit),
+                            style = monoStyle(10.sp, AmberBright),
+                            modifier = Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                            ) { draft = memory.note.orEmpty(); editing = true },
+                        )
+                    }
                 }
-                Row(
+                if (spokenFile != null) {
+                    SpokenNotePlayer(spokenFile, heard = spoken?.heardAt != null, onRemove = actions.onRemoveSpoken)
+                }
+                if (!memory.note.isNullOrBlank()) Row(
                     Modifier
                         .height(IntrinsicSize.Min)
                         .clickable(
@@ -401,15 +434,22 @@ private fun NoteSection(memory: Memory, onNote: (String?) -> Unit) {
                 }
             }
             else -> Row(
-                Modifier.clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                ) { draft = ""; editing = true },
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("+", style = monoStyle(14.sp, AmberBright))
-                Text(stringResource(R.string.capture_add_note), style = monoStyle(12.sp, BoneDim))
+                Row(
+                    Modifier.clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                    ) { draft = ""; editing = true },
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("+", style = monoStyle(14.sp, AmberBright))
+                    Text(stringResource(R.string.capture_add_note), style = monoStyle(12.sp, BoneDim))
+                }
+                SayIt(onClick = { saying = true })
             }
         }
     }

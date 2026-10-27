@@ -69,6 +69,10 @@
     <string name="voice_pause">Pause</string>
     <string name="voice_listening">listening…</string>
     <string name="voice_no_words">no words heard</string>
+    <!-- Voice notes V4: a note said over any memory. -->
+    <string name="spoken_say">say it</string>
+    <string name="spoken_remove">remove</string>
+    <string name="spoken_said">note said</string>
     <string name="undo_deleted">deleted</string>
 
     <!-- Capture workstream: the capture sheet. "Saved" and "Saving…" are in the

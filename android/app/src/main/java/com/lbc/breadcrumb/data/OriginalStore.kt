@@ -85,12 +85,26 @@ class OriginalStore(
     fun fileFor(memory: Memory): File? {
         val uri = memory.localUri?.let(Uri::parse) ?: return null
         if (uri.scheme != "file") return null
-        val name = File(uri.path ?: return null).name
+        return named(File(uri.path ?: return null).name)?.takeIf { it.isFile }
+    }
+
+    /**
+     * The file called [name] directly in this store, whether or not it exists
+     * yet; null when the name could reach outside it.
+     */
+    fun named(name: String): File? {
         if (name.isEmpty() || name == "." || name == ".." || '/' in name || '\\' in name) return null
         val file = File(root, name)
         if (file.canonicalFile.parentFile != root.canonicalFile) return null
-        return file.takeIf { it.isFile }
+        return file
     }
+
+    /**
+     * Where the recording of a note said over [memoryId] lives ([SpokenNote]),
+     * named by the memory, so it goes with the memory's own original in
+     * [delete] without asking the database.
+     */
+    fun spokenFile(memoryId: String): File? = named("$memoryId$SPOKEN")
 
     /**
      * Every original held. For the importer, which compares what it has just
@@ -100,11 +114,18 @@ class OriginalStore(
     fun files(): List<File> =
         root.listFiles()?.filter { it.isFile && !it.name.endsWith(".part") }.orEmpty()
 
+    /** The memory's original, and the recording of a note said over it. */
     fun delete(memory: Memory) {
         fileFor(memory)?.delete()
+        spokenFile(memory.id)?.delete()
     }
 
     fun clear() {
         root.listFiles()?.forEach { it.delete() }
+    }
+
+    companion object {
+        /** The ending of a spoken note's recording: "<memory id>.spoken.m4a". */
+        const val SPOKEN = ".spoken.m4a"
     }
 }

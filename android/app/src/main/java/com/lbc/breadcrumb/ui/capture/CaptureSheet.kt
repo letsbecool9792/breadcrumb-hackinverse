@@ -65,6 +65,8 @@ import com.lbc.breadcrumb.R
 import com.lbc.breadcrumb.data.Memory
 import com.lbc.breadcrumb.data.MemoryType
 import com.lbc.breadcrumb.ui.common.DocumentGlyph
+import com.lbc.breadcrumb.ui.common.SayANote
+import com.lbc.breadcrumb.ui.common.SayIt
 import com.lbc.breadcrumb.ui.common.VoiceGlyph
 import com.lbc.breadcrumb.ui.common.rememberAudioLength
 import com.lbc.breadcrumb.ui.home.monoStyle
@@ -72,6 +74,7 @@ import com.lbc.breadcrumb.ui.home.sans
 import com.lbc.breadcrumb.ui.home.serif
 import com.lbc.breadcrumb.ui.theme.*
 import com.lbc.breadcrumb.voice.AudioLength
+import com.lbc.breadcrumb.voice.Recording
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import java.io.File
@@ -106,6 +109,7 @@ fun CaptureSheet(
     onUndo: () -> Unit,
     onDismiss: () -> Unit,
     onKeepAgain: () -> Unit = {},
+    onSay: (suspend (Recording) -> Boolean)? = null,
 ) {
     var showNoteField by remember { mutableStateOf(false) }
     val now = remember { System.currentTimeMillis() }
@@ -329,6 +333,7 @@ fun CaptureSheet(
                             secondaryLabel = R.string.capture_undo,
                             onSecondary = onUndo,
                             onDone = close,
+                            onSay = onSay,
                         )
 
                         // Kept already: what is kept is shown, a note goes on it, or it is kept again.
@@ -346,6 +351,7 @@ fun CaptureSheet(
                             secondaryLabel = R.string.capture_keep_again,
                             onSecondary = onKeepAgain,
                             onDone = close,
+                            onSay = onSay,
                         )
 
                         is CaptureState.Failed -> {
@@ -401,28 +407,47 @@ private fun SavedBody(
     @StringRes secondaryLabel: Int,
     onSecondary: () -> Unit,
     onDone: () -> Unit,
+    onSay: (suspend (Recording) -> Boolean)?,
 ) {
-    // Preview (compact while note is being written)
+    var saying by remember { mutableStateOf(false) }
+    var said by remember { mutableStateOf(false) }
+
+    // Preview (compact while note is being written, or said)
     SavedPreview(
         memories = memories,
-        isCompact = noteOpen,
+        isCompact = noteOpen || saying,
     )
 
-    // Note
-    if (!noteOpen) {
+    // Note: written, or said over it.
+    if (saying && onSay != null) {
+        SayANote(keep = onSay, onDone = { saying = false; said = true }, onCancel = { saying = false })
+    } else if (!noteOpen) {
         Row(
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onOpenNote)
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("+", style = monoStyle(15.sp, color = AmberBright))
-            Text(
-                stringResource(noteLabel),
-                style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
-            )
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onOpenNote)
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("+", style = monoStyle(15.sp, color = AmberBright))
+                Text(
+                    stringResource(noteLabel),
+                    style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline),
+                )
+            }
+            when {
+                said -> Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    VoiceGlyph(Modifier.size(13.dp), MaterialTheme.colorScheme.primary)
+                    Text(stringResource(R.string.spoken_said), style = monoStyle(12.sp, color = MaterialTheme.colorScheme.outline))
+                }
+                onSay != null -> SayIt(onClick = { saying = true }, modifier = Modifier.padding(end = 4.dp))
+            }
         }
     } else {
         val focusRequester = remember { FocusRequester() }

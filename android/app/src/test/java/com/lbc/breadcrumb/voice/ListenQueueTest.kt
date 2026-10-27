@@ -22,6 +22,7 @@ class ListenQueueTest {
         unheard = MutableStateFlow(emptyList()),
         wakes = MutableStateFlow(0),
         newest = { limit -> notes.filter { it.extractedText == null }.sortedByDescending { it.capturedAt }.take(limit) },
+        idOf = { it.id },
         fileOf = { memory -> memory.localUri?.let { File(it.removePrefix("file:///")) } },
         write = { id, words ->
             val i = notes.indexOfFirst { it.id == id && it.extractedText == null }

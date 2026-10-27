@@ -5,18 +5,23 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lbc.breadcrumb.BreadcrumbApp
 import com.lbc.breadcrumb.data.Memory
+import com.lbc.breadcrumb.data.SpokenNote
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.LocalSearch
 import com.lbc.breadcrumb.embed.PhraseRules
 import com.lbc.breadcrumb.embed.VectorIndex
 import com.lbc.breadcrumb.embed.Sites
 import com.lbc.breadcrumb.imports.BulkImporter
+import com.lbc.breadcrumb.voice.Recording
+import com.lbc.breadcrumb.voice.SpokenNotes
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import java.util.concurrent.ConcurrentHashMap
 
 /**
  * What the home screen holds (design §4). The memories come straight from Room,
@@ -67,12 +72,28 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         heldMemories = { app.database.memoryDao().getAll() },
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SearchState.Resting)
 
-    /** Delete with five seconds of Undo (design §12); its changes outlive the screen. */
+    /** The notes said over memories being deleted, held until Undo brings them back with their memory. */
+    private val heldSpoken = ConcurrentHashMap<String, SpokenNote>()
+
+    /**
+     * Delete with five seconds of Undo (design §12); its changes outlive the screen.
+     * A note said over the memory goes with its row, and comes back with it; its
+     * recording goes with the original.
+     */
     private val deletes = UndoableDeletes(
         scope = app.applicationScope,
-        deleteRow = { app.database.memoryDao().delete(it) },
-        restoreRow = { app.database.memoryDao().upsert(it) },
-        deleteOriginal = { app.originals.delete(it) },
+        deleteRow = { memory ->
+            app.database.spokenNoteDao().get(memory.id)?.let { heldSpoken[memory.id] = it }
+            app.database.memoryDao().delete(memory)
+        },
+        restoreRow = { memory ->
+            app.database.memoryDao().upsert(memory)
+            heldSpoken.remove(memory.id)?.let { app.database.spokenNoteDao().upsert(it) }
+        },
+        deleteOriginal = { memory ->
+            heldSpoken.remove(memory.id)
+            app.originals.delete(memory)
+        },
         // A memory brought back lost its vector with the row: embed it again.
         scheduleWork = { EmbedWorker.schedule(app) },
     )
@@ -89,6 +110,16 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         app.applicationScope.launch {
             if (app.database.captureDao().setNote(listOf(id), note) > 0) EmbedWorker.schedule(app)
         }
+    }
+
+    /** The note said over a memory, live, or null. */
+    fun spokenNote(id: String): Flow<SpokenNote?> = app.database.spokenNoteDao().observe(id)
+
+    /** Keeps a note said over a memory; the listen queue hears it into the memory's note. */
+    suspend fun keepSpoken(id: String, recording: Recording): Boolean = SpokenNotes.keep(app, listOf(id), recording)
+
+    fun removeSpoken(id: String) {
+        app.applicationScope.launch { SpokenNotes.remove(app, id) }
     }
 
     override fun onCleared() {

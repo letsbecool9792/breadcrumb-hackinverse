@@ -38,7 +38,7 @@ class CaptureSheetTest {
     // The note lives with the activity; here, with the test.
     private val note = mutableStateOf("")
 
-    private fun show(state: CaptureState) {
+    private fun show(state: CaptureState, canSay: Boolean = false) {
         compose.setContent {
             BreadcrumbTheme(darkTheme = true) {
                 CaptureSheet(
@@ -48,6 +48,7 @@ class CaptureSheetTest {
                     onUndo = {},
                     onDismiss = { dismissed++ },
                     onKeepAgain = { keptAgain++ },
+                    onSay = if (canSay) ({ true }) else null,
                 )
             }
         }
@@ -162,5 +163,18 @@ class CaptureSheetTest {
 
         assertEquals(1, dismissed)
         assertEquals("Priya's pick", note.value)
+    }
+
+    @Test
+    fun aNoteCanBeSaidOverWhatWasSaved() {
+        show(saved, canSay = true)
+        compose.onNodeWithText("add a note").assertExists()
+        compose.onNodeWithText("say it").assertExists()
+    }
+
+    @Test
+    fun withNoWayToSayItThereIsNoSayIt() {
+        show(saved)
+        compose.onNodeWithText("say it").assertDoesNotExist()
     }
 }

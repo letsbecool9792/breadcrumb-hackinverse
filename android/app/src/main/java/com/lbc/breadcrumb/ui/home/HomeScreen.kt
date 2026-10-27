@@ -239,9 +239,12 @@ fun HomeScreen(
                             openedId = null
                         },
                         onNote = { viewModel.setNote(memory.id, it) },
+                        onSay = { viewModel.keepSpoken(memory.id, it) },
+                        onRemoveSpoken = { viewModel.removeSpoken(memory.id) },
                     )
                 }
-                MemoryDetail(memory, now, visibility, actions)
+                val spoken by remember(memory.id) { viewModel.spokenNote(memory.id) }.collectAsStateWithLifecycle(null)
+                MemoryDetail(memory, now, visibility, actions, spoken)
             }
 
             // Keeping something from inside the app, or bringing in what's already on the phone.
