@@ -478,11 +478,15 @@ Over the app the share came from. Behaviour as it is now. The look:
   preview rather than jumping), spacing 18:
   1. **Header**: a Row, centred, spacing 14: the **CrumbMark** at 42dp (below), then a Column,
      spacing 4: the title in serif 23sp lineHeight 27 onSurface, a polite live region ("Saving…",
-     "Saved", "Saved 3", "Saved 2 of 3", "Removed", or the failure's words); and under it, when
-     something was saved, the kind line in mono 12sp outline, one line ("image · from
-     whatsapp", "3 images").
+     "Saved", "Saved 3", "Saved 2 of 3", "Kept already", "Removed", or the failure's words); and
+     under it, when something was saved, the kind line in mono 12sp outline, one line ("image ·
+     from whatsapp", "3 images", "2 images · 1 kept already"), or when it was kept already, when
+     ("link · kept 3d ago", "image · kept just now", "2 images · kept before").
   2. Saved: the **preview** (below), compact while the note is being written; the **note**; then
      a Row, spacing 10, of two equal buttons: "Undo" (secondary) and "Done" (primary).
+     Kept already (nothing new written; capture C10): the same, with the preview of what is kept,
+     the note's closed label "add another note" when it has a note already, and "Keep again" in
+     Undo's place. The CrumbMark does not play.
      Failed: one full-width "Close" (secondary). Saving and Removed: nothing more.
 - **Buttons**: 52dp tall, radius 26; primary: AmberBright with onPrimary text; secondary:
   surfaceVariant (InkElevated) with onSurface text; the label 15sp SemiBold (sans).
@@ -527,7 +531,7 @@ Over the app the share came from. Behaviour as it is now. The look:
 | "+" | Keep something / Keep something — a draft is waiting / a thought, a link, anything… / a note about it — who sent it, what it's for… / photo / pdf / Keep / Remove / couldn't keep that — try again? / bring in what's already on the phone |
 | Import | Bring in / back / A whole folder / every picture and PDF in it — screenshots, usually / Only these pictures / pick them yourself / PDFs, or a bookmarks export / from the file picker |
 | Shortcut | Keep / Keep something |
-| Capture | Saving… / Saved / Saved %d / Saved %d of %d / Removed / Undo / Done / Close / +%d / Document / add a note / who sent it, what it's for… / Nothing to save / Couldn't save that |
+| Capture | Saving… / Saved / Saved %d / Saved %d of %d / Removed / Undo / Done / Close / +%d / Document / add a note / who sent it, what it's for… / Nothing to save / Couldn't save that / Kept already / Keep again / add another note |
 
 All in strings.xml.
 

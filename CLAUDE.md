@@ -40,7 +40,8 @@ brief says:
 **Roadmap**, in this order (set 2026-10-25):
 
 1. **Saved already.** Saving something the phone already holds says so, and offers to add a note
-   to the one kept, or to keep it again as a memory of its own.
+   to the one kept, or to keep it again as a memory of its own. Built as capture C10, waiting on
+   its check by hand (below); the "+" composer doesn't check yet.
 2. **Voice notes**: recording, playback, audio storage, and making them searchable.
 3. **A first-run screen for the model.** The 388 MB embedding model downloads silently on the
    first Wi-Fi today, and search by meaning waits for it with nothing said. Show it downloading.
@@ -148,6 +149,7 @@ it whenever a change needs a manual check, and tick items off when done.
   - [ ] Left for later: a PDF behind a password shows *no text found*.
 - [x] **Instagram links** (2026-10-27): a shared reel, post or profile gets its title and
       thumbnail, and so does one saved before the fix (it is read once more).
+- [ ] **Saved already** (capture C10): the brief's *check* line.
 - [ ] **When roadmap 3 is built: the first-run download on a phone that has never had
       Breadcrumb**, from install to search by meaning.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`

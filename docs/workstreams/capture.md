@@ -152,6 +152,27 @@ what Suparno runs when he reviews.
     - Text alone keeps one memory and empties the draft.
     - A failed keep shows the failure line and keeps the draft.
 
+- [x] **C10. Saved already** (roadmap 1; Suparno, 2026-10-27)
+  - A share, a selection or the tile that brings what the phone already holds writes nothing.
+    The sheet says **Kept already**, shows the memory kept, and offers **Keep again** (it is saved
+    as a memory of its own, and the sheet goes on as for any save) beside **Done**. A note typed
+    goes under the kept memory's note ("add another note" when it has one), once.
+  - The same, by `capture/SameMemory` (pure): a link is the page it opens (no scheme, `www.` or
+    `m.`, fragment or trailing slash; no tracking parameters such as `utm_…`, Instagram's
+    `igsh` and `obrf`, YouTube's `si`; the rest in order; `youtu.be/ID` is `watch?v=ID`); text
+    is its words, case and spacing aside. A file is its bytes: it is copied in, compared by size
+    and then SHA-256 with the kept files of its kind (`CaptureStorage.keptFile`), and when they
+    match, the copy goes at once; Keep again copies it once more while the share's grant holds.
+  - Several files of which some are kept already: the rest are saved, and the line says
+    "2 images · 1 kept already". All of them kept already: Kept already, as for one.
+  - Not the "+" composer (C9) yet: it saves without a sheet to say so.
+  - Tests: `SameMemoryTest` and `SheetTextTest` (JVM); `CaptureDaoTest` (`addNote`, `ofType`)
+    and `CaptureSheetTest` (the state, its words and Keep again) on the phone.
+  - *Check:* share the same link twice (once with `?igsh=` or `?utm_source=` on it): the second
+    says Kept already, and nothing new appears on the home screen. Add a note there: it shows
+    under the first note. Keep again: a second memory appears. Share the same screenshot twice:
+    Kept already. Copy the same text and tap the tile twice: Kept already.
+
 ## Rules and pitfalls
 
 - **Every capture activity is its own task:** `excludeFromRecents`, `noHistory`,
