@@ -51,7 +51,9 @@ brief says:
    the first launch, and the first-run screen and a bar show it coming. Test it on a phone that
    has never had Breadcrumb (in the manual list below).
 4. **Export and import**: every memory, its originals and vectors, out to one file the person
-   keeps, and back in on a new phone.
+   keeps, and back in on a new phone. Built
+   ([`docs/workstreams/backup.md`](docs/workstreams/backup.md)): a zip from the masthead's
+   count, restored from there or from "Bring in"; a restore only adds. Waiting on its check.
 5. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
    and 1 GB each on the CPU today).
 6. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
@@ -160,6 +162,8 @@ it whenever a change needs a manual check, and tick items off when done.
 - [ ] **Saved already** (capture C10): the brief's *check* line.
 - [ ] **Voice notes** (roadmap 2): V3's and V4's *check* lines in
       [`voice-notes.md`](docs/workstreams/voice-notes.md).
+- [ ] **Export and import** (roadmap 4): B2's *check* line in
+      [`backup.md`](docs/workstreams/backup.md), including a restore on a second phone.
 - [ ] **The first-run download on a phone that has never had Breadcrumb** (roadmap 3, L8's
       *check* line in [`local-first.md`](docs/workstreams/local-first.md)), from install to
       search by meaning.

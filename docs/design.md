@@ -99,7 +99,7 @@ Layout, top to bottom, on Ink with statusBarsPadding:
    and replays nothing. Over the content's bottom edge, a 48dp vertical gradient from transparent
    to Ink, so content fades under the search field rather than stopping.
 2. **The bottom**, `navigationBarsPadding().imePadding()`, padding start 16, end 16, top 6,
-   bottom 16, spacing 10dp: the model's bar (§19), the import bar (§14), the undo bar (§12), then a Row: the search
+   bottom 16, spacing 10dp: the model's bar (§19), the import bar (§14), the backup bar (§20), the undo bar (§12), then a Row: the search
    field (weight 1) and the "+" button (§8) 10dp to its right. The "+" shows only while the field
    has no focus and nothing is typed: enter `fadeIn(180) + expandHorizontally(220)`, exit
    `fadeOut(120) + shrinkHorizontally(200)`.
@@ -118,7 +118,9 @@ padding start 6, end 6, top 6, bottom 16, spacing 6:
 - "breadcrumb" in serif 48sp, lineHeight 52. A long press (no ripple, no click action) does a
   LongPress haptic and opens the debug list; with `onLongPress == null` there is no gesture at all.
 - Row, spacing 9, centred: CrumbTrail 15dp (still), then the kept count UPPERCASE in mono 11sp
-  InkOutline, letterSpacing 1.4sp ("17 KEPT").
+  InkOutline, letterSpacing 1.4sp ("17 KEPT"), weight 1; at the end "BACK UP" in the same. A tap
+  on the Row (no ripple, click label "back up") opens everything kept (§20). Not on the empty
+  mosaic: there is nothing to back up, and the import panel offers a restore.
 
 **The slim strip** takes its place as it scrolls away.
 `collapse = if (firstVisibleIndex > 0) 1 else clamp((offset/mastheadHeight − 0.45) / 0.45, 0, 1)`.
@@ -507,6 +509,8 @@ padding 22 horizontal, top 6, spacing 14:
   - "PDFs, or a bookmarks export" / "from the file picker": the document picker for
     application/pdf and text/html, several at once → PDFs to importPdfs, an HTML file to
     importBookmarks.
+  - "A breadcrumb backup" / "from another phone, or one you saved": the document picker for a
+    zip → restore (§20).
 - The import's line (below) in mono 12sp AmberBright, when there is one.
 - A navigationBarsPadding spacer of 20dp at the foot.
 - Picking closes the sheet at once; the import runs on the application's scope.
@@ -602,7 +606,8 @@ Over the app the share came from. Behaviour as it is now. The look:
 | Toasts | Copied / No app here can open this |
 | Undo bar | deleted / Undo |
 | "+" | Keep something / Keep something — a draft is waiting / a thought, a link, anything… / a note about it — who sent it, what it's for… / photo / pdf / Keep / Remove / couldn't keep that — try again? / bring in what's already on the phone |
-| Import | Bring in / back / A whole folder / every picture and PDF in it — screenshots, usually / Only these pictures / pick them yourself / PDFs, or a bookmarks export / from the file picker |
+| Import | Bring in / back / A whole folder / every picture and PDF in it — screenshots, usually / Only these pictures / pick them yourself / PDFs, or a bookmarks export / from the file picker / A breadcrumb backup / from another phone, or one you saved |
+| Backup | back up / Everything kept / %s · %s on this phone / Save a backup / every memory, its originals and what the phone made of them, in one file you keep / Restore a backup / its memories join these; nothing here is replaced |
 | Shortcut | Keep / Keep something / Say it / Say something |
 | First run | Getting search ready / Search is ready / Breadcrumb finds what you kept by what it means… / download it on mobile data now / saving, and search by words, work already;\nsearch by meaning joins in when this is done / Start keeping / Done |
 | Capture | Saving… / Saved / Saved %d / Saved %d of %d / Removed / Undo / Done / Close / +%d / Document / add a note / who sent it, what it's for… / Nothing to save / Couldn't save that / Kept already / Keep again / add another note |
@@ -655,6 +660,32 @@ All in strings.xml.
 Through `LocalHapticFeedback.performHapticFeedback`, which follows the phone's Touch feedback
 setting: SegmentTick when ranked results land; Confirm on delete; LongPress on the wordmark;
 GestureThresholdActivate when a sheet's pull crosses its dismiss point.
+
+## §20 Everything kept: backing up and restoring
+
+A SheetLayer opened from the masthead's count. Grabber; a scrolling Column, padding 22
+horizontal, top 6, spacing 14:
+- "Everything kept" in serif 26sp lineHeight 30, over (spacing 6) "17 kept · 13 MB on this phone"
+  in mono 12sp BoneDim (the originals' size, read off the main thread; the count alone until
+  then).
+- Two choices, the import panel's cards (§14): "Save a backup" / "every memory, its originals and
+  what the phone made of them, in one file you keep": the system's save dialog for
+  `breadcrumb-2026-10-27.zip` (application/zip). "Restore a backup" / "its memories join these;
+  nothing here is replaced": the document picker for a zip.
+- The backup's line, when there is one, in mono 12sp AmberBright.
+- A navigationBarsPadding spacer of 20dp at the foot.
+- Picking closes the sheet at once; the work runs on the application's scope.
+
+**The backup bar**, over the search field after the import bar: the import bar's pill (§14),
+walking while it runs; a tap clears a finished one, and it goes by itself 6 s after it finishes.
+The line:
+- saving → "backing up · {done} of {files}"; saved → "backed up {memories} · 13 MB" ("0.4 MB"
+  under a megabyte)
+- restoring → "restoring · {done} of {files}"; restored → "restored {added}", plus " · {already}
+  already here" when any were; "nothing new · {already} already here"; "nothing in that backup"
+- failed → "backup stopped · {reason}" or "restore stopped · {reason}": "that isn't a breadcrumb
+  backup", "that file is damaged", "the phone is out of space", "couldn't read or write the
+  file"
 
 ## §19 The model's first run
 
