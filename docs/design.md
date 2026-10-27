@@ -99,7 +99,7 @@ Layout, top to bottom, on Ink with statusBarsPadding:
    and replays nothing. Over the content's bottom edge, a 48dp vertical gradient from transparent
    to Ink, so content fades under the search field rather than stopping.
 2. **The bottom**, `navigationBarsPadding().imePadding()`, padding start 16, end 16, top 6,
-   bottom 16, spacing 10dp: the import bar (§14), the undo bar (§12), then a Row: the search
+   bottom 16, spacing 10dp: the model's bar (§19), the import bar (§14), the undo bar (§12), then a Row: the search
    field (weight 1) and the "+" button (§8) 10dp to its right. The "+" shows only while the field
    has no focus and nothing is typed: enter `fadeIn(180) + expandHorizontally(220)`, exit
    `fadeOut(120) + shrinkHorizontally(200)`.
@@ -590,6 +590,7 @@ Over the app the share came from. Behaviour as it is now. The look:
 | "+" | Keep something / Keep something — a draft is waiting / a thought, a link, anything… / a note about it — who sent it, what it's for… / photo / pdf / Keep / Remove / couldn't keep that — try again? / bring in what's already on the phone |
 | Import | Bring in / back / A whole folder / every picture and PDF in it — screenshots, usually / Only these pictures / pick them yourself / PDFs, or a bookmarks export / from the file picker |
 | Shortcut | Keep / Keep something / Say it / Say something |
+| First run | Getting search ready / Search is ready / Breadcrumb finds what you kept by what it means… / download it on mobile data now / saving, and search by words, work already;\nsearch by meaning joins in when this is done / Start keeping / Done |
 | Capture | Saving… / Saved / Saved %d / Saved %d of %d / Removed / Undo / Done / Close / +%d / Document / add a note / who sent it, what it's for… / Nothing to save / Couldn't save that / Kept already / Keep again / add another note |
 
 All in strings.xml.
@@ -640,3 +641,34 @@ All in strings.xml.
 Through `LocalHapticFeedback.performHapticFeedback`, which follows the phone's Touch feedback
 setting: SegmentTick when ranked results land; Confirm on delete; LongPress on the wordmark;
 GestureThresholdActivate when a sheet's pull crosses its dismiss point.
+
+## §19 The model's first run
+
+**FirstRunScreen(status, firstTime, onMobileData, onContinue)**, in place of the home screen (as
+the debug list is) on the first launches while the model isn't on the phone, until "Start
+keeping"; opened again from the model's bar, with "Done". Back closes it as Start keeping does.
+Full size on Ink, a Column with statusBarsPadding and navigationBarsPadding, padding start 26,
+end 26, top 24, bottom 22:
+- A Row, spacing 10: CrumbTrail 22dp (walking while it downloads, checks, or is about to start),
+  "breadcrumb" in serif 24sp lineHeight 26.
+- A spacer, weight 1.
+- "Getting search ready" ("Search is ready" once it is) in serif 30sp lineHeight 34; 14dp; "Breadcrumb
+  finds what you kept by what it means, with a small model that runs on this phone. It downloads
+  once, 388 MB, and works offline from then on. Nothing you keep leaves the phone." in sans 16sp
+  BoneDim lineHeight 24; 28dp.
+- **The bar**: full width, 6dp tall, radius 3, InkElevated, AmberBright as far as it has got
+  (eased over 400 ms, read while drawing). Under it, 10dp down, SpaceBetween: what it is doing
+  ("downloading", "waiting for wi-fi", "waiting for the internet", "starting", "checking it",
+  "ready") in mono 12sp BoneDim, and "142 of 388 MB" (megabytes of a million bytes) in mono 12sp
+  Bone.
+- While it waits for Wi-Fi, 16dp down, the chip "download it on mobile data now" (mono 12sp
+  BoneDim, InkElevated, border InkFieldBorder, radius 20, padding 14/11); once tapped it goes.
+- A spacer, weight 1; "saving, and search by words, work already;\nsearch by meaning joins in
+  when this is done" in mono 11sp InkOutline lineHeight 18; 16dp; the button, full width, 52dp,
+  radius 26, AmberBright, "Start keeping" (or "Done") in sans 15sp SemiBold AmberOnContainer.
+
+**The model's bar**, over the search field above the import bar, until the model is ready: the
+import bar's pill (§14, `LineBar`), its trail walking while it downloads or checks: "getting
+search ready · 37%" (never 100 before it is ready), "getting search ready · checking it",
+"search by meaning waits for wi-fi", "… waits for the internet", "getting search ready…". A tap
+opens the first-run screen.

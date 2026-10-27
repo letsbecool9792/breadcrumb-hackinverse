@@ -173,6 +173,27 @@ nothing leaves the phone (L7)
   - Tests: the upload pass's, the server client's, redaction's and the payload's went with their
     code; the rest pass (300 JVM, 145 on the phone).
 
+- [x] **L8. The model's first run** (Suparno, 2026-10-27; roadmap 3)
+  - The model was asked for only when `EmbedPass` found something to embed without it: on a new
+    phone, after the first save, and silently. `BreadcrumbApp.onCreate` now asks for it at every
+    launch while it isn't on the phone (on Wi-Fi, `KEEP`, so a download already waiting stays).
+  - `ModelStore.progress` says what a download in this process is doing (a megabyte at a time,
+    then checking the hash); `ModelWatch` joins it with the network; `ModelStatus` (pure) says
+    it: ready, downloading, checking it, or waiting (for wi-fi, the internet, or to start).
+    `BreadcrumbApp.modelStatus` holds it while something watches.
+  - The first-run screen (design §19), in place of the home screen on the first launches while
+    the model isn't ready, until "Start keeping" (`FirstRun`, a SharedPreferences flag). While it
+    waits for Wi-Fi it offers mobile data, which replaces the waiting download with one on any
+    network. Then the model's bar over the search field until the model is ready; a tap opens the
+    screen again, with "Done". A phone with the model never sees either.
+  - The import bar's pill is `ui/common/LineBar`, shared with the model's bar.
+  - Tests: `ModelStatusTest` (JVM); `FirstRunTest` on the phone, the screen and the bar with the
+    status given. Nothing downloads in a test.
+  - *Check, on a phone that has never had Breadcrumb:* install it on Wi-Fi: the first-run screen
+    shows the bar moving and "N of 388 MB"; "Start keeping" goes home, where the bar says
+    "getting search ready · N%" until it's done, and then search finds by meaning. Again on
+    mobile data: "waiting for wi-fi", and "download it on mobile data now" starts it.
+
 ## Rules
 
 - **Never commit the model**, and never put it in the APK.

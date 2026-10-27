@@ -45,9 +45,10 @@ brief says:
 2. **Voice notes**: recording, playback, audio storage, and making them searchable. Built
    ([`docs/workstreams/voice-notes.md`](docs/workstreams/voice-notes.md)), heard by the phone's
    own speech recognizer offline; waiting on its check by hand (below).
-3. **A first-run screen for the model.** The 388 MB embedding model downloads silently on the
-   first Wi-Fi today, and search by meaning waits for it with nothing said. Show it downloading.
-   Test it on a phone that has never had Breadcrumb (in the manual list below).
+3. **A first-run screen for the model.** The 388 MB embedding model downloaded silently, and
+   search by meaning waited for it with nothing said. Built as local-first L8: it downloads from
+   the first launch, and the first-run screen and a bar show it coming. Test it on a phone that
+   has never had Breadcrumb (in the manual list below).
 4. **Export and import**: every memory, its originals and vectors, out to one file the person
    keeps, and back in on a new phone.
 5. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
@@ -156,8 +157,9 @@ it whenever a change needs a manual check, and tick items off when done.
 - [ ] **Saved already** (capture C10): the brief's *check* line.
 - [ ] **Voice notes** (roadmap 2): V3's *check* line in
       [`voice-notes.md`](docs/workstreams/voice-notes.md).
-- [ ] **When roadmap 3 is built: the first-run download on a phone that has never had
-      Breadcrumb**, from install to search by meaning.
+- [ ] **The first-run download on a phone that has never had Breadcrumb** (roadmap 3, L8's
+      *check* line in [`local-first.md`](docs/workstreams/local-first.md)), from install to
+      search by meaning.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
       in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
       breaking command-line builds with the jlink error (see "Android").
