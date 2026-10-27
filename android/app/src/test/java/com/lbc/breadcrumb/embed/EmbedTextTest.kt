@@ -74,4 +74,14 @@ class EmbedTextTest {
         val memory = Memory(type = MemoryType.PDF, extractedText = "x".repeat(10_000))
         assertEquals(EmbedText.MAX_CHARS, EmbedText.text(memory).length)
     }
+
+    @Test
+    fun `a voice note waits to be heard, then is embedded by what was said`() {
+        assertNull(EmbedText.want(Memory(type = MemoryType.AUDIO), hasPicture = false))
+        val heard = EmbedText.want(Memory(type = MemoryType.AUDIO, extractedText = "the ramen place is closed on mondays"), hasPicture = false)
+        assertTrue(heard is EmbedText.AsText && "ramen" in heard.prompt)
+        // Heard with no words and no note: nothing to embed.
+        assertNull(EmbedText.want(Memory(type = MemoryType.AUDIO, extractedText = ""), hasPicture = false))
+        assertTrue(EmbedText.want(Memory(type = MemoryType.AUDIO, extractedText = "", note = "from priya"), hasPicture = false) is EmbedText.AsText)
+    }
 }

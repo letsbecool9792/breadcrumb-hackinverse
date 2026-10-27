@@ -1,6 +1,8 @@
 package com.lbc.breadcrumb
 
+import android.app.Activity
 import android.app.Application
+import android.os.Bundle
 import com.lbc.breadcrumb.data.BreadcrumbDatabase
 import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.embed.EmbedWorker
@@ -10,6 +12,8 @@ import com.lbc.breadcrumb.imports.BulkImporter
 import com.lbc.breadcrumb.ocr.LinkWorker
 import com.lbc.breadcrumb.ocr.OcrQueue
 import com.lbc.breadcrumb.ocr.workScheduler
+import com.lbc.breadcrumb.voice.ListenQueue
+import com.lbc.breadcrumb.voice.OnDeviceTranscriber
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -51,6 +55,13 @@ class BreadcrumbApp : Application() {
      */
     val readingOriginals = MutableStateFlow(true)
 
+    /**
+     * How many times one of the app's activities has come to the front. The
+     * listen queue tries a voice note that had to wait again then: the phone
+     * may lend its speech recognizer only to the app on screen.
+     */
+    val inFront = MutableStateFlow(0)
+
     override fun onCreate() {
         super.onCreate()
         // Before the OCR queue starts: a read landing first would call the
@@ -66,9 +77,37 @@ class BreadcrumbApp : Application() {
         // pages and embedding, for whatever a killed process left. Building the
         // queue builds the database.
         OcrQueue.launchIn(applicationScope, readingOriginals) { OcrQueue(this) }
+        // Voice notes are heard on the phone, as they come and whenever the app comes to the front.
+        registerActivityLifecycleCallbacks(FrontCounter(inFront))
+        applicationScope.launch {
+            val reading = database.readingDao()
+            ListenQueue(
+                unheard = reading.observeUnheard(),
+                wakes = inFront,
+                newest = reading::getNewestUnheard,
+                fileOf = originals::fileFor,
+                write = { id, words -> reading.updateExtractedText(id, words) },
+                transcriber = OnDeviceTranscriber(this@BreadcrumbApp),
+                scheduleWork = { workScheduler(this@BreadcrumbApp) },
+            ).run()
+        }
         applicationScope.launch {
             LinkWorker.schedule(this@BreadcrumbApp)
             EmbedWorker.schedule(this@BreadcrumbApp)
         }
     }
+}
+
+/** Counts activities coming to the front ([BreadcrumbApp.inFront]). */
+private class FrontCounter(private val count: MutableStateFlow<Int>) : Application.ActivityLifecycleCallbacks {
+    override fun onActivityStarted(activity: Activity) {
+        count.value++
+    }
+
+    override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) = Unit
+    override fun onActivityResumed(activity: Activity) = Unit
+    override fun onActivityPaused(activity: Activity) = Unit
+    override fun onActivityStopped(activity: Activity) = Unit
+    override fun onActivitySaveInstanceState(activity: Activity, outState: Bundle) = Unit
+    override fun onActivityDestroyed(activity: Activity) = Unit
 }

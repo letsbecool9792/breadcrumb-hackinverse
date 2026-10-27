@@ -260,6 +260,10 @@ class LinkReadingTest {
         override suspend fun countUnreadImages(): Int =
             memories.values.count { it.type == MemoryType.IMAGE && it.extractedText == null }
 
+        override fun observeUnheard(): Flow<List<String>> = flowOf(emptyList())
+
+        override suspend fun getNewestUnheard(limit: Int): List<Memory> = emptyList()
+
         override fun observeUnreadMedia(): Flow<List<Memory>> =
             flowOf(memories.values.filter { (it.type == MemoryType.IMAGE || it.type == MemoryType.PDF) && it.extractedText == null })
 

@@ -49,12 +49,12 @@ object EmbedText {
 
     /**
      * What to embed for [memory], or null when there is nothing to embed yet: a
-     * picture or PDF still being read, or a memory with no words and no picture.
+     * picture or PDF still being read, a voice note not heard yet, or a memory
+     * with no words and no picture.
      */
     fun want(memory: Memory, hasPicture: Boolean): Want? {
-        if (memory.type == MemoryType.AUDIO) return null
         val beingRead = memory.extractedText == null &&
-            (memory.type == MemoryType.IMAGE || memory.type == MemoryType.PDF)
+            (memory.type == MemoryType.IMAGE || memory.type == MemoryType.PDF || memory.type == MemoryType.AUDIO)
         if (beingRead) return null
 
         val text = text(memory)
