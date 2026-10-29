@@ -16,7 +16,10 @@ It lives in `web/` and is a static site with no server of its own.
   pictures travelling (§10); the four ways to save as small loops (share sheet, selection
   menu, Quick Settings tile, the "+" taking a voice note); airplane mode on a switch, with the
   search still finding; a trail of crumbs dropping down the page as it is read, and behind the
-  pointer on a computer. The example memories are made up.
+  pointer on a computer. Things arrive as the page scrolls to them (titles rising word by
+  word, screens standing up, the save scenes dealt in), and the hero lifts away as it is left.
+  On a computer the search section fits one screenful, its "try" chips beside the screen. The
+  example memories are made up.
 - **Motion only while it is seen**, as in the app (§0), through Motion (`motion`, pinned to a
   release at least two weeks old) and CSS: loops pause off screen, and with reduced motion on
   nothing moves and each scene rests on its last beat, where the thing is saved.
@@ -71,18 +74,19 @@ Whichever it is:
   - `web/src`: `App.tsx` (the page), `Hero.tsx` (the field and headline), `MosaicSearch.tsx`,
     `SaveScenes.tsx`, `Offline.tsx`, `Trail.tsx`; the pieces they share: `data.ts` (the made-up
     memories), `memories.tsx` (tiles and rows), `art.tsx` (the pictures), `glyphs.tsx`,
-    `SearchField.tsx`.
+    `SearchField.tsx`, `Reveal.tsx` (arriving on scroll), `ease.ts`.
   - The download (`DownloadButton.tsx`): the page's one amber button, "Download for Android",
     linked to `releases/latest/download/breadcrumb.apk`, which answers only once W2 has
     published a full release with that file. On a computer, the footer adds the same link as a
     QR code, drawn locally (`uqr`) in crumbs around the trail.
   - Checks: `npm run build` (type-checks first) and `npm run lint`; at 390 and 1440 px wide in
     Chromium, no sideways scroll and no console errors.
-  - *Check:* on a phone and a computer: the field drifts and the headline's words change; the
-    home screen searches by itself while on screen, its pictures flying into the results and
+  - *Check:* on a phone and a computer: the field drifts and the headline's words roll over in
+    their light, which is never empty; the home screen searches by itself while on screen, its pictures flying into the results and
     back, and "try" picks a search; the four save scenes loop (on a phone, swiped sideways);
     airplane mode turns on by itself once and the ramen photo is still found; crumbs drop down
-    the page's edge while scrolling. With reduced motion on (Android: Remove animations),
+    the page's edge while scrolling, and each section arrives as it is reached; on a computer the
+    search section and its chips fit one screen. With reduced motion on (Android: Remove animations),
     nothing moves and every part still reads.
 - [ ] **W2. The download**
   - The release flow (above): the signing key, a signed `assembleRelease`, the first real release
