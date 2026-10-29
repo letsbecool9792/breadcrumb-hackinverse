@@ -121,12 +121,12 @@ function Footer() {
           <CrumbMark size={44} play={seen} />
           <p className="font-serif text-[clamp(3.2rem,12vw,8rem)] leading-none">
             <span className="sr-only">breadcrumb</span>
-            <span className="-mb-[0.2em] inline-flex overflow-hidden pb-[0.2em]" aria-hidden="true">
+            <span className="-my-[0.15em] inline-flex overflow-hidden py-[0.15em]" aria-hidden="true">
               {WORDMARK.map((ch, i) => (
                 <motion.span
                   key={i}
                   className="inline-block"
-                  initial={{ y: '105%' }}
+                  initial={{ y: '160%' }}
                   animate={seen ? { y: 0 } : undefined}
                   transition={{ duration: 0.8, ease: EASE, delay: 0.25 + i * 0.045 }}
                 >

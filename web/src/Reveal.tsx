@@ -15,10 +15,10 @@ export function RevealHeading({ title, note }: { title: string; note: string }) 
         <span className="sr-only">{title}</span>
         {words.map((word, i) => (
           <Fragment key={i}>
-            <span className="-mb-[0.16em] inline-block overflow-hidden pb-[0.16em] align-top" aria-hidden="true">
+            <span className="-my-[0.14em] inline-block overflow-hidden py-[0.14em] align-top" aria-hidden="true">
               <motion.span
                 className="inline-block"
-                variants={{ hidden: { y: '110%' }, shown: { y: 0, transition: { duration: 0.85, ease: EASE, delay: i * 0.07 } } }}
+                variants={{ hidden: { y: '140%' }, shown: { y: 0, transition: { duration: 0.85, ease: EASE, delay: i * 0.07 } } }}
               >
                 {word}
               </motion.span>
