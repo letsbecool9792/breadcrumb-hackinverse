@@ -16,3 +16,7 @@
 .cxx
 local.properties
 .kotlin
+# the release key and its passwords: never committed (website W2)
+keystore.properties
+*.jks
+*.keystore

@@ -32,7 +32,8 @@ It lives in `web/` and is a static site with no server of its own.
 
 ## Getting a release to the page
 
-Decided at W2. What there is to choose from:
+Decided (2026-10-29): GitHub Releases, uploaded by hand (1), until releases are frequent
+enough for Actions (2). What there was to choose from:
 
 1. **GitHub Releases, uploaded by hand.** Build a signed release APK, make a release and attach
    it, always under one name (`breadcrumb.apk`). The page links to
@@ -54,19 +55,39 @@ Whichever it is:
 
 - **One release signing key, kept for good.** Android installs an update only when it is signed
   like the app already there; otherwise the person must uninstall, and that deletes everything
-  they kept. Back the key up in two places; never commit it. `v1.0-demo` was signed with a debug
-  key.
+  they kept. Back the key up in two places; never commit it. It is
+  `D:\keys\breadcrumb-release.jks` on Suparno's machine, alias `breadcrumb`, made 2026-10-29;
+  `v1.0-demo` was signed with a debug key.
 - **Suparno's phone runs debug builds**, which a release-signed APK can't install over. Test
   releases on a second phone, or give debug builds `applicationIdSuffix = ".debug"` (which moves
   the dev install's data again).
 - **`/releases/latest/` skips prereleases**: `v1.0-demo` is one, so the link answers 404 until
   a real release exists.
-- **Size**: `v1.0-demo` is 152 MB, debug and unminified. A release build, arm64 only and shrunk
-  by R8, should be far smaller; measure it.
+- **Size**: `v1.0-demo` is 152 MB, debug and unminified. The release build is arm64 only (LiteRT-LM
+  ships no 32-bit ARM, so those phones couldn't search anyway): 68 MB, about half of it code.
+  R8 could shrink that, but needs keep rules for Room, LiteRT-LM and ML Kit and a full check on
+  the phone, so it is off for now.
 - **Google's developer verification**: apps installed from outside Play are to come from a
   verified developer, enforced from September 2026 in Brazil, Indonesia, Singapore and Thailand
   and everywhere in 2027 (an unverified app then needs an "advanced" install flow or adb). There
   is a lighter tier for students and hobbyists. Verify before 2027.
+
+## Releasing
+
+Each release, from `android/`:
+
+1. Raise `versionCode` by one and set `versionName` in `app/build.gradle.kts`; a phone refuses
+   an update whose `versionCode` isn't higher. The first release is 1, "1.0".
+2. `./gradlew assembleRelease`, and copy `app/build/outputs/apk/release/app-release.apk` to
+   `breadcrumb.apk`. An `app-release-unsigned.apk` instead means `keystore.properties` is missing
+   (copy `keystore.properties.example`, fill in the passwords).
+3. Install it on a phone without a debug build (`adb install -r breadcrumb.apk`): open it, keep
+   something, find it.
+4. `gh release create v1.0 breadcrumb.apk --title "Breadcrumb 1.0" --notes "…"`, with that
+   release's version. Never `--prerelease`, and the file named exactly `breadcrumb.apk`, or the
+   page's link misses it.
+5. `curl -sI https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk`
+   answers 302.
 
 ## Steps
 
@@ -89,8 +110,9 @@ Whichever it is:
     search section and its chips fit one screen. With reduced motion on (Android: Remove animations),
     nothing moves and every part still reads.
 - [ ] **W2. The download**
-  - The release flow (above): the signing key, a signed `assembleRelease`, the first real release
-    with `breadcrumb.apk`.
+  - Done (2026-10-29): the release key, made by Suparno and kept off the repo; release builds
+    signed from `android/keystore.properties` (ignored by git), and arm64 only.
+  - Left: the first release, by "Releasing" above.
   - The button's link answers once that release is out; then perhaps the version and size by
     it, a line on allowing the install, and the Obtainium link.
   - *Check:* on a phone that has never had Breadcrumb, from the page: download, install, open,

@@ -56,8 +56,8 @@ brief says:
    count, restored from there or from "Bring in"; a restore only adds. Waiting on its check.
 5. **A website, for getting the app.** Breadcrumb isn't going to the Play Store yet, so a
    landing page in the app's look says what it is and downloads the latest release from it. The
-   page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), with
-   no download yet: the release flow (a signing key, GitHub Releases) comes first, then hosting.
+   page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), and
+   release builds are signed; the first release on GitHub comes next, then hosting.
 6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
    and 1 GB each on the CPU today).
 7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
@@ -175,8 +175,9 @@ it whenever a change needs a manual check, and tick items off when done.
       search by meaning.
 - [ ] **The website** (roadmap 5): W1's *check* line in
       [`website.md`](docs/workstreams/website.md), on a phone and a computer.
-- [ ] **The release flow** (roadmap 5, W2): make the release signing key and keep it safe,
-      publish the first real release on GitHub, then the website's download goes in.
+- [ ] **The first release** (roadmap 5, W2): the key is made (2026-10-29); keep it backed up
+      in two places. Fill in `android/keystore.properties`, then follow "Releasing" in
+      [`website.md`](docs/workstreams/website.md); the website's button works from then on.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
       in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
       breaking command-line builds with the jlink error (see "Android").
@@ -348,6 +349,11 @@ indexes per cluster**; one vector index plus one text index fits.
 - **The applicationId is `com.lbc.breadcrumb`, the same as the code's namespace, and permanent
   once published.** adb commands, the test runner (`com.lbc.breadcrumb.test`) and the launcher
   shortcut's `targetPackage` use it. It was `com.lbc.breadcrumb.hackinverse` until the hackathon.
+- **Release builds are signed by one key, kept for good**: `android/keystore.properties`
+  (ignored by git; copy `keystore.properties.example`) says where it is and its passwords. Never
+  commit either. Lose the key and no installed copy can ever be updated, only uninstalled, which
+  deletes what it kept. A release and a debug build can't install over each other. Releasing:
+  [`website.md`](docs/workstreams/website.md).
 - **Moving a phone's data to a new applicationId**, by hand (done once, from
   `com.lbc.breadcrumb.hackinverse`). From Git Bash, never PowerShell: its `>` and `<` re-encode
   binary data and the archive comes out corrupt. Git Bash also rewrites `/sdcard/...` arguments
