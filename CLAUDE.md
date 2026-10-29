@@ -38,8 +38,8 @@ brief says:
   simply no longer used.
 - **Released: v1.0** (2026-10-29), the first signed release, on
   [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.0)
-  as `breadcrumb.apk` (68 MB, arm64). Suparno's own phone runs it (see "Android"). The website
-  in `web/` downloads it, but isn't hosted yet.
+  as `breadcrumb.apk` (68 MB, arm64). Suparno's own phone runs it (see "Android"). The website,
+  live at https://breadcrumb.suparno.me (`web/`, on Vercel), downloads it.
 
 **Roadmap**, in this order (set 2026-10-25):
 
@@ -62,7 +62,8 @@ brief says:
 5. **A website, for getting the app.** Breadcrumb isn't going to the Play Store yet, so a
    landing page in the app's look says what it is and downloads the latest release from it. The
    page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), and
-   its button downloads v1.0 from GitHub Releases. Next: hosting it at `breadcrumb.suparno.me`.
+   its button downloads v1.0 from GitHub Releases. Live since 2026-10-29 at
+   https://breadcrumb.suparno.me, on Vercel.
 6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
    and 1 GB each on the CPU today).
 7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
@@ -179,12 +180,12 @@ it whenever a change needs a manual check, and tick items off when done.
 - [x] **The first-run download** (roadmap 3, 2026-10-29): on that fresh install of v1.0 the
       model downloaded and search found by meaning, on Wi-Fi; the mobile-data path wasn't tried
       ([`local-first.md`](docs/workstreams/local-first.md) L8).
-- [ ] **The website** (roadmap 5): W1's *check* line in
-      [`website.md`](docs/workstreams/website.md), on a phone and a computer.
+- [ ] **The website** (roadmap 5): W1's and W3's *check* lines in
+      [`website.md`](docs/workstreams/website.md), on a phone and a computer, on the live site.
 - [x] **The first release** (roadmap 5, W2, 2026-10-29): the key made and kept off the repo,
       v1.0 published; the website's download link answers. Keep the key backed up in two places.
-- [ ] **Hosting the website** (roadmap 5, W3): pick the host (GitHub Pages or Vercel), then
-      point `breadcrumb.suparno.me` at it with a CNAME record at the domain's DNS provider.
+- [x] **Hosting the website** (roadmap 5, W3, 2026-10-29): on Vercel, at
+      `breadcrumb.suparno.me` by a CNAME record at Namecheap, which holds the domain's DNS.
 - [ ] **Decide how debug builds reach the phone**, now that it runs the release (see
       "Android"): a `.debug` applicationId suffix, or backing up and reinstalling each time.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
@@ -239,7 +240,7 @@ The product should feel like a personal search engine, not a digital notebook.
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
 | On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled); the phone's own speech recognizer, offline only, for voice notes |
 | Query parsing | **On the phone, by rules** (`embed/PhraseRules`) |
-| Website | **Vite + React + TypeScript + Tailwind 4**, with Motion for the animation: a static page in `web/`; its fonts ship with it |
+| Website | **Vite + React + TypeScript + Tailwind 4**, with Motion for the animation: a static page in `web/`; its fonts ship with it. Hosted on **Vercel** (Hobby, free) at https://breadcrumb.suparno.me |
 | Server (**retired**, L7) | Node + Express + TypeScript, MongoDB Atlas (M0) with Atlas Vector Search, Gemini 3.1 and 3.5 Flash Lite, `gemini-embedding-001`. Kept in `server/`; the app makes no call to it |
 
 For the retired server: pin explicit Gemini model versions in code. The `gemini-flash-latest`
@@ -509,8 +510,12 @@ npm run build       # type-checks, then builds the static site into web/dist
 npm run lint
 ```
 
-**Released, not yet hosted.** The app is on GitHub Releases ("Releasing" in
-[`website.md`](docs/workstreams/website.md)); the website goes to `breadcrumb.suparno.me` (W3).
+**Released and live.** The app is on GitHub Releases ("Releasing" in
+[`website.md`](docs/workstreams/website.md)). The website is on Vercel at
+https://breadcrumb.suparno.me: each push to `main` goes live, and Vercel
+gives any other pushed branch a preview link of its own, which is how to see a change to the
+site from a phone or a cloud session before it reaches `main`. Vercel's settings (the project,
+the domain) live in its dashboard, not in the repo.
 The app has no server since L7.
 
 ## Repo layout

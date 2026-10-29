@@ -25,6 +25,8 @@ It lives in `web/` and is a static site with no server of its own.
   nothing moves and each scene rests on its last beat, where the thing is saved.
 - **Nothing from a third party.** The fonts ship with the site (Fontsource, not Google Fonts):
   a page about keeping things private doesn't hand its visitors to a font host. No analytics.
+- **Credited**: the footer says "built by Suparno Saha", linking https://suparno.me, his own
+  site; the page's head names him as its author.
 - **Vite + React + TypeScript + Tailwind 4**, scaffolded with
   `npm create vite@latest web -- --template react-ts`, at Suparno's request the one exception to
   "scaffolding is done by hand"; Tailwind through `@tailwindcss/vite`. `base: './'`, so the build
@@ -117,11 +119,13 @@ Each release, from `android/`:
   - v1.0 on GitHub Releases as `breadcrumb.apk` (68 MB); the page's link answers 302 to it.
   - Later, perhaps: the version and size by the button, a line on allowing the install, and the
     Obtainium link.
-- [ ] **W3. Hosting**, at `breadcrumb.suparno.me` (Suparno's domain; his portfolio is at the
-  root): a CNAME record for `breadcrumb` at the domain's DNS provider, pointing at the host. The
-  host is GitHub Pages (built by Actions from `web/`, no new account, one version only) or Vercel
-  (free Hobby plan, an account through GitHub, a preview link for every pushed branch); to
-  decide. Then the README links to the site.
+- [x] **W3. Hosting** (Suparno, 2026-10-29): live at https://breadcrumb.suparno.me.
+  - On Vercel's free Hobby plan, chosen over GitHub Pages for its preview links: every pushed
+    branch gets one, so a change can be seen on a phone before it reaches `main`. Vercel builds
+    the site from `web/` on each push; its settings live in Vercel's dashboard, not the repo.
+  - `breadcrumb.suparno.me` is Suparno's domain (his portfolio is at the root), pointed at
+    Vercel by a CNAME record at Namecheap, which holds the domain's DNS.
+  - The README links to the site.
   - *Check:* on a phone that has never had Breadcrumb, from the hosted page: download, install,
     open, keep something.
 
