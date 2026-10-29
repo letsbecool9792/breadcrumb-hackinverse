@@ -118,39 +118,3 @@ export function VoiceGlyph({ size, colour = 'var(--color-amber)' }: { size: numb
     </svg>
   )
 }
-
-// Pictures stand in for the screenshots and photos a real phone holds.
-
-export function ScreenshotThumb() {
-  return (
-    <svg viewBox="0 0 46 46" className="h-full w-full" aria-hidden="true">
-      <rect width="46" height="46" fill="#f3efe9" />
-      <rect width="46" height="9" fill="#1d2b3a" />
-      <rect x="5" y="3.5" width="14" height="2" rx="1" fill="#9fb3c8" />
-      <circle cx="9" cy="16" r="3.5" fill="#c9d4df" />
-      <rect x="15" y="13.5" width="22" height="2.2" rx="1.1" fill="#3b4652" />
-      <rect x="15" y="17.5" width="14" height="1.8" rx="0.9" fill="#a3abb3" />
-      <rect x="5" y="25" width="36" height="2" rx="1" fill="#59636d" />
-      <rect x="5" y="30" width="31" height="2" rx="1" fill="#59636d" />
-      <rect x="5" y="35" width="34" height="2" rx="1" fill="#59636d" />
-      <rect x="5" y="40" width="18" height="2" rx="1" fill="#59636d" />
-    </svg>
-  )
-}
-
-export function RamenThumb() {
-  return (
-    <svg viewBox="0 0 46 46" className="h-full w-full" aria-hidden="true">
-      <rect width="46" height="46" fill="#3a2a1f" />
-      <circle cx="23" cy="24" r="19" fill="#e9dccb" />
-      <circle cx="23" cy="24" r="15.5" fill="#b8661c" />
-      <path d="M12 22c4-3 7 3 11 0s7 3 11 0M12 27c4-3 7 3 11 0s7 3 11 0" stroke="#f1d58f" strokeWidth="1.6" fill="none" strokeLinecap="round" />
-      <ellipse cx="29" cy="17.5" rx="5" ry="4.2" fill="#fbf5ea" />
-      <circle cx="29.5" cy="17.8" r="2.2" fill="#f2a334" />
-      <circle cx="15" cy="17" r="1.3" fill="#7c9a3f" />
-      <circle cx="18" cy="31" r="1.3" fill="#7c9a3f" />
-      <circle cx="30" cy="30" r="1.3" fill="#7c9a3f" />
-      <rect x="27" y="23" width="8" height="5" rx="1" fill="#6d3d1d" transform="rotate(-12 31 25)" />
-    </svg>
-  )
-}
