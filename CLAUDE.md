@@ -54,9 +54,13 @@ brief says:
    keeps, and back in on a new phone. Built
    ([`docs/workstreams/backup.md`](docs/workstreams/backup.md)): a zip from the masthead's
    count, restored from there or from "Bring in"; a restore only adds. Waiting on its check.
-5. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
+5. **A website, for getting the app.** Breadcrumb isn't going to the Play Store yet, so a
+   landing page in the app's look says what it is and downloads the latest release from it. The
+   page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), with
+   no download yet: the release flow (a signing key, GitHub Releases) comes first, then hosting.
+6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
    and 1 GB each on the CPU today).
-6. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
+7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
    `READ_MEDIA_IMAGES` and real battery care.
 
 **Later, maybe:** seed 500+ real items and judge search against a fixed list of about 20 real
@@ -76,6 +80,7 @@ Each brief holds its own checklist; tick a step with the commits that finish it.
 | Reading on the phone | Dhruba (DhrubaIsha2006) | [reading.md](docs/workstreams/reading.md) | OCR, PDF text, links' pages, local word search, the bulk importer and its way in; the screens' type, glyphs and thumbnails; opening and sharing originals | No |
 | Server | Ayushi (aeryxii) | [server.md](docs/workstreams/server.md) | Gemini ingest, embeddings, Atlas indexes, hybrid search, query parsing; on the phone, the search client, two-stage search and the text rules | Is the server |
 | Sync, search screens, integration | Suparno (letsbecool9792) | [sync-and-search.md](docs/workstreams/sync-and-search.md) | Upload queue, server client, home, search, the detail and its sheet, stitching the screens together; reviews every PR | Yes |
+| Website | Suparno (letsbecool9792) | [website.md](docs/workstreams/website.md) | The landing page in `web/`, its download, and how a release reaches it | No |
 
 The team built V1 for Hackinverse; since 2026-10-24 Suparno alone works on the repo, and the
 app is mobile only, so the server column is history.
@@ -132,7 +137,8 @@ search against what the phone holds.
 - **No process without a reason.** Every tool, config file or check needs a concrete reason tied
   to this project; anything that cannot be justified does not go in.
 - **Scaffolding is done by hand.** Agents do not run project generators (`npm create`,
-  `android create`); a person does, and commits the result.
+  `android create`); a person does, and commits the result. The one exception is `web/`, which
+  an agent scaffolded with `npm create vite` at Suparno's request.
 - On Windows, **write commit messages to a file and commit with `git commit -F <file>`**:
   PowerShell 5.1 strips double quotes from arguments to native programs, so `git commit -m` with a
   `"` in it splits into pathspecs.
@@ -167,6 +173,10 @@ it whenever a change needs a manual check, and tick items off when done.
 - [ ] **The first-run download on a phone that has never had Breadcrumb** (roadmap 3, L8's
       *check* line in [`local-first.md`](docs/workstreams/local-first.md)), from install to
       search by meaning.
+- [ ] **The website** (roadmap 5): W1's *check* line in
+      [`website.md`](docs/workstreams/website.md), on a phone and a computer.
+- [ ] **The release flow** (roadmap 5, W2): make the release signing key and keep it safe,
+      publish the first real release on GitHub, then the website's download goes in.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
       in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
       breaking command-line builds with the jlink error (see "Android").
@@ -219,6 +229,7 @@ The product should feel like a personal search engine, not a digital notebook.
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
 | On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled); the phone's own speech recognizer, offline only, for voice notes |
 | Query parsing | **On the phone, by rules** (`embed/PhraseRules`) |
+| Website | **Vite + React + TypeScript + Tailwind 4**, a static page in `web/`; its fonts ship with it |
 | Server (**retired**, L7) | Node + Express + TypeScript, MongoDB Atlas (M0) with Atlas Vector Search, Gemini 3.1 and 3.5 Flash Lite, `gemini-embedding-001`. Kept in `server/`; the app makes no call to it |
 
 For the retired server: pin explicit Gemini model versions in code. The `gemini-flash-latest`
@@ -465,7 +476,18 @@ npm test
 npm run typecheck
 ```
 
-**Nothing is deployed**, and nothing needs to be: the app has no server since L7.
+The website:
+
+```
+cd web
+npm install
+npm run dev         # http://localhost:5173, reloads on save
+npm run build       # type-checks, then builds the static site into web/dist
+npm run lint
+```
+
+**Nothing is deployed yet.** The app has no server since L7; the website will be hosted once
+there is a release to download (W3 in [`website.md`](docs/workstreams/website.md)).
 
 ## Repo layout
 
@@ -473,7 +495,8 @@ npm run typecheck
 breadcrumb-hackinverse/
   android/      Gradle project: run ./gradlew from here
   server/       Express + TypeScript, its own package.json: retired (L7), kept
-  docs/         api.md, workstreams/
+  web/          the website: Vite + React + Tailwind, its own package.json
+  docs/         api.md, design.md, workstreams/
   tools/        generate_icons.py
   CLAUDE.md
   README.md
