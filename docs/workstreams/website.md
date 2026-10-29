@@ -72,7 +72,10 @@ Whichever it is:
     `SaveScenes.tsx`, `Offline.tsx`, `Trail.tsx`; the pieces they share: `data.ts` (the made-up
     memories), `memories.tsx` (tiles and rows), `art.tsx` (the pictures), `glyphs.tsx`,
     `SearchField.tsx`.
-  - In the download's place, "android · download soon" (`DownloadPill.tsx`).
+  - The download (`DownloadButton.tsx`): the page's one amber button, "Download for Android",
+    linked to `releases/latest/download/breadcrumb.apk`, which answers only once W2 has
+    published a full release with that file. On a computer, the footer adds the same link as a
+    QR code, drawn locally (`uqr`) in crumbs around the trail.
   - Checks: `npm run build` (type-checks first) and `npm run lint`; at 390 and 1440 px wide in
     Chromium, no sideways scroll and no console errors.
   - *Check:* on a phone and a computer: the field drifts and the headline's words change; the
@@ -84,8 +87,8 @@ Whichever it is:
 - [ ] **W2. The download**
   - The release flow (above): the signing key, a signed `assembleRelease`, the first real release
     with `breadcrumb.apk`.
-  - `DownloadSlot` becomes the link, with the version, size and date; a line on allowing the
-    install; the Obtainium link.
+  - The button's link answers once that release is out; then perhaps the version and size by
+    it, a line on allowing the install, and the Obtainium link.
   - *Check:* on a phone that has never had Breadcrumb, from the page: download, install, open,
     keep something.
 - [ ] **W3. Hosting**: GitHub Pages (built by Actions from `web/`, no new account, one version

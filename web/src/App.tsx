@@ -1,6 +1,6 @@
 import { MotionConfig } from 'motion/react'
 import type { ReactNode } from 'react'
-import { DownloadPill } from './DownloadPill.tsx'
+import { DownloadButton, DownloadCode } from './DownloadButton.tsx'
 import { CrumbTrail } from './glyphs.tsx'
 import { Hero } from './Hero.tsx'
 import { MosaicSearch } from './MosaicSearch.tsx'
@@ -102,7 +102,12 @@ function Footer() {
           <CrumbTrail size={34} />
           <p className="font-serif text-[clamp(3.2rem,12vw,8rem)] leading-none">breadcrumb</p>
         </div>
-        <DownloadPill />
+        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+          <DownloadButton />
+          <div className="hidden lg:block">
+            <DownloadCode />
+          </div>
+        </div>
         <div className="flex flex-wrap justify-center gap-x-6 gap-y-2 font-mono text-xs text-ink-outline">
           <ExternalLink href={DEVFOLIO} className="hover:text-bone">
             1st place · hackinverse 1.0

@@ -216,6 +216,45 @@ h3 {
   }
 }
 
+/* The download: a slow shine across it, and its light breathing behind. */
+.download-shine {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  z-index: -1;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.5), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .download-shine {
+    animation: shine 4.5s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.2s;
+  }
+  .download-glow {
+    animation: glow 3.2s ease-in-out infinite alternate;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  30%,
+  100% {
+    transform: translateX(320%) skewX(-18deg);
+  }
+}
+
+@keyframes glow {
+  from {
+    opacity: 0.55;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 /* The strip of what it will never be. */
 @media (prefers-reduced-motion: no-preference) {
   .not-this {

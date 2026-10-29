@@ -1,6 +1,6 @@
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
 import { useEffect, useRef, useState } from 'react'
-import { DownloadPill } from './DownloadPill.tsx'
+import { DownloadButton } from './DownloadButton.tsx'
 import { MEMORIES as M, type Memory } from './data.ts'
 import { Tile } from './memories.tsx'
 
@@ -58,7 +58,7 @@ export function Hero() {
             by describing it.
           </h1>
           <p className="font-mono text-xs tracking-[1.4px] text-bone-dim uppercase">a search engine for your own memory</p>
-          <DownloadPill />
+          <DownloadButton />
         </div>
       </div>
     </section>
