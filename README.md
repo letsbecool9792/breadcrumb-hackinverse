@@ -7,6 +7,10 @@ Save anything in one tap. Find it later by describing it the way you actually re
 🏆 **1st place at [Hackinverse 1.0](https://hackinverse-s1.devfolio.co/overview).** Project page on
 [Devfolio](https://devfolio.co/projects/breadcrumb-54b8).
 
+**Get it:** [download the latest APK](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk)
+for Android 10 and up (64-bit phones), or see [all releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases).
+It isn't on the Play Store yet, so Android asks you to allow installing from your browser.
+
 ---
 
 ## The problem

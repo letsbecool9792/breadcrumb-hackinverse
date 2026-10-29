@@ -58,9 +58,9 @@ Whichever it is:
   they kept. Back the key up in two places; never commit it. It is
   `D:\keys\breadcrumb-release.jks` on Suparno's machine, alias `breadcrumb`, made 2026-10-29;
   `v1.0-demo` was signed with a debug key.
-- **Suparno's phone runs debug builds**, which a release-signed APK can't install over. Test
-  releases on a second phone, or give debug builds `applicationIdSuffix = ".debug"` (which moves
-  the dev install's data again).
+- **Suparno's phone runs the release** (v1.0, since 2026-10-29), so a debug build can't
+  install over it (CLAUDE.md, "Android"). A new release installs over it as an update. Debug
+  builds could get `applicationIdSuffix = ".debug"` to sit beside it; undecided.
 - **`/releases/latest/` skips prereleases**: `v1.0-demo` is one, so the link answers 404 until
   a real release exists.
 - **Size**: `v1.0-demo` is 152 MB, debug and unminified. The release build is arm64 only (LiteRT-LM
@@ -77,7 +77,7 @@ Whichever it is:
 Each release, from `android/`:
 
 1. Raise `versionCode` by one and set `versionName` in `app/build.gradle.kts`; a phone refuses
-   an update whose `versionCode` isn't higher. The first release is 1, "1.0".
+   an update whose `versionCode` isn't higher. v1.0 was 1, "1.0"; the next is 2.
 2. `./gradlew assembleRelease`, and copy `app/build/outputs/apk/release/app-release.apk` to
    `breadcrumb.apk`. An `app-release-unsigned.apk` instead means `keystore.properties` is missing
    (copy `keystore.properties.example`, fill in the passwords).
@@ -95,31 +95,35 @@ Each release, from `android/`:
   - `web/src`: `App.tsx` (the page), `Hero.tsx` (the field and headline), `MosaicSearch.tsx`,
     `SaveScenes.tsx`, `Offline.tsx`, `Trail.tsx`; the pieces they share: `data.ts` (the made-up
     memories), `memories.tsx` (tiles and rows), `art.tsx` (the pictures), `glyphs.tsx`,
-    `SearchField.tsx`, `Reveal.tsx` (arriving on scroll), `ease.ts`.
+    `SearchField.tsx`, `Reveal.tsx` (arriving on scroll), `ease.ts`, `links.ts` (the APK's and
+    the source's links), `QrCode.tsx`.
   - The download (`DownloadButton.tsx`): the page's one amber button, "Download for Android",
-    linked to `releases/latest/download/breadcrumb.apk`, which answers only once W2 has
-    published a full release with that file. On a computer, the footer adds the same link as a
-    QR code, drawn locally (`uqr`) in crumbs around the trail.
+    linked to `releases/latest/download/breadcrumb.apk`, the newest full release's file. On a
+    computer, "on a computer? scan a code" under it brings up the same link as a large QR code
+    in a dialog, drawn locally (`uqr`) in crumbs around the trail; it decodes to the link.
   - Checks: `npm run build` (type-checks first) and `npm run lint`; at 390 and 1440 px wide in
     Chromium, no sideways scroll and no console errors.
   - *Check:* on a phone and a computer: the field drifts and the headline's words roll over in
     their light, which is never empty; the home screen searches by itself while on screen, its pictures flying into the results and
     back, and "try" picks a search; the four save scenes loop (on a phone, swiped sideways);
-    airplane mode turns on by itself once and the ramen photo is still found; crumbs drop down
+    airplane mode turns on by itself once and the ramen photo is still found; on a computer,
+    "scan a code" brings up a code a phone's camera opens, and Escape closes it; crumbs drop down
     the page's edge while scrolling, and each section arrives as it is reached; on a computer the
     search section and its chips fit one screen. With reduced motion on (Android: Remove animations),
     nothing moves and every part still reads.
-- [ ] **W2. The download**
-  - Done (2026-10-29): the release key, made by Suparno and kept off the repo; release builds
-    signed from `android/keystore.properties` (ignored by git), and arm64 only.
-  - Left: the first release, by "Releasing" above.
-  - The button's link answers once that release is out; then perhaps the version and size by
-    it, a line on allowing the install, and the Obtainium link.
-  - *Check:* on a phone that has never had Breadcrumb, from the page: download, install, open,
-    keep something.
-- [ ] **W3. Hosting**: GitHub Pages (built by Actions from `web/`, no new account, one version
-  only), or Cloudflare Pages or Netlify (free, no card, a preview link for every pushed branch).
-  Then the README links to it.
+- [x] **W2. The download** (Suparno, 2026-10-29)
+  - The release key, made by Suparno and kept off the repo; release builds signed from
+    `android/keystore.properties` (ignored by git), and arm64 only.
+  - v1.0 on GitHub Releases as `breadcrumb.apk` (68 MB); the page's link answers 302 to it.
+  - Later, perhaps: the version and size by the button, a line on allowing the install, and the
+    Obtainium link.
+- [ ] **W3. Hosting**, at `breadcrumb.suparno.me` (Suparno's domain; his portfolio is at the
+  root): a CNAME record for `breadcrumb` at the domain's DNS provider, pointing at the host. The
+  host is GitHub Pages (built by Actions from `web/`, no new account, one version only) or Vercel
+  (free Hobby plan, an account through GitHub, a preview link for every pushed branch); to
+  decide. Then the README links to the site.
+  - *Check:* on a phone that has never had Breadcrumb, from the hosted page: download, install,
+    open, keep something.
 
 ## Rules
 

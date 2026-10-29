@@ -46,6 +46,8 @@ this phone keeps originals. Vectors are base64.
     and nothing changes. On a second phone (or after uninstalling, with the file kept): +, "A
     breadcrumb backup", pick it: every memory comes back with its pictures, PDFs, voice notes and
     spoken notes, and search finds them by meaning at once (their vectors came along).
+    Checked 2026-10-29 by Suparno: backed up, uninstalled the debug build, installed v1.0 and
+    restored; everything came back.
 
 ## Rules
 

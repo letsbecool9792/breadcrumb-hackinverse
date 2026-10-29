@@ -36,6 +36,10 @@ brief says:
 - **The server (S1 to S7, L3) and sync (U1, U2) are retired** (L7): the app makes no call to a
   server. `server/` stays in the repo, never deleted, and still runs and passes its tests; it is
   simply no longer used.
+- **Released: v1.0** (2026-10-29), the first signed release, on
+  [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.0)
+  as `breadcrumb.apk` (68 MB, arm64). Suparno's own phone runs it (see "Android"). The website
+  in `web/` downloads it, but isn't hosted yet.
 
 **Roadmap**, in this order (set 2026-10-25):
 
@@ -48,16 +52,17 @@ brief says:
    own speech recognizer offline; waiting on its checks by hand (below).
 3. **A first-run screen for the model.** The 388 MB embedding model downloaded silently, and
    search by meaning waited for it with nothing said. Built as local-first L8: it downloads from
-   the first launch, and the first-run screen and a bar show it coming. Test it on a phone that
-   has never had Breadcrumb (in the manual list below).
+   the first launch, and the first-run screen and a bar show it coming. Checked 2026-10-29 on a
+   fresh install of v1.0.
 4. **Export and import**: every memory, its originals and vectors, out to one file the person
    keeps, and back in on a new phone. Built
    ([`docs/workstreams/backup.md`](docs/workstreams/backup.md)): a zip from the masthead's
-   count, restored from there or from "Bring in"; a restore only adds. Waiting on its check.
+   count, restored from there or from "Bring in"; a restore only adds. Checked 2026-10-29: a
+   backup restored into a fresh install.
 5. **A website, for getting the app.** Breadcrumb isn't going to the Play Store yet, so a
    landing page in the app's look says what it is and downloads the latest release from it. The
    page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), and
-   release builds are signed; the first release on GitHub comes next, then hosting.
+   its button downloads v1.0 from GitHub Releases. Next: hosting it at `breadcrumb.suparno.me`.
 6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
    and 1 GB each on the CPU today).
 7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
@@ -168,16 +173,20 @@ it whenever a change needs a manual check, and tick items off when done.
 - [ ] **Saved already** (capture C10): the brief's *check* line.
 - [ ] **Voice notes** (roadmap 2): V3's and V4's *check* lines in
       [`voice-notes.md`](docs/workstreams/voice-notes.md).
-- [ ] **Export and import** (roadmap 4): B2's *check* line in
-      [`backup.md`](docs/workstreams/backup.md), including a restore on a second phone.
-- [ ] **The first-run download on a phone that has never had Breadcrumb** (roadmap 3, L8's
-      *check* line in [`local-first.md`](docs/workstreams/local-first.md)), from install to
-      search by meaning.
+- [x] **Export and import** (roadmap 4, 2026-10-29): backed up on Suparno's phone, the debug
+      build uninstalled, v1.0 installed, and the backup restored: everything came back
+      ([`backup.md`](docs/workstreams/backup.md) B2).
+- [x] **The first-run download** (roadmap 3, 2026-10-29): on that fresh install of v1.0 the
+      model downloaded and search found by meaning, on Wi-Fi; the mobile-data path wasn't tried
+      ([`local-first.md`](docs/workstreams/local-first.md) L8).
 - [ ] **The website** (roadmap 5): W1's *check* line in
       [`website.md`](docs/workstreams/website.md), on a phone and a computer.
-- [ ] **The first release** (roadmap 5, W2): the key is made (2026-10-29); keep it backed up
-      in two places. Fill in `android/keystore.properties`, then follow "Releasing" in
-      [`website.md`](docs/workstreams/website.md); the website's button works from then on.
+- [x] **The first release** (roadmap 5, W2, 2026-10-29): the key made and kept off the repo,
+      v1.0 published; the website's download link answers. Keep the key backed up in two places.
+- [ ] **Hosting the website** (roadmap 5, W3): pick the host (GitHub Pages or Vercel), then
+      point `breadcrumb.suparno.me` at it with a CNAME record at the domain's DNS provider.
+- [ ] **Decide how debug builds reach the phone**, now that it runs the release (see
+      "Android"): a `.debug` applicationId suffix, or backing up and reinstalling each time.
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
       in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
       breaking command-line builds with the jlink error (see "Android").
@@ -354,6 +363,12 @@ indexes per cluster**; one vector index plus one text index fits.
   commit either. Lose the key and no installed copy can ever be updated, only uninstalled, which
   deletes what it kept. A release and a debug build can't install over each other. Releasing:
   [`website.md`](docs/workstreams/website.md).
+- **Suparno's phone runs the release build (v1.0) since 2026-10-29**, so `installDebug` fails
+  on it (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), and so do the on-device tests, which need the
+  debug build. Until debug builds get their own applicationId (undecided; a `.debug` suffix
+  would need a debug copy of `res/xml/shortcuts.xml`, whose `targetPackage` is fixed), putting
+  one there means backing up in the app, uninstalling, and restoring after. **Never uninstall to
+  get past that error without a backup first**: uninstalling deletes everything kept.
 - **Moving a phone's data to a new applicationId**, by hand (done once, from
   `com.lbc.breadcrumb.hackinverse`). From Git Bash, never PowerShell: its `>` and `<` re-encode
   binary data and the archive comes out corrupt. Git Bash also rewrites `/sdcard/...` arguments
@@ -472,6 +487,8 @@ adb shell am start -n com.lbc.breadcrumb/com.lbc.breadcrumb.MainActivity
 adb shell am instrument -w com.lbc.breadcrumb.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
+On Suparno's phone the installs above fail while it runs the release build (see "Android").
+
 The retired server, for anyone who runs it:
 
 ```
@@ -492,8 +509,9 @@ npm run build       # type-checks, then builds the static site into web/dist
 npm run lint
 ```
 
-**Nothing is deployed yet.** The app has no server since L7; the website will be hosted once
-there is a release to download (W3 in [`website.md`](docs/workstreams/website.md)).
+**Released, not yet hosted.** The app is on GitHub Releases ("Releasing" in
+[`website.md`](docs/workstreams/website.md)); the website goes to `breadcrumb.suparno.me` (W3).
+The app has no server since L7.
 
 ## Repo layout
 

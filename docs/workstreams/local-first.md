@@ -193,6 +193,8 @@ nothing leaves the phone (L7)
     shows the bar moving and "N of 388 MB"; "Start keeping" goes home, where the bar says
     "getting search ready · N%" until it's done, and then search finds by meaning. Again on
     mobile data: "waiting for wi-fi", and "download it on mobile data now" starts it.
+    Checked 2026-10-29 by Suparno, on Wi-Fi: a fresh install of v1.0 (the debug build uninstalled
+    first) downloaded the model and searched by meaning. Mobile data not tried.
 
 ## Rules
 
