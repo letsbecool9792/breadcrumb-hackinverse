@@ -3,3 +3,6 @@
 export const APK = 'https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk'
 
 export const SOURCE = 'https://github.com/letsbecool9792/breadcrumb-hackinverse'
+
+// Who built it: Suparno's own site.
+export const AUTHOR = 'https://suparno.me'

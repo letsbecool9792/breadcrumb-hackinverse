@@ -3,7 +3,7 @@ import { useRef, type ReactNode } from 'react'
 import { DownloadButton } from './DownloadButton.tsx'
 import { CrumbMark, CrumbTrail } from './glyphs.tsx'
 import { Hero } from './Hero.tsx'
-import { SOURCE } from './links.ts'
+import { AUTHOR, SOURCE } from './links.ts'
 import { MosaicSearch } from './MosaicSearch.tsx'
 import { Offline } from './Offline.tsx'
 import { EASE } from './ease.ts'
@@ -138,9 +138,23 @@ function Footer() {
         <Reveal delay={0.2}>
           <DownloadButton />
         </Reveal>
-        <ExternalLink href={SOURCE} className="font-mono text-xs text-ink-outline hover:text-bone">
-          source on github
-        </ExternalLink>
+        <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 font-mono text-xs text-ink-outline">
+          <span>
+            built by{' '}
+            <ExternalLink
+              href={AUTHOR}
+              className="text-bone underline decoration-amber-container underline-offset-4 hover:text-amber hover:decoration-amber"
+            >
+              Suparno Saha
+            </ExternalLink>
+          </span>
+          <span className="text-crumb-dim" aria-hidden="true">
+            ·
+          </span>
+          <ExternalLink href={SOURCE} className="hover:text-bone">
+            source on github
+          </ExternalLink>
+        </div>
       </div>
     </footer>
   )
