@@ -10,14 +10,16 @@ It lives in `web/` and is a static site with no server of its own.
   dark always. Tailwind's own palette is dropped (`web/src/index.css`), so only the app's
   colours exist there. The glyphs (`web/src/glyphs.tsx`) are drawn to design.md §2 and §15 on
   the same unit grids.
-- **What it shows**: the app's search playing through example phrases (the field, the counter
-  line, ranked rows with the matched word lit); save, forget, search, find; the ways to save,
-  beside the capture sheet saying "Saved"; a phrase taken apart into words, kind, date and app;
-  everything staying on the phone, beside the first-run bar; reference memory. The example
-  memories are made up.
-- **Motion only while it is seen**, as in the app (§0): the example searches and the capture
-  sheet's mark play while on screen, and nothing moves under reduced motion. The page is
-  complete before anything moves: it opens on a finished search.
+- **Shown, not explained**: words are few, the app's own screens do the telling. A tilted field
+  of memories drifting behind the headline, now and then one lit as found; the home screen
+  playing through searches, the matches leaving their tiles for a ranked list with their
+  pictures travelling (§10); the four ways to save as small loops (share sheet, selection
+  menu, Quick Settings tile, the "+" taking a voice note); airplane mode on a switch, with the
+  search still finding; a trail of crumbs dropping down the page as it is read, and behind the
+  pointer on a computer. The example memories are made up.
+- **Motion only while it is seen**, as in the app (§0), through Motion (`motion`, pinned to a
+  release at least two weeks old) and CSS: loops pause off screen, and with reduced motion on
+  nothing moves and each scene rests on its last beat, where the thing is saved.
 - **Nothing from a third party.** The fonts ship with the site (Fontsource, not Google Fonts):
   a page about keeping things private doesn't hand its visitors to a font host. No analytics.
 - **Vite + React + TypeScript + Tailwind 4**, scaffolded with
@@ -66,15 +68,19 @@ Whichever it is:
 ## Steps
 
 - [x] **W1. The page** (Suparno, 2026-10-29)
-  - `web/`: `App.tsx` (the sections), `SearchDemo.tsx`, `CaptureSheet.tsx`, `glyphs.tsx`,
-    `lib/motion.ts` (reduced motion; whether a thing is on screen).
-  - In the download's place, "download for android · soon" (`DownloadSlot` in `App.tsx`).
+  - `web/src`: `App.tsx` (the page), `Hero.tsx` (the field and headline), `MosaicSearch.tsx`,
+    `SaveScenes.tsx`, `Offline.tsx`, `Trail.tsx`; the pieces they share: `data.ts` (the made-up
+    memories), `memories.tsx` (tiles and rows), `art.tsx` (the pictures), `glyphs.tsx`,
+    `SearchField.tsx`.
+  - In the download's place, "android · download soon" (`DownloadPill.tsx`).
   - Checks: `npm run build` (type-checks first) and `npm run lint`; at 390 and 1440 px wide in
     Chromium, no sideways scroll and no console errors.
-  - *Check:* on a phone and a computer: the search plays through its four examples, only while on
-    screen; "try" switches between them; the capture sheet's crumbs drop in on "Saved" as it
-    comes into view; with reduced motion on (Android: Remove animations), nothing moves and every
-    part still reads.
+  - *Check:* on a phone and a computer: the field drifts and the headline's words change; the
+    home screen searches by itself while on screen, its pictures flying into the results and
+    back, and "try" picks a search; the four save scenes loop (on a phone, swiped sideways);
+    airplane mode turns on by itself once and the ramen photo is still found; crumbs drop down
+    the page's edge while scrolling. With reduced motion on (Android: Remove animations),
+    nothing moves and every part still reads.
 - [ ] **W2. The download**
   - The release flow (above): the signing key, a signed `assembleRelease`, the first real release
     with `breadcrumb.apk`.
@@ -88,8 +94,8 @@ Whichever it is:
 
 ## Rules
 
-- **The page says only what the release it offers does.** It names voice notes and backups,
-  both still waiting on their checks by hand; when W2 puts in the first release, read the copy
-  against that release.
+- **The page says only what the release it offers does.** It shows voice notes, still waiting
+  on their check by hand; when W2 puts in the first release, check the page against that
+  release.
 - **Nothing loads from anywhere but the site.** Fonts, scripts and pictures ship with it.
 - **The APK never goes into git**, in `web/` or anywhere else.

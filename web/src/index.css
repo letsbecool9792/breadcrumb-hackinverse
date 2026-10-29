@@ -121,38 +121,111 @@ h3 {
   }
 }
 
-/* A result's first appearance in a search (§9): 340 ms, alpha and a 16 px rise. */
+/* The hero's field of memories: columns of tiles on a plane tilted away,
+   drifting up and down at their own speeds. Each column holds its tiles
+   twice, with a gap's padding at the foot, so half its height is one lap. */
+.memory-field {
+  position: absolute;
+  inset: 0;
+  perspective: 1400px;
+}
+
+.memory-plane {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  grid-template-columns: repeat(6, 230px);
+  gap: 18px;
+  opacity: 0.8;
+  transform: translate(-50%, -46%) rotateX(50deg) rotateZ(-32deg);
+  transform-style: preserve-3d;
+}
+
+/* Smaller on a phone, so the field reads as many things, not a few big ones. */
+@media (max-width: 640px) {
+  .memory-plane {
+    transform: translate(-50%, -46%) scale(0.7) rotateX(50deg) rotateZ(-32deg);
+  }
+}
+
+.memory-column {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-bottom: 18px;
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .row-arrive {
-    animation: arrive 340ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  .memory-column.up {
+    animation: drift-up linear infinite;
+  }
+  .memory-column.down {
+    animation: drift-down linear infinite;
+  }
+  .memory-column .found {
+    animation: found 12s ease-in-out infinite;
+  }
+  .memory-column:nth-child(2) .found {
+    animation-delay: -4s;
+  }
+  .memory-column:nth-child(3) .found {
+    animation-delay: -8s;
+  }
+  .memory-column:nth-child(4) .found {
+    animation-delay: -2s;
+  }
+  .memory-column:nth-child(5) .found {
+    animation-delay: -6s;
+  }
+  .memory-column:nth-child(6) .found {
+    animation-delay: -10s;
+  }
+  .memory-field.paused * {
+    animation-play-state: paused;
   }
 }
 
-@keyframes arrive {
+@keyframes drift-up {
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@keyframes drift-down {
   from {
-    opacity: 0;
-    transform: translateY(16px);
+    transform: translateY(-50%);
   }
 }
 
-/* The lit word (§9): 180 ms after its row lands it warms over 520 ms. */
-.lit {
-  border-radius: 3px;
-  padding: 0 2px;
-  color: var(--color-amber);
-  background: var(--color-hit);
+/* Now and then a tile is found: it lights as a search's match does. */
+@keyframes found {
+  0%,
+  64%,
+  100% {
+    border-color: var(--color-ink-border);
+    box-shadow: none;
+  }
+  70%,
+  86% {
+    border-color: var(--color-amber);
+    box-shadow:
+      0 0 0 1px var(--color-amber),
+      0 0 48px 6px rgb(255 196 107 / 0.4);
+  }
 }
 
+/* The strip of what it will never be. */
 @media (prefers-reduced-motion: no-preference) {
-  .row-arrive .lit {
-    animation: warm 520ms cubic-bezier(0.4, 0, 0.2, 1) 180ms both;
+  .not-this {
+    animation: strip 48s linear infinite;
   }
 }
 
-@keyframes warm {
-  from {
-    color: var(--color-bone-dim);
-    background: transparent;
+@keyframes strip {
+  to {
+    transform: translateX(-50%);
   }
 }
 

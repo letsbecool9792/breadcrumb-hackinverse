@@ -229,7 +229,7 @@ The product should feel like a personal search engine, not a digital notebook.
 | Mobile | **Native Android**: Kotlin, Jetpack Compose, MVVM, Room (with full-text search), WorkManager |
 | On the phone | **EmbeddingGemma 2** (text and pictures, 768 dimensions) through **LiteRT-LM**; ML Kit Text Recognition v2 (bundled); the phone's own speech recognizer, offline only, for voice notes |
 | Query parsing | **On the phone, by rules** (`embed/PhraseRules`) |
-| Website | **Vite + React + TypeScript + Tailwind 4**, a static page in `web/`; its fonts ship with it |
+| Website | **Vite + React + TypeScript + Tailwind 4**, with Motion for the animation: a static page in `web/`; its fonts ship with it |
 | Server (**retired**, L7) | Node + Express + TypeScript, MongoDB Atlas (M0) with Atlas Vector Search, Gemini 3.1 and 3.5 Flash Lite, `gemini-embedding-001`. Kept in `server/`; the app makes no call to it |
 
 For the retired server: pin explicit Gemini model versions in code. The `gemini-flash-latest`
