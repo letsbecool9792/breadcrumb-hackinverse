@@ -1,8 +1,9 @@
 import { AnimatePresence, LayoutGroup, motion, useInView, useReducedMotion } from 'motion/react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { CrumbTrail } from './glyphs.tsx'
 import { MEMORIES as M, type Memory, type Why } from './data.ts'
 import { ResultRow, Tile } from './memories.tsx'
+import { Reveal } from './Reveal.tsx'
 import { SearchField } from './SearchField.tsx'
 
 // The app's home screen playing through searches: the mosaic, a phrase typed
@@ -55,7 +56,9 @@ const SEARCHES: Search[] = [
 
 type Phase = 'rest' | 'typing' | 'ranking' | 'shown'
 
-export function MosaicSearch() {
+// Its section's heading comes in, so that on a computer the "try" chips sit
+// under it, beside the screen, and the whole of it fits in one screenful.
+export function MosaicSearch({ heading }: { heading: ReactNode }) {
   const panel = useRef<HTMLDivElement>(null)
   const inView = useInView(panel, { amount: 0.4 })
   const reduced = useReducedMotion()
@@ -109,67 +112,74 @@ export function MosaicSearch() {
   const shown = phase === 'shown'
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-4">
+    <div className="grid w-full min-w-0 items-center gap-x-16 [grid-template-areas:'heading'_'panel'_'chips'] lg:grid-cols-2 lg:grid-rows-[1fr_1fr] lg:gap-y-8 lg:[grid-template-areas:'heading_panel'_'chips_panel']">
+      <div className="mb-10 [grid-area:heading] lg:mb-0 lg:self-end">{heading}</div>
       <LayoutGroup id={SCOPE}>
-        <div
-          ref={panel}
-          className="relative h-[580px] overflow-hidden rounded-[32px] border border-ink-border bg-ink shadow-[0_40px_120px_-40px_rgb(255_196_107/0.18)] sm:h-[620px]"
-          aria-hidden="true"
-        >
-          <div className="absolute inset-x-0 top-0 bottom-[78px]">
-            <AnimatePresence initial={false}>
-              {shown ? (
-                <motion.div
-                  key={`results-${index}`}
-                  className="absolute inset-0 px-2.5"
-                  exit={{ opacity: 0, transition: { duration: 0.16 } }}
-                >
-                  <motion.p
-                    className="px-3 pt-[22px] pb-3 font-mono text-[11px] tracking-[0.3px] text-ink-outline"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.24, delay: 0.06 }}
+        <Reveal tilt className="mx-auto w-full max-w-[420px] [grid-area:panel] lg:mr-0">
+          <div
+            ref={panel}
+            className="relative h-[580px] overflow-hidden rounded-[32px] border border-ink-border bg-ink shadow-[0_40px_120px_-40px_rgb(255_196_107/0.18)] sm:h-[620px] lg:h-[clamp(480px,calc(100svh-6rem),640px)]"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-x-0 top-0 bottom-[78px]">
+              <AnimatePresence initial={false}>
+                {shown ? (
+                  <motion.div
+                    key={`results-${index}`}
+                    className="absolute inset-0 px-2.5"
+                    exit={{ opacity: 0, transition: { duration: 0.16 } }}
                   >
-                    {search.counter}
-                  </motion.p>
-                  <div className="flex flex-col gap-1">
-                    {search.hits.map((hit, i) => (
-                      <ResultRow key={hit.m.id} m={hit.m} why={hit.why} top={i === 0} scope={SCOPE} index={i} />
-                    ))}
-                  </div>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="mosaic"
-                  className="absolute inset-0 px-3.5"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: phase === 'ranking' ? 0.4 : 1 }}
-                  exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <Masthead />
-                  <div className="grid grid-cols-2 items-start gap-2.5">
-                    {[LEFT, RIGHT].map((column, c) => (
-                      <div key={c} className="flex flex-col gap-2.5">
-                        {column.map((m) => (
-                          <Tile key={m.id} m={m} scope={SCOPE} />
-                        ))}
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-ink" />
-          </div>
+                    <motion.p
+                      className="px-3 pt-[22px] pb-3 font-mono text-[11px] tracking-[0.3px] text-ink-outline"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ duration: 0.24, delay: 0.06 }}
+                    >
+                      {search.counter}
+                    </motion.p>
+                    <div className="flex flex-col gap-1">
+                      {search.hits.map((hit, i) => (
+                        <ResultRow key={hit.m.id} m={hit.m} why={hit.why} top={i === 0} scope={SCOPE} index={i} />
+                      ))}
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="mosaic"
+                    className="absolute inset-0 px-3.5"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: phase === 'ranking' ? 0.4 : 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Masthead />
+                    <div className="grid grid-cols-2 items-start gap-2.5">
+                      {[LEFT, RIGHT].map((column, c) => (
+                        <div key={c} className="flex flex-col gap-2.5">
+                          {column.map((m) => (
+                            <Tile key={m.id} m={m} scope={SCOPE} />
+                          ))}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-b from-transparent to-ink" />
+            </div>
 
-          <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
-            <SearchField text={search.phrase.slice(0, typed)} ranking={phase === 'ranking'} />
+            <div className="absolute inset-x-0 bottom-0 px-4 pb-4">
+              <SearchField text={search.phrase.slice(0, typed)} ranking={phase === 'ranking'} />
+            </div>
           </div>
-        </div>
+        </Reveal>
       </LayoutGroup>
 
-      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Example searches">
+      <div
+        className="mx-auto mt-4 flex w-full max-w-[420px] flex-wrap items-center gap-2 [grid-area:chips] lg:mx-0 lg:mt-0 lg:max-w-[26rem] lg:self-start"
+        role="group"
+        aria-label="Example searches"
+      >
         <span className="pr-1 font-mono text-[11px] text-ink-outline">try</span>
         {SEARCHES.map((s, i) => (
           <button

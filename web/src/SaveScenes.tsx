@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useInView, useReducedMotion } from 'motion/react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Art } from './art.tsx'
+import { EASE } from './ease.ts'
 import { CrumbMark, CrumbTrail } from './glyphs.tsx'
 
 // The four ways in, each a small loop that plays while it is on screen:
@@ -21,12 +22,30 @@ function useBeats(durations: number[], seen: boolean): number {
   return reduced ? durations.length - 1 : beat
 }
 
-function Scene({ label, caption, children }: { label: string; caption: string; children: (seen: boolean) => ReactNode }) {
-  const ref = useRef<HTMLDivElement>(null)
+// Dealt in one after another, each tipped a little, as the row comes into view.
+const DEAL = {
+  hidden: (i: number) => ({ opacity: 0, y: 80, rotate: i % 2 ? 4 : -4 }),
+  shown: (i: number) => ({ opacity: 1, y: 0, rotate: 0, transition: { duration: 0.9, ease: EASE, delay: i * 0.1 } }),
+}
+
+function Scene({
+  index,
+  label,
+  caption,
+  children,
+}: {
+  index: number
+  label: string
+  caption: string
+  children: (seen: boolean) => ReactNode
+}) {
+  const ref = useRef<HTMLElement>(null)
   const seen = useInView(ref, { amount: 0.5 })
   return (
-    <figure
+    <motion.figure
       ref={ref}
+      custom={index}
+      variants={DEAL}
       className="flex h-[360px] w-[82%] shrink-0 snap-center flex-col overflow-hidden rounded-[24px] border border-ink-border bg-ink-media sm:w-auto"
     >
       <div className="relative flex-1 overflow-hidden" aria-hidden="true">
@@ -36,26 +55,31 @@ function Scene({ label, caption, children }: { label: string; caption: string; c
         <span className="font-mono text-xs text-amber">{label}</span>
         <span className="text-sm text-bone-dim">{caption}</span>
       </figcaption>
-    </figure>
+    </motion.figure>
   )
 }
 
 export function SaveScenes() {
   return (
-    <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
-      <Scene label="share" caption="from any app">
+    <motion.div
+      className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pt-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4"
+      initial="hidden"
+      whileInView="shown"
+      viewport={{ once: true, amount: 0.3 }}
+    >
+      <Scene index={0} label="share" caption="from any app">
         {(seen) => <ShareScene seen={seen} />}
       </Scene>
-      <Scene label="select" caption="any text, anywhere">
+      <Scene index={1} label="select" caption="any text, anywhere">
         {(seen) => <SelectScene seen={seen} />}
       </Scene>
-      <Scene label="tile" caption="whatever you copied">
+      <Scene index={2} label="tile" caption="whatever you copied">
         {(seen) => <TileScene seen={seen} />}
       </Scene>
-      <Scene label="+" caption="a thought, said out loud">
+      <Scene index={3} label="+" caption="a thought, said out loud">
         {(seen) => <PlusScene seen={seen} />}
       </Scene>
-    </div>
+    </motion.div>
   )
 }
 
