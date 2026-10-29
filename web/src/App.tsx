@@ -1,16 +1,15 @@
 import { motion, MotionConfig, useInView, useReducedMotion, useScroll, useTransform } from 'motion/react'
 import { useRef, type ReactNode } from 'react'
-import { DownloadButton, DownloadCode } from './DownloadButton.tsx'
+import { DownloadButton } from './DownloadButton.tsx'
 import { CrumbMark, CrumbTrail } from './glyphs.tsx'
 import { Hero } from './Hero.tsx'
+import { SOURCE } from './links.ts'
 import { MosaicSearch } from './MosaicSearch.tsx'
 import { Offline } from './Offline.tsx'
 import { EASE } from './ease.ts'
 import { Reveal, RevealHeading } from './Reveal.tsx'
 import { SaveScenes } from './SaveScenes.tsx'
 import { PointerTrail, ScrollTrail } from './Trail.tsx'
-
-const SOURCE = 'https://github.com/letsbecool9792/breadcrumb-hackinverse'
 
 export default function App() {
   return (
@@ -136,14 +135,9 @@ function Footer() {
             </span>
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
-          <Reveal delay={0.2}>
-            <DownloadButton />
-          </Reveal>
-          <Reveal delay={0.35} className="hidden lg:block">
-            <DownloadCode />
-          </Reveal>
-        </div>
+        <Reveal delay={0.2}>
+          <DownloadButton />
+        </Reveal>
         <ExternalLink href={SOURCE} className="font-mono text-xs text-ink-outline hover:text-bone">
           source on github
         </ExternalLink>

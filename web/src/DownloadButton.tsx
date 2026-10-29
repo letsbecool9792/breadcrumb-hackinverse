@@ -1,10 +1,5 @@
-import { encode, QrCodeDataType } from 'uqr'
-import { CrumbTrail } from './glyphs.tsx'
-
-// The newest release's APK. GitHub sends this to the latest full release's
-// file named breadcrumb.apk; it answers once the first one is published
-// (docs/workstreams/website.md W2).
-const APK = 'https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk'
+import { APK } from './links.ts'
+import { QrButton } from './QrCode.tsx'
 
 // The page's one main action, so it takes the amber (design.md §0).
 export function DownloadButton() {
@@ -41,6 +36,9 @@ export function DownloadButton() {
         </a>
       </div>
       <p className="font-mono text-[11px] text-ink-outline">apk · android 10 and up · free, no account</p>
+      <div className="hidden lg:block">
+        <QrButton />
+      </div>
     </div>
   )
 }
@@ -54,51 +52,5 @@ function AndroidGlyph() {
       <circle cx="8.6" cy="13.3" r="1.15" fill="var(--color-amber)" />
       <circle cx="15.4" cy="13.3" r="1.15" fill="var(--color-amber)" />
     </svg>
-  )
-}
-
-// On a computer, the same download as a code to scan with the phone: its
-// modules drawn as crumbs, the trail in the middle.
-export function DownloadCode() {
-  const { data, size, types } = encode(APK, { ecc: 'H', border: 0 })
-  const logo = Math.ceil(size * 0.24) | 1
-  const from = (size - logo) / 2
-  const inLogo = (x: number, y: number) => x >= from - 0.5 && x < from + logo + 0.5 && y >= from - 0.5 && y < from + logo + 0.5
-  const finders = [
-    [0, 0],
-    [size - 7, 0],
-    [0, size - 7],
-  ]
-
-  return (
-    <div className="flex items-center gap-5 rounded-[24px] border border-ink-border bg-ink-elevated p-4 pr-6">
-      <div className="relative size-[132px] shrink-0 rounded-2xl bg-bone p-2.5">
-        <svg viewBox={`0 0 ${size} ${size}`} className="size-full" role="img" aria-label="QR code for the Android download">
-          {data.flatMap((row, y) =>
-            row.map((dark, x) =>
-              dark && types[y][x] !== QrCodeDataType.Position && !inLogo(x, y) ? <circle key={`${x}-${y}`} cx={x + 0.5} cy={y + 0.5} r="0.44" fill="#171310" /> : null,
-            ),
-          )}
-          {finders.map(([x, y]) => (
-            <g key={`${x}-${y}`} fill="#171310">
-              <path
-                fillRule="evenodd"
-                d={`M${x + 2} ${y}h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3a2 2 0 012-2zM${x + 2} ${y + 1}a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1v-3a1 1 0 00-1-1z`}
-              />
-              <rect x={x + 2} y={y + 2} width="3" height="3" rx="0.9" />
-            </g>
-          ))}
-        </svg>
-        <span className="absolute inset-2.5 grid place-items-center">
-          <span className="grid aspect-square place-items-center rounded-[9px] bg-ink" style={{ width: `${(logo / size) * 100}%` }}>
-            <CrumbTrail size={20} />
-          </span>
-        </span>
-      </div>
-      <div className="flex max-w-[11rem] flex-col gap-2 text-left">
-        <p className="font-serif text-lg leading-6">On a computer?</p>
-        <p className="font-mono text-[11px] leading-[17px] text-bone-dim">scan it with your phone's camera to download there</p>
-      </div>
-    </div>
   )
 }
