@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+  <!-- The app's CrumbTrail (docs/design.md §2) on its ink ground. -->
+  <rect width="20" height="20" rx="4.5" fill="#171310"/>
+  <circle cx="4" cy="15.5" r="1.6" fill="#5A4420"/>
+  <circle cx="8.4" cy="12.4" r="2.1" fill="#7A5A28"/>
+  <circle cx="13.2" cy="8.6" r="2.7" fill="#C8912F"/>
+  <circle cx="17" cy="4.2" r="3" fill="#FFC46B"/>
+</svg>
