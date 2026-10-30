@@ -64,8 +64,10 @@ brief says:
    page is built ([`docs/workstreams/website.md`](docs/workstreams/website.md), in `web/`), and
    its button downloads v1.0 from GitHub Releases. Live since 2026-10-29 at
    https://breadcrumb.suparno.me, on Vercel.
-6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger (about 5 s
-   and 1 GB each on the CPU today).
+6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger. Built
+   as local-first L9 (2026-10-30): pictures no longer wait for the charger at all, and their
+   vision encoder runs on the GPU where it works (about 2 s a picture on the demo phone, against
+   4.5 s on the CPU). Waiting on its check by hand (below).
 7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
    `READ_MEDIA_IMAGES` and real battery care.
 
@@ -163,8 +165,8 @@ it whenever a change needs a manual check, and tick items off when done.
 - [x] **Server tests against Atlas** (`cd server`, `npm test`, with `MONGODB_URI` set): passing
       on the M0 cluster since 2026-10-10.
 - [ ] **Seed the phone** (roadmap 1). Search only impresses with a real corpus: put 500+ real
-      items on the phone with the importer (reading R5), then leave it on the charger so pictures
-      with no words get embedded. It costs nothing.
+      items on the phone with the importer (reading R5). Pictures with no words are embedded as
+      they come (L9), on the GPU. It costs nothing.
 - [x] **Check R3 and R4 on the phone** (2026-10-25): a scanned PDF is read by OCR; a bare link
       gets its page's description, and its title when it had none; a link saved in airplane mode
       stays unread, and is read when the network is back.
@@ -186,6 +188,10 @@ it whenever a change needs a manual check, and tick items off when done.
       v1.0 published; the website's download link answers. Keep the key backed up in two places.
 - [x] **Hosting the website** (roadmap 5, W3, 2026-10-29): on Vercel, at
       `breadcrumb.suparno.me` by a CNAME record at Namecheap, which holds the domain's DNS.
+- [ ] **Pictures on the GPU, and the smaller release** (roadmap 6, L9's *check* line in
+      [`local-first.md`](docs/workstreams/local-first.md); the release built with R8, already
+      on Suparno's phone as an update): use the app as usual for a while: keep, search, OCR,
+      voice notes, a backup. Then push, and release it as 1.1.
 - [x] **Decide how debug builds reach the phone** (2026-10-30): a `.debug` applicationId
       suffix, an app of its own beside the release (see "Android").
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`

@@ -66,9 +66,14 @@ Whichever it is:
 - **`/releases/latest/` skips prereleases**: `v1.0-demo` is one, so the link answers 404 until
   a real release exists.
 - **Size**: `v1.0-demo` is 152 MB, debug and unminified. The release build is arm64 only (LiteRT-LM
-  ships no 32-bit ARM, so those phones couldn't search anyway): 68 MB, about half of it code.
-  R8 could shrink that, but needs keep rules for Room, LiteRT-LM and ML Kit and a full check on
-  the phone, so it is off for now.
+  ships no 32-bit ARM, so those phones couldn't search anyway). v1.0 was 68 MB, about half of it
+  code. Since 2026-10-30 it is 21.6 MB: R8 shrinks the code from 32 MB to 5 MB and drops unused
+  resources (68 → 40.8 MB), and the native libraries (LiteRT-LM 22 MB, ML Kit's OCR 11 MB) go
+  compressed in the APK, unpacked at install (40.8 → 21.6 MB to download, about 15 MB more on
+  the phone). `proguard-rules.pro` keeps LiteRT-LM whole (its native code reaches its classes by
+  name) and ML Kit's component registrars (made by name; without them OCR fails in the release
+  alone, silently). The on-device tests can't run against a shrunk app, so a shrunk build is
+  checked by hand, or with a shrunk debug build sharing things in by adb.
 - **Google's developer verification**: apps installed from outside Play are to come from a
   verified developer, enforced from September 2026 in Brazil, Indonesia, Singapore and Thailand
   and everywhere in 2027 (an unverified app then needs an "advanced" install flow or adb). There
@@ -85,10 +90,12 @@ Each release, from `android/`:
    (copy `keystore.properties.example`, fill in the passwords).
 3. Install it over the release on a phone (`adb install -r breadcrumb.apk`; the debug app
    beside it doesn't matter): open it, keep something, find it.
-4. `gh release create v1.0 breadcrumb.apk --title "Breadcrumb 1.0" --notes "…"`, with that
+4. Keep that build's `app/build/outputs/mapping/release/mapping.txt`, which turns a shrunk
+   stack trace's names back: attach it to the release beside the APK.
+5. `gh release create v1.0 breadcrumb.apk mapping.txt --title "Breadcrumb 1.0" --notes "…"`, with that
    release's version. Never `--prerelease`, and the file named exactly `breadcrumb.apk`, or the
    page's link misses it.
-5. `curl -sI https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk`
+6. `curl -sI https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk`
    answers 302.
 
 ## Steps

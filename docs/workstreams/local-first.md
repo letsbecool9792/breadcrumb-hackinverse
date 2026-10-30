@@ -56,7 +56,7 @@ nothing leaves the phone (L7)
     note is embedded again.
   - `embed/EmbedWorker` runs `EmbedPass` wherever the upload is scheduled (a save, a read, a
     note, an Undo, a link's page read). A picture OCR could barely read is embedded as a picture
-    on the charger; meanwhile its few words stand in.
+    on the charger; meanwhile its few words stand in. (Until L9: now at once, on the GPU.)
   - Tests: `EmbedTextTest` and `EmbedPassTest` (JVM). `EmbedOnPhoneTest` uses the real model and
     an in-memory database: a vague phrase finds its memory, and a vector goes with its memory.
 - [x] **L2. Ranking on the phone** (Suparno; after L1)
@@ -195,6 +195,35 @@ nothing leaves the phone (L7)
     mobile data: "waiting for wi-fi", and "download it on mobile data now" starts it.
     Checked 2026-10-29 by Suparno, on Wi-Fi: a fresh install of v1.0 (the debug build uninstalled
     first) downloaded the model and searched by meaning. Mobile data not tried.
+
+- [x] **L9. Pictures on the GPU, and no charger** (Suparno, 2026-10-30; roadmap 6)
+  - A picture OCR could barely read waited for the charger (about 4.5 s and 0.9 GB on the
+    CPU). It is now embedded with everything else, whenever the pass comes, charging or not.
+  - Measured on the demo phone (Dimensity 7200, Mali-G610), the same picture and words:
+
+    | Setup | Engine start | Words | Picture | Peak memory |
+    |---|---|---|---|---|
+    | All on the CPU | 1.4–2.4 s | 0.2 s | 4.5 s | 0.88 GB |
+    | Vision on the GPU, words on the CPU | 1.7 s (7.3 s cold) | 0.2 s | 1.9 s | 0.80 GB |
+    | All on the GPU | 3–7 s | 0.17 s | 1.8 s | 2.5 GB |
+
+    "Cold" is the first start, before the GPU's compiled kernels are cached in `cacheDir`.
+  - `Embedder`: words always on the CPU, so a search starts the engine as fast as before and
+    its vectors are unchanged; a picture starts it again with the vision encoder on the GPU,
+    where `GpuChoice` allows. A picture's vector there is the CPU's to a cosine of 0.998, under
+    the same key, so vectors from either mix. The engine is let go after a pass with pictures.
+  - `GpuChoice` (SharedPreferences "embedder"): untried, then "works" or "fails". A start is
+    marked before it begins, with `commit()`: one that throws, or never ends (a GPU driver's
+    crash takes the process past any catch), leaves pictures on the CPU for good. A phone
+    without OpenCL fails the first start and goes on on the CPU.
+  - The manifest names `libOpenCL.so` and `libvndksupport.so` (`uses-native-library`, not
+    required), as LiteRT-LM's GPU backend asks.
+  - Tests: `EmbedPassTest`, `GpuChoiceTest` (JVM); `BackendsOnPhoneTest` on the phone (the same
+    words' vector; the picture's within a cosine of 0.99; a phone whose GPU failed still embeds
+    pictures, on the CPU).
+  - *Check:* off the charger, keep a photo with no words in it (a plate of food): within a few
+    seconds search finds it by what it shows ("noodles"), where before it waited for the
+    charger.
 
 ## Rules
 
