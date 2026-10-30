@@ -186,8 +186,8 @@ it whenever a change needs a manual check, and tick items off when done.
       v1.0 published; the website's download link answers. Keep the key backed up in two places.
 - [x] **Hosting the website** (roadmap 5, W3, 2026-10-29): on Vercel, at
       `breadcrumb.suparno.me` by a CNAME record at Namecheap, which holds the domain's DNS.
-- [ ] **Decide how debug builds reach the phone**, now that it runs the release (see
-      "Android"): a `.debug` applicationId suffix, or backing up and reinstalling each time.
+- [x] **Decide how debug builds reach the phone** (2026-10-30): a `.debug` applicationId
+      suffix, an app of its own beside the release (see "Android").
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`
       in the workspace's `.vscode/settings.json` (gitignored). Its daemon kept coming back and
       breaking command-line builds with the jlink error (see "Android").
@@ -357,19 +357,27 @@ indexes per cluster**; one vector index plus one text index fits.
 - **minSdk 29** (Android 10), target 36. The clipboard restriction lands at 29, so a 29 floor
   means one code path instead of two; scoped storage is mandatory from 29 anyway.
 - **The applicationId is `com.lbc.breadcrumb`, the same as the code's namespace, and permanent
-  once published.** adb commands, the test runner (`com.lbc.breadcrumb.test`) and the launcher
-  shortcut's `targetPackage` use it. It was `com.lbc.breadcrumb.hackinverse` until the hackathon.
+  once published.** The release's adb commands and the launcher shortcut's `targetPackage` use
+  it. It was `com.lbc.breadcrumb.hackinverse` until the hackathon.
+- **Debug builds are an app of their own, `com.lbc.breadcrumb.debug`** (`applicationIdSuffix`,
+  since 2026-10-30), named "Breadcrumb debug", beside the release on the same phone, with its
+  own data. The on-device tests run in it (`com.lbc.breadcrumb.debug.test`), so neither a debug
+  build nor a test ever touches what the release keeps. Its launcher shortcuts are a copy in
+  `src/debug/res/xml/shortcuts.xml` (a shortcut's `targetPackage` is fixed): change both
+  together. It needs the model too: before its first start, `adb push` it to
+  `/sdcard/Android/data/com.lbc.breadcrumb.debug/files/` and `adb shell chmod 666` it, or it
+  downloads its own 388 MB. A copy of the model, its hash checked, is at
+  `D:\Programming\models\` on Suparno's machine.
 - **Release builds are signed by one key, kept for good**: `android/keystore.properties`
   (ignored by git; copy `keystore.properties.example`) says where it is and its passwords. Never
   commit either. Lose the key and no installed copy can ever be updated, only uninstalled, which
   deletes what it kept. A release and a debug build can't install over each other. Releasing:
   [`website.md`](docs/workstreams/website.md).
-- **Suparno's phone runs the release build (v1.0) since 2026-10-29**, so `installDebug` fails
-  on it (`INSTALL_FAILED_UPDATE_INCOMPATIBLE`), and so do the on-device tests, which need the
-  debug build. Until debug builds get their own applicationId (undecided; a `.debug` suffix
-  would need a debug copy of `res/xml/shortcuts.xml`, whose `targetPackage` is fixed), putting
-  one there means backing up in the app, uninstalling, and restoring after. **Never uninstall to
-  get past that error without a backup first**: uninstalling deletes everything kept.
+- **Suparno's phone runs the release build** (v1.0 since 2026-10-29), and the debug app beside
+  it. The release isn't debuggable, so `run-as` reaches only the debug app: the release's data
+  is backed up in the app (the masthead's "BACK UP"). A new release installs over it as an
+  update (`adb install -r`) and keeps its data. **Never uninstall the release** to get past an
+  install error: uninstalling deletes everything kept.
 - **Moving a phone's data to a new applicationId**, by hand (done once, from
   `com.lbc.breadcrumb.hackinverse`). From Git Bash, never PowerShell: its `>` and `<` re-encode
   binary data and the archive comes out corrupt. Git Bash also rewrites `/sdcard/...` arguments
@@ -418,8 +426,8 @@ indexes per cluster**; one vector index plus one text index fits.
 - **Schema changes go through Room `AutoMigration` against the checked-in schema JSON**
   (`app/schemas/`). Never `fallbackToDestructiveMigration`: it would silently wipe saved memories
   on upgrade. A migration that changes the word index's columns must rebuild it.
-- **Back up the phone's database before installing a schema bump:**
-  `adb exec-out run-as com.lbc.breadcrumb cat databases/breadcrumb.db > breadcrumb.db`,
+- **Back up before installing a schema bump**: the release in the app ("BACK UP"); the debug
+  app with `adb exec-out run-as com.lbc.breadcrumb.debug cat databases/breadcrumb.db > breadcrumb.db`,
   and the same for `-wal` and `-shm` (the WAL holds recent writes). Run it from Git Bash:
   PowerShell 5.1's `>` re-encodes binary output and corrupts the copy.
 - **Run the instrumented tests without wiping saved memories.** Gradle's
@@ -430,10 +438,11 @@ indexes per cluster**; one vector index plus one text index fits.
 - **A finished `am instrument` force-stops the app**, and a force-stopped app's WorkManager jobs
   don't run until it starts again: a link read or an embedding left by a test run waits for the
   next launch. To run them without opening the app,
-  `adb shell am broadcast -a androidx.work.diagnostics.REQUEST_DIAGNOSTICS -p com.lbc.breadcrumb`
+  `adb shell am broadcast -a androidx.work.diagnostics.REQUEST_DIAGNOSTICS -p com.lbc.breadcrumb.debug`
   starts its process.
 - **An on-phone test never clears, or lists-and-deletes, the real database or `originals/`.** The
-  test APK runs in the app's process, so `app.database` is the person's real one. Use an
+  test APK runs in the debug app's process, so `app.database` is that app's real one (no longer
+  the release's, since the `.debug` suffix, but keep to the rule). Use an
   in-memory Room database; where a test must go through `app.database` (it exercises code that
   does), have it note what existed before, look only at what it created, and remove only that.
   `WrittenCaptureTest` once deleted everything, and a test run wiped the phone's saved memories
@@ -483,12 +492,12 @@ The app needs nothing but the phone: no server, no `adb reverse`.
 cd android
 ./gradlew testDebugUnitTest                         # JVM tests
 ./gradlew installDebug                              # build and install on the phone
-adb shell am start -n com.lbc.breadcrumb/com.lbc.breadcrumb.MainActivity
+adb shell am start -n com.lbc.breadcrumb.debug/com.lbc.breadcrumb.MainActivity
 ./gradlew installDebug installDebugAndroidTest      # then the on-device tests, without a wipe:
-adb shell am instrument -w com.lbc.breadcrumb.test/androidx.test.runner.AndroidJUnitRunner
+adb shell am instrument -w com.lbc.breadcrumb.debug.test/androidx.test.runner.AndroidJUnitRunner
 ```
 
-On Suparno's phone the installs above fail while it runs the release build (see "Android").
+The debug app (`.debug`) installs beside the release; see "Android".
 
 The retired server, for anyone who runs it:
 

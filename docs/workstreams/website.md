@@ -60,9 +60,9 @@ Whichever it is:
   they kept. Back the key up in two places; never commit it. It is
   `D:\keys\breadcrumb-release.jks` on Suparno's machine, alias `breadcrumb`, made 2026-10-29;
   `v1.0-demo` was signed with a debug key.
-- **Suparno's phone runs the release** (v1.0, since 2026-10-29), so a debug build can't
-  install over it (CLAUDE.md, "Android"). A new release installs over it as an update. Debug
-  builds could get `applicationIdSuffix = ".debug"` to sit beside it; undecided.
+- **Suparno's phone runs the release** (v1.0, since 2026-10-29). A new release installs over
+  it as an update; debug builds are `com.lbc.breadcrumb.debug`, beside it (CLAUDE.md,
+  "Android").
 - **`/releases/latest/` skips prereleases**: `v1.0-demo` is one, so the link answers 404 until
   a real release exists.
 - **Size**: `v1.0-demo` is 152 MB, debug and unminified. The release build is arm64 only (LiteRT-LM
@@ -83,8 +83,8 @@ Each release, from `android/`:
 2. `./gradlew assembleRelease`, and copy `app/build/outputs/apk/release/app-release.apk` to
    `breadcrumb.apk`. An `app-release-unsigned.apk` instead means `keystore.properties` is missing
    (copy `keystore.properties.example`, fill in the passwords).
-3. Install it on a phone without a debug build (`adb install -r breadcrumb.apk`): open it, keep
-   something, find it.
+3. Install it over the release on a phone (`adb install -r breadcrumb.apk`; the debug app
+   beside it doesn't matter): open it, keep something, find it.
 4. `gh release create v1.0 breadcrumb.apk --title "Breadcrumb 1.0" --notes "…"`, with that
    release's version. Never `--prerelease`, and the file named exactly `breadcrumb.apk`, or the
    page's link misses it.

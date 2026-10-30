@@ -25,8 +25,8 @@ android {
 
     defaultConfig {
         // The same as the code's namespace, and permanent once published. adb
-        // commands, the test runner (com.lbc.breadcrumb.test) and the launcher
-        // shortcut's targetPackage use it.
+        // commands and the launcher shortcut's targetPackage use it. Debug
+        // builds add ".debug" (below).
         applicationId = "com.lbc.breadcrumb"
         minSdk = 29
         targetSdk = 36
@@ -48,6 +48,12 @@ android {
     }
 
     buildTypes {
+        // An app of its own, beside the release on the same phone, with its own
+        // data: a debug build or a test on the phone never touches what the
+        // release keeps. Its name and shortcuts are in src/debug/res.
+        debug {
+            applicationIdSuffix = ".debug"
+        }
         release {
             signingConfig = signingConfigs.findByName("release")
             // LiteRT-LM ships only arm64-v8a and x86_64, so a 32-bit phone

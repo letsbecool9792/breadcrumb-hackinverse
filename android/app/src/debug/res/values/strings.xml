@@ -1,0 +1,6 @@
+<resources>
+    <!-- The debug build is an app of its own (com.lbc.breadcrumb.debug), beside the release:
+         its name says which is which in the launcher, the share sheet and Quick Settings. -->
+    <string name="app_name">Breadcrumb debug</string>
+    <string name="tile_label">Breadcrumb debug</string>
+</resources>
