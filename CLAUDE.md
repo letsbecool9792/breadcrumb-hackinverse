@@ -36,10 +36,12 @@ brief says:
 - **The server (S1 to S7, L3) and sync (U1, U2) are retired** (L7): the app makes no call to a
   server. `server/` stays in the repo, never deleted, and still runs and passes its tests; it is
   simply no longer used.
-- **Released: v1.0** (2026-10-29), the first signed release, on
-  [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.0)
-  as `breadcrumb.apk` (68 MB, arm64). Suparno's own phone runs it (see "Android"). The website,
-  live at https://breadcrumb.suparno.me (`web/`, on Vercel), downloads it.
+- **Released: v1.1** (2026-10-30), on
+  [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.1)
+  as `breadcrumb.apk` (22 MB, arm64): pictures on the GPU with no wait for the charger, and R8.
+  v1.0 (2026-10-29, 68 MB) was the first signed release. Suparno's own phone runs it (see
+  "Android"). The website, live at https://breadcrumb.suparno.me (`web/`, on Vercel), downloads
+  the latest release, so a release needs no change to it.
 
 **Roadmap**, in this order (set 2026-10-25):
 
@@ -67,7 +69,7 @@ brief says:
 6. **Faster picture embedding on the GPU**, so pictures needn't wait for the charger. Built
    as local-first L9 (2026-10-30): pictures no longer wait for the charger at all, and their
    vision encoder runs on the GPU where it works (about 2 s a picture on the demo phone, against
-   4.5 s on the CPU). Waiting on its check by hand (below).
+   4.5 s on the CPU). Checked and released in v1.1 (2026-10-30).
 7. **Offer new screenshots automatically**: a `ContentObserver` on MediaStore. Last: it costs
    `READ_MEDIA_IMAGES` and real battery care.
 
@@ -188,10 +190,9 @@ it whenever a change needs a manual check, and tick items off when done.
       v1.0 published; the website's download link answers. Keep the key backed up in two places.
 - [x] **Hosting the website** (roadmap 5, W3, 2026-10-29): on Vercel, at
       `breadcrumb.suparno.me` by a CNAME record at Namecheap, which holds the domain's DNS.
-- [ ] **Pictures on the GPU, and the smaller release** (roadmap 6, L9's *check* line in
-      [`local-first.md`](docs/workstreams/local-first.md); the release built with R8, already
-      on Suparno's phone as an update): use the app as usual for a while: keep, search, OCR,
-      voice notes, a backup. Then push, and release it as 1.1.
+- [x] **Pictures on the GPU, and the smaller release** (roadmap 6, 2026-10-30): L9's *check*
+      line in [`local-first.md`](docs/workstreams/local-first.md), and the app used as usual on
+      the R8 build; released as v1.1.
 - [x] **Decide how debug builds reach the phone** (2026-10-30): a `.debug` applicationId
       suffix, an app of its own beside the release (see "Android").
 - [x] **Turn off VS Code's Gradle import** on this machine: `"java.import.gradle.enabled": false`

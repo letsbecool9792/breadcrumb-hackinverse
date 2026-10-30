@@ -91,9 +91,10 @@ Each release, from `android/`:
 3. Install it over the release on a phone (`adb install -r breadcrumb.apk`; the debug app
    beside it doesn't matter): open it, keep something, find it.
 4. Keep that build's `app/build/outputs/mapping/release/mapping.txt`, which turns a shrunk
-   stack trace's names back: attach it to the release beside the APK.
-5. `gh release create v1.0 breadcrumb.apk mapping.txt --title "Breadcrumb 1.0" --notes "…"`, with that
-   release's version. Never `--prerelease`, and the file named exactly `breadcrumb.apk`, or the
+   stack trace's names back: zip it (65 MB, about 4 MB zipped) as `mapping.zip`. Keep both
+   files outside the repo; Suparno keeps them in `D:\Programming\breadcrumb-releases\<tag>\`.
+5. `gh release create v1.1 breadcrumb.apk mapping.zip --target main --title "Breadcrumb 1.1" --notes-file …`,
+   with that release's version. Never `--prerelease`, and the file named exactly `breadcrumb.apk`, or the
    page's link misses it.
 6. `curl -sI https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/latest/download/breadcrumb.apk`
    answers 302.
@@ -124,6 +125,8 @@ Each release, from `android/`:
   - The release key, made by Suparno and kept off the repo; release builds signed from
     `android/keystore.properties` (ignored by git), and arm64 only.
   - v1.0 on GitHub Releases as `breadcrumb.apk` (68 MB); the page's link answers 302 to it.
+  - v1.1 (2026-10-30, versionCode 2): 22 MB with R8, and pictures on the GPU (local-first L9);
+    the link now answers 302 to it, with no change to the page.
   - Later, perhaps: the version and size by the button, a line on allowing the install, and the
     Obtainium link.
 - [x] **W3. Hosting** (Suparno, 2026-10-29): live at https://breadcrumb.suparno.me.

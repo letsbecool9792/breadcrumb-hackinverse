@@ -223,7 +223,7 @@ nothing leaves the phone (L7)
     pictures, on the CPU).
   - *Check:* off the charger, keep a photo with no words in it (a plate of food): within a few
     seconds search finds it by what it shows ("noodles"), where before it waited for the
-    charger.
+    charger. Checked by Suparno, 2026-10-30; released in v1.1.
 
 ## Rules
 
