@@ -44,12 +44,12 @@ brief says:
 **Roadmap**, in this order (set 2026-10-25):
 
 1. **Saved already.** Saving something the phone already holds says so, and offers to add a note
-   to the one kept, or to keep it again as a memory of its own. Built as capture C10, waiting on
-   its check by hand (below); the "+" composer doesn't check yet.
+   to the one kept, or to keep it again as a memory of its own. Built as capture C10, checked
+   2026-10-30; the "+" composer doesn't check yet.
 2. **Voice notes**: recording, playback, audio storage, and making them searchable; and a note
    said over any memory, not only written. Built
    ([`docs/workstreams/voice-notes.md`](docs/workstreams/voice-notes.md)), heard by the phone's
-   own speech recognizer offline; waiting on its checks by hand (below).
+   own speech recognizer offline. Checked 2026-10-30.
 3. **A first-run screen for the model.** The 388 MB embedding model downloaded silently, and
    search by meaning waited for it with nothing said. Built as local-first L8: it downloads from
    the first launch, and the first-run screen and a bar show it coming. Checked 2026-10-29 on a
@@ -171,8 +171,8 @@ it whenever a change needs a manual check, and tick items off when done.
   - [ ] Left for later: a PDF behind a password shows *no text found*.
 - [x] **Instagram links** (2026-10-27): a shared reel, post or profile gets its title and
       thumbnail, and so does one saved before the fix (it is read once more).
-- [ ] **Saved already** (capture C10): the brief's *check* line.
-- [ ] **Voice notes** (roadmap 2): V3's and V4's *check* lines in
+- [x] **Saved already** (capture C10, 2026-10-30): the brief's *check* line.
+- [x] **Voice notes** (roadmap 2, 2026-10-30): V3's and V4's *check* lines in
       [`voice-notes.md`](docs/workstreams/voice-notes.md).
 - [x] **Export and import** (roadmap 4, 2026-10-29): backed up on Suparno's phone, the debug
       build uninstalled, v1.0 installed, and the backup restored: everything came back

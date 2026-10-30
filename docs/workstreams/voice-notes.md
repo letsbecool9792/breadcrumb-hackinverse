@@ -97,6 +97,7 @@ share a voice note in ────────────────┴→ a r
     "balcony" finds the photo. Share a screenshot in, "say it" on the sheet, Done: "note said";
     open it in the app: the same. "remove" takes the player away and leaves the words. Delete
     the photo and Undo: the spoken note comes back with it.
+    V3's and V4's checks: done by Suparno, 2026-10-30.
 
 ## Rules
 

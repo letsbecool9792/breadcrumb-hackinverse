@@ -172,6 +172,7 @@ what Suparno runs when he reviews.
     says Kept already, and nothing new appears on the home screen. Add a note there: it shows
     under the first note. Keep again: a second memory appears. Share the same screenshot twice:
     Kept already. Copy the same text and tap the tile twice: Kept already.
+    Checked by Suparno, 2026-10-30.
 
 ## Rules and pitfalls
 

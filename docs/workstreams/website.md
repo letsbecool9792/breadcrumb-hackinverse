@@ -131,8 +131,8 @@ Each release, from `android/`:
 
 ## Rules
 
-- **The page says only what the release it offers does.** It shows voice notes, still waiting
-  on their check by hand; when W2 puts in the first release, check the page against that
-  release.
+- **The page says only what the release it offers does.** Everything it shows, voice notes
+  included, is in v1.0 and checked by hand; a feature on the page waits for the release that
+  has it.
 - **Nothing loads from anywhere but the site.** Fonts, scripts and pictures ship with it.
 - **The APK never goes into git**, in `web/` or anywhere else.
