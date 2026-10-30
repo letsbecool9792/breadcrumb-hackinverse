@@ -62,11 +62,20 @@ android {
             ndk {
                 abiFilters += "arm64-v8a"
             }
-            isMinifyEnabled = false
+            // R8: the code shrunk from 32 MB to what is used, and the resources nothing reaches.
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+    // The native libraries (LiteRT-LM's 22 MB, ML Kit's 11 MB) go compressed in the APK and are
+    // unpacked at install: a download about half the size, for about 15 MB more on the phone.
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
         }
     }
     compileOptions {
