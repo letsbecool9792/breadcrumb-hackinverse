@@ -1,6 +1,9 @@
 package com.lbc.breadcrumb
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -8,6 +11,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -34,6 +39,13 @@ class MainActivity : ComponentActivity() {
      * launches while the model isn't ready, and again from the model's bar.
      */
     private var firstRunOpen by mutableStateOf(false)
+
+    /**
+     * Leaving the first-run screen while the model still downloads asks to show notifications
+     * (Android 13+): the download goes on in one when the app is left. Refused, it goes on anyway,
+     * unseen.
+     */
+    private val notifications = registerForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     /**
      * How many times the launcher shortcut has asked to keep something (design §13).
@@ -78,6 +90,10 @@ class MainActivity : ComponentActivity() {
                     val close = {
                         FirstRun.markSeen(this)
                         firstRunOpen = false
+                        val asking = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                            app.models.ready() == null &&
+                            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+                        if (asking) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
                     }
                     BackHandler(onBack = close)
                     FirstRunScreen(

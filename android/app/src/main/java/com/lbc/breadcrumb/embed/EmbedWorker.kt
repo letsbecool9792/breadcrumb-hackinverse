@@ -1,19 +1,14 @@
 package com.lbc.breadcrumb.embed
 
 import android.content.Context
-import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingWorkPolicy
-import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import com.lbc.breadcrumb.BreadcrumbApp
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import okhttp3.OkHttpClient
-import java.time.Duration
-import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicLong
 
 /**
@@ -63,45 +58,6 @@ class EmbedWorker(context: Context, params: WorkerParameters) : CoroutineWorker(
             requests.incrementAndGet()
             WorkManager.getInstance(context)
                 .enqueueUniqueWork(NAME, ExistingWorkPolicy.KEEP, OneTimeWorkRequestBuilder<EmbedWorker>().build())
-        }
-    }
-}
-
-/**
- * Downloads the embedding model once, then embeds what is waiting: on an
- * unmetered network, unless the person asked for it on mobile data from the
- * first-run screen.
- */
-class ModelDownloadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
-
-    override suspend fun doWork(): Result {
-        val app = applicationContext as BreadcrumbApp
-        val client = OkHttpClient.Builder().readTimeout(60, TimeUnit.SECONDS).build()
-        val ready = try {
-            app.models.download(client)
-        } catch (_: java.io.IOException) {
-            false
-        }
-        if (!ready) return Result.retry()
-        EmbedWorker.schedule(app)
-        return Result.success()
-    }
-
-    companion object {
-        private const val NAME = "embedding-model"
-
-        /**
-         * Waits for Wi-Fi; [anyNetwork] (asked for on mobile data) takes the place of a download
-         * still waiting for it. Only ever offered while it waits, so nothing running is replaced.
-         */
-        fun schedule(context: Context, anyNetwork: Boolean = false) {
-            val network = if (anyNetwork) NetworkType.CONNECTED else NetworkType.UNMETERED
-            val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
-                .setConstraints(Constraints.Builder().setRequiredNetworkType(network).build())
-                .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, Duration.ofMinutes(1))
-                .build()
-            val policy = if (anyNetwork) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP
-            WorkManager.getInstance(context).enqueueUniqueWork(NAME, policy, request)
         }
     }
 }

@@ -12,6 +12,11 @@
          tapped; a phone without a microphone still installs, and keeps shared voice notes. -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-feature android:name="android.hardware.microphone" android:required="false" />
+    <!-- Local first L8: the model's download goes on as a foreground service, with its progress
+         in a notification, when the app is left or swiped away. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <!-- Each workstream adds its own entries here: capture its activities, its
          Quick Settings tile and the <queries> block for source apps; search the
@@ -144,6 +149,13 @@
             android:exported="false"
             android:windowSoftInputMode="adjustResize"
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden|uiMode" />
+
+        <!-- Local first L8: WorkManager's foreground service, which runs the model's download, is a
+             data transfer (Android 14+ asks for its type). -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
 
         <!-- Reading R7: FileProvider for opening and sharing saved originals (architecture rule 1) -->
         <provider

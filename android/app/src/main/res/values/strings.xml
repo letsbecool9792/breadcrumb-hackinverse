@@ -35,6 +35,8 @@
     <string name="first_run_hint">saving, and search by words, work already;\nsearch by meaning joins in when this is done</string>
     <string name="first_run_start">Start keeping</string>
     <string name="first_run_done">Done</string>
+    <!-- The notification channel the model's download shows in while the app is left. -->
+    <string name="model_channel">Search model</string>
 
     <!-- The debug list. Lowercase mono chrome, as the search screens will be. -->
     <string name="debug_title">breadcrumb · debug</string>

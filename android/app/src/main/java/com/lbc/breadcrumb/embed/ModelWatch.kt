@@ -24,7 +24,8 @@ class ModelWatch(private val context: Context, private val store: ModelStore) {
             progress = progress,
             downloaded = store.downloaded(),
             online = net.online,
-            unmetered = net.unmetered,
+            // Asked for on mobile data, it waits for nothing but a connection.
+            unmetered = net.unmetered || ModelDownloadWorker.onAnyNetwork(context),
         )
     }.distinctUntilChanged()
 

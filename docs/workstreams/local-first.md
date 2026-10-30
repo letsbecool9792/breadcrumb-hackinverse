@@ -187,6 +187,20 @@ nothing leaves the phone (L7)
     network. Then the model's bar over the search field until the model is ready; a tap opens the
     screen again, with "Done". A phone with the model never sees either.
   - The import bar's pill is `ui/common/LineBar`, shared with the model's bar.
+  - **The download goes on when the app is left** (2026-10-30): `ModelDownloadWorker` (its own
+    file now) makes itself a foreground service (`setForeground`, type `dataSync`; the manifest
+    gives WorkManager's `SystemForegroundService` that type and asks for `FOREGROUND_SERVICE`,
+    `FOREGROUND_SERVICE_DATA_SYNC` and `POST_NOTIFICATIONS`), with a notification, "Getting
+    search ready", "142 of 388 MB" and the bar, kept a percent at a time. As plain background
+    work it was cut off after about ten minutes, and sooner once the app was swiped away.
+    Android allows a foreground service only while the app is on screen (12+): one that starts
+    in the background (Wi-Fi arriving later) runs as plain work, and each try carries on from
+    where the last stopped (`Range`). Leaving the first-run screen while the model still
+    downloads asks to show notifications (13+); refused, the download goes on unseen. Mobile
+    data, once asked for, is remembered: the screen says "starting", not "waiting for wi-fi".
+    Checked on the demo phone in the debug app: started on mobile data, Home, swiped away from
+    Recents; the process stayed in the foreground and the download went from 122 MB to 344 MB
+    in five seconds, then, force-stopped and reopened, carried on and finished, its hash good.
   - Tests: `ModelStatusTest` (JVM); `FirstRunTest` on the phone, the screen and the bar with the
     status given. Nothing downloads in a test.
   - *Check, on a phone that has never had Breadcrumb:* install it on Wi-Fi: the first-run screen
