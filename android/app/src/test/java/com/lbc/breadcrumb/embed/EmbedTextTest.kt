@@ -54,19 +54,19 @@ class EmbedTextTest {
     }
 
     @Test
-    fun `a picture ocr could barely read is embedded as a picture, its few words standing in meanwhile`() {
+    fun `a picture ocr could barely read is embedded as a picture, its few words beside it and standing in for it`() {
         val memory = Memory(type = MemoryType.IMAGE, extractedText = "20:45", note = "the beach")
         val want = EmbedText.want(memory, hasPicture = true) as EmbedText.AsPicture
         assertEquals("title: none | text: 20:45\nthe beach", want.prompt)
-        assertEquals(want.prompt, want.meanwhile?.prompt)
-        assertNotEquals(want.key, want.meanwhile?.key)
+        assertEquals(want.prompt, want.words?.prompt)
+        assertNotEquals(want.key, want.words?.key)
     }
 
     @Test
     fun `a picture with no words at all still has its picture`() {
         val want = EmbedText.want(Memory(type = MemoryType.IMAGE, extractedText = ""), hasPicture = true) as EmbedText.AsPicture
         assertNull(want.prompt)
-        assertNull(want.meanwhile)
+        assertNull(want.words)
     }
 
     @Test

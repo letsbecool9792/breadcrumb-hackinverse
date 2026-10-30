@@ -10,6 +10,7 @@ import com.lbc.breadcrumb.data.OriginalStore
 import com.lbc.breadcrumb.data.SpokenNote
 import com.lbc.breadcrumb.embed.EmbedWorker
 import com.lbc.breadcrumb.embed.Embedder
+import com.lbc.breadcrumb.embed.GpuChoice
 import com.lbc.breadcrumb.embed.ModelDownloadWorker
 import com.lbc.breadcrumb.embed.ModelStatus
 import com.lbc.breadcrumb.embed.ModelStore
@@ -64,7 +65,7 @@ class BreadcrumbApp : Application() {
     }
 
     /** EmbeddingGemma 2 on the phone: memories are embedded, and searched, here (local-first L1). */
-    val embedder: Embedder by lazy { Embedder(models::ready, cacheDir, applicationScope) }
+    val embedder: Embedder by lazy { Embedder(models::ready, cacheDir, applicationScope, GpuChoice.of(this)) }
 
     /** Everything kept, out to one file and back in (roadmap 4). */
     val backups: Backups by lazy { Backups(this, database, originals, applicationScope) }

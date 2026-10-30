@@ -41,6 +41,10 @@
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
         android:theme="@style/Theme.Breadcrumb">
+        <!-- Local first: the embedding model on the GPU (LiteRT-LM's GPU backend reaches it through
+             OpenCL). Not required: a phone without them embeds on the CPU. -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so" android:required="false" />
         <!-- adjustResize: the search field sits just above the keyboard,
              rather than the whole window panning. -->
         <activity

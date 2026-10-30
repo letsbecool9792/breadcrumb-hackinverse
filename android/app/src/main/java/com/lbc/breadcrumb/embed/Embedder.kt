@@ -22,36 +22,52 @@ interface Embeddings {
 }
 
 /**
- * EmbeddingGemma 2 on the phone's CPU, through LiteRT-LM. One engine for the
- * app, started on first use (about 2 s, about 210 MB), one call at a time, and
- * closed after two idle minutes or when [close] lets it go.
+ * EmbeddingGemma 2 on the phone, through LiteRT-LM. One engine for the app,
+ * started on first use, one call at a time, and closed after two idle minutes
+ * or when [close] lets it go.
+ *
+ * Words always run on the CPU: the engine starts in about 1.5 s, which a search
+ * waits for. A picture's vision encoder runs on the GPU where [gpu] allows it
+ * (roadmap 6): on the demo phone a picture takes about 2 s there against 4.5 s
+ * on the CPU, in about 0.8 GB either way, and its vector is the CPU's to a
+ * cosine of 0.998. Words alone start an engine without it; the first picture
+ * starts it again with it (about 1.7 s once its compiled kernels are cached in
+ * [cacheDir], about 7 s the first time).
  */
 class Embedder(
     private val model: () -> File?,
     private val cacheDir: File,
     private val scope: CoroutineScope,
+    /** Null keeps everything on the CPU. */
+    private val gpu: GpuChoice? = null,
 ) : Embeddings {
 
     private val lock = Mutex()
     private var engine: EmbeddingEngine? = null
+    private var visionOnGpu = false
     private var idle: Job? = null
 
-    override suspend fun text(prompt: String): FloatArray? = compute(listOf(InputData.Text(prompt)))
+    override suspend fun text(prompt: String): FloatArray? = compute(listOf(InputData.Text(prompt)), picture = false)
 
     override suspend fun picture(jpeg: ByteArray, prompt: String?): FloatArray? =
-        compute(listOfNotNull(InputData.Image(jpeg), prompt?.let { InputData.Text(it) }))
+        compute(listOfNotNull(InputData.Image(jpeg), prompt?.let { InputData.Text(it) }), picture = true)
 
-    /** Lets go of the model and its memory: after a pass over pictures, which takes it to about 1 GB. */
-    suspend fun close() = lock.withLock {
+    /** Lets go of the model and its memory: after a pass over pictures, which takes it to about 0.8 GB. */
+    suspend fun close() = lock.withLock { shut() }
+
+    private fun shut() {
         idle?.cancel()
         engine?.close()
         engine = null
+        visionOnGpu = false
     }
 
-    private suspend fun compute(inputs: List<InputData>): FloatArray? = withContext(Dispatchers.Default) {
+    private suspend fun compute(inputs: List<InputData>, picture: Boolean): FloatArray? = withContext(Dispatchers.Default) {
         lock.withLock {
             idle?.cancel()
-            val running = engine ?: start() ?: return@withLock null
+            // A picture wants the GPU where it works: an engine started for words alone makes way.
+            if (picture && engine != null && !visionOnGpu && gpu?.allowed() == true) shut()
+            val running = engine ?: start(picture) ?: return@withLock null
             try {
                 running.computeEmbedding(inputs, OPTIONS).embedding
             } finally {
@@ -63,18 +79,40 @@ class Embedder(
         }
     }
 
-    private fun start(): EmbeddingEngine? {
+    /** An engine, with the vision encoder on the GPU when it is for a picture and the GPU works here. */
+    private fun start(picture: Boolean): EmbeddingEngine? {
         val file = model() ?: return null
+        if (picture && gpu?.allowed() == true) {
+            gpu.starting()
+            try {
+                return engine(file, Backend.GPU()).also {
+                    gpu.worked()
+                    visionOnGpu = true
+                }
+            } catch (_: Exception) {
+                // No OpenCL, or a GPU the model doesn't run on: pictures go to the CPU from now on.
+                gpu.failed()
+            }
+        }
+        return engine(file, Backend.CPU())
+    }
+
+    private fun engine(file: File, vision: Backend): EmbeddingEngine {
         val config = EmbeddingEngineConfig(
             modelPath = file.path,
             backend = Backend.CPU(),
-            visionBackend = Backend.CPU(),
+            visionBackend = vision,
             cacheDir = cacheDir.path,
         )
-        return EmbeddingEngine(config).also {
-            it.initialize()
-            engine = it
+        val made = EmbeddingEngine(config)
+        try {
+            made.initialize()
+        } catch (e: Exception) {
+            runCatching { made.close() }
+            throw e
         }
+        engine = made
+        return made
     }
 
     private companion object {

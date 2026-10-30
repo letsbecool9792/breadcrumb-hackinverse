@@ -42,10 +42,10 @@ object EmbedText {
 
     /**
      * A picture OCR could barely read, embedded as a picture with its few words
-     * beside it. Slow and memory-hungry on the CPU (about 5 s and 1 GB on the
-     * demo phone), so it waits for the charger; meanwhile [meanwhile] stands in.
+     * beside it: about 2 s on the demo phone's GPU, 4.5 s on its CPU, in about
+     * 0.8 GB. [words] stand in when the picture itself can't be read.
      */
-    data class AsPicture(val prompt: String?, override val key: String, val meanwhile: AsText?) : Want
+    data class AsPicture(val prompt: String?, override val key: String, val words: AsText?) : Want
 
     /**
      * What to embed for [memory], or null when there is nothing to embed yet: a
@@ -62,7 +62,7 @@ object EmbedText {
         val barelyRead = (memory.extractedText?.trim()?.length ?: 0) < MIN_OCR_CHARS
         if (memory.type == MemoryType.IMAGE && hasPicture && barelyRead) {
             val prompt = asText?.prompt
-            return AsPicture(prompt, key("picture", prompt.orEmpty()), meanwhile = asText)
+            return AsPicture(prompt, key("picture", prompt.orEmpty()), words = asText)
         }
         return asText
     }

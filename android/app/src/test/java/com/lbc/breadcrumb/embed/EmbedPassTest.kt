@@ -34,21 +34,20 @@ class EmbedPassTest {
     private val photo = Memory(id = "photo", type = MemoryType.IMAGE, extractedText = "20:45")
     private val unread = Memory(id = "unread", type = MemoryType.IMAGE, extractedText = null)
 
-    private fun pass(memories: List<Memory>, stored: Stored, model: Model, pictures: Boolean) = EmbedPass(
+    private fun pass(memories: List<Memory>, stored: Stored, model: Model, picture: ByteArray? = byteArrayOf(1)) = EmbedPass(
         memories = { memories },
         stored = stored,
         embeddings = model,
-        pictureOf = { byteArrayOf(1) },
+        pictureOf = { picture },
         hasPicture = { it.type == MemoryType.IMAGE },
-        pictures = pictures,
         now = { 7L },
     )
 
     @Test
     fun `embeds what has no vector, and leaves what is being read`() = runTest {
         val stored = Stored()
-        val outcome = pass(listOf(note, unread), stored, Model(), pictures = false).run()
-        assertEquals(EmbedPass.Outcome.Done(embedded = 1, picturesWaiting = false), outcome)
+        val outcome = pass(listOf(note, unread), stored, Model()).run()
+        assertEquals(EmbedPass.Outcome.Done(embedded = 1), outcome)
         assertArrayEquals(Vectors.toBytes(floatArrayOf(1f, 0f)), stored.rows.getValue("note").vector)
     }
 
@@ -56,8 +55,8 @@ class EmbedPassTest {
     fun `a second pass over the same words embeds nothing`() = runTest {
         val stored = Stored()
         val model = Model()
-        pass(listOf(note), stored, model, pictures = false).run()
-        pass(listOf(note), stored, model, pictures = false).run()
+        pass(listOf(note), stored, model).run()
+        pass(listOf(note), stored, model).run()
         assertEquals(1, model.texts.size)
     }
 
@@ -65,31 +64,39 @@ class EmbedPassTest {
     fun `a changed note is embedded again`() = runTest {
         val stored = Stored()
         val model = Model()
-        pass(listOf(note), stored, model, pictures = false).run()
-        pass(listOf(note.copy(note = "Priya said")), stored, model, pictures = false).run()
+        pass(listOf(note), stored, model).run()
+        pass(listOf(note.copy(note = "Priya said")), stored, model).run()
         assertEquals(2, model.texts.size)
     }
 
     @Test
-    fun `off the charger a barely read picture gets its words, and waits for its picture`() = runTest {
+    fun `a barely read picture is embedded as a picture at once, charging or not`() = runTest {
         val stored = Stored()
         val model = Model()
-        val off = pass(listOf(photo), stored, model, pictures = false).run()
-        assertEquals(EmbedPass.Outcome.Done(embedded = 1, picturesWaiting = true), off)
-        assertEquals(0, model.pictures)
 
-        // Again off the charger: its words are already in, nothing to do.
-        pass(listOf(photo), stored, model, pictures = false).run()
-        assertEquals(1, model.texts.size)
+        val outcome = pass(listOf(photo), stored, model).run()
 
-        val on = pass(listOf(photo), stored, model, pictures = true).run()
-        assertEquals(EmbedPass.Outcome.Done(embedded = 1, picturesWaiting = false), on)
+        assertEquals(EmbedPass.Outcome.Done(embedded = 1, pictures = 1), outcome)
+        assertEquals(1, model.pictures)
+        assertEquals(0, model.texts.size)
+        // Again: it has its picture's vector, nothing to do.
+        pass(listOf(photo), stored, model).run()
         assertEquals(1, model.pictures)
     }
 
     @Test
+    fun `a picture that can't be read is embedded by its words`() = runTest {
+        val model = Model()
+
+        pass(listOf(photo), Stored(), model, picture = null).run()
+
+        assertEquals(0, model.pictures)
+        assertEquals(1, model.texts.size)
+    }
+
+    @Test
     fun `without the model it says so`() = runTest {
-        val outcome = pass(listOf(note), Stored(), Model(present = false), pictures = false).run()
+        val outcome = pass(listOf(note), Stored(), Model(present = false)).run()
         assertEquals(EmbedPass.Outcome.NoModel, outcome)
     }
 

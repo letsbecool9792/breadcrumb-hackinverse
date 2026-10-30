@@ -52,9 +52,8 @@ class EmbedOnPhoneTest {
             embeddings = embedder,
             pictureOf = { null },
             hasPicture = { false },
-            pictures = false,
         )
-        assertEquals(EmbedPass.Outcome.Done(embedded = 3, picturesWaiting = false), pass.run())
+        assertEquals(EmbedPass.Outcome.Done(embedded = 3), pass.run())
 
         val vectors = database.embeddingDao().vectors().associate { it.memoryId to Vectors.fromBytes(it.vector) }
         suspend fun best(phrase: String): String {
