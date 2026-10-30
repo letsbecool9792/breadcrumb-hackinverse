@@ -63,9 +63,9 @@ export function QrButton() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: 0.2 }}
             >
-              <div className="absolute inset-0 bg-scrim/75 backdrop-blur-sm" onClick={() => setOpen(false)} />
+              <div className="absolute inset-0 bg-scrim/85" onClick={() => setOpen(false)} />
               <motion.div
                 role="dialog"
                 aria-modal="true"
@@ -74,7 +74,7 @@ export function QrButton() {
                 initial={{ opacity: 0, y: 28, scale: 0.94 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 14, scale: 0.97 }}
-                transition={{ duration: 0.45, ease: EASE }}
+                transition={{ duration: 0.32, ease: EASE }}
               >
                 <button
                   ref={close}
@@ -108,47 +108,59 @@ export function QrButton() {
   )
 }
 
-// The download's link as a code: its modules drawn as crumbs, rippling in from
-// the middle, where the logo's crumbs drop in as they do on "Saved".
-function QrCode() {
+// The download's link as a code: its modules drawn as crumbs around the
+// logo's crumbs, which drop in as they do on "Saved". All of it is one path,
+// worked out once, so opening the dialog has nothing to build; it is revealed
+// by one soft mask widening from the middle (.qr-reveal), not by animating
+// hundreds of dots.
+interface QrDrawing {
+  size: number
+  logo: number
+  dots: string
+  finders: string
+}
+
+let drawing: QrDrawing | undefined
+
+function drawQr(): QrDrawing {
+  if (drawing) return drawing
   const { data, size, types } = encode(APK, { ecc: 'H', border: 0 })
   const logo = Math.ceil(size * 0.24) | 1
   const from = (size - logo) / 2
-  const middle = (size - 1) / 2
   const inLogo = (x: number, y: number) => x >= from - 0.5 && x < from + logo + 0.5 && y >= from - 0.5 && y < from + logo + 0.5
+  // A dot of radius 0.44 in each dark module: two half-circle arcs.
+  let dots = ''
+  data.forEach((row, y) =>
+    row.forEach((dark, x) => {
+      if (dark && types[y][x] !== QrCodeDataType.Position && !inLogo(x, y)) {
+        dots += `M${x + 0.06} ${y + 0.5}a.44 .44 0 1 0 .88 0a.44 .44 0 1 0-.88 0`
+      }
+    }),
+  )
+  // The three finders, rounded: a ring and its centre.
   const finders = [
     [0, 0],
     [size - 7, 0],
     [0, size - 7],
   ]
+    .map(
+      ([x, y]) =>
+        `M${x + 2} ${y}h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3a2 2 0 012-2z` +
+        `M${x + 2} ${y + 1}a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1v-3a1 1 0 00-1-1z` +
+        `M${x + 2.9} ${y + 2}h1.2a.9 .9 0 01.9 .9v1.2a.9 .9 0 01-.9 .9h-1.2a.9 .9 0 01-.9-.9v-1.2a.9 .9 0 01.9-.9z`,
+    )
+    .join('')
+  drawing = { size, logo, dots, finders }
+  return drawing
+}
 
+function QrCode() {
+  const { size, logo, dots, finders } = drawQr()
   return (
     <div className="relative size-[248px] rounded-[22px] bg-bone p-4">
-      <svg viewBox={`0 0 ${size} ${size}`} className="size-full" role="img" aria-label="QR code for the Android download">
-        {data.flatMap((row, y) =>
-          row.map((dark, x) =>
-            dark && types[y][x] !== QrCodeDataType.Position && !inLogo(x, y) ? (
-              <circle
-                key={`${x}-${y}`}
-                cx={x + 0.5}
-                cy={y + 0.5}
-                r="0.44"
-                fill="#171310"
-                className="qr-dot"
-                style={{ animationDelay: `${Math.round(Math.hypot(x - middle, y - middle) * 16)}ms` }}
-              />
-            ) : null,
-          ),
-        )}
-        {finders.map(([x, y]) => (
-          <g key={`${x}-${y}`} fill="#171310" className="qr-dot" style={{ animationDelay: '320ms' }}>
-            <path
-              fillRule="evenodd"
-              d={`M${x + 2} ${y}h3a2 2 0 012 2v3a2 2 0 01-2 2h-3a2 2 0 01-2-2v-3a2 2 0 012-2zM${x + 2} ${y + 1}a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1v-3a1 1 0 00-1-1z`}
-            />
-            <rect x={x + 2} y={y + 2} width="3" height="3" rx="0.9" />
-          </g>
-        ))}
+      <svg viewBox={`0 0 ${size} ${size}`} className="qr-reveal size-full" role="img" aria-label="QR code for the Android download">
+        <path d={dots} fill="#171310" />
+        <path d={finders} fill="#171310" fillRule="evenodd" />
       </svg>
       <span className="absolute inset-4 grid place-items-center">
         <span className="grid aspect-square place-items-center rounded-[12px] bg-ink" style={{ width: `${(logo / size) * 100}%` }}>

@@ -255,19 +255,31 @@ h3 {
   }
 }
 
-/* The download's code, its crumbs rippling in from the middle as it opens. */
+/* The download's code, revealed from the middle as it opens: one soft-edged
+   mask widening over the whole code, not an animation per dot. At rest the
+   mask's radius (110% of the side) clears the corners, so all of it shows. */
+@property --qr-r {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 110%;
+}
+
+.qr-reveal {
+  mask-image: radial-gradient(ellipse var(--qr-r) var(--qr-r) at 50% 50%, #000 70%, transparent 100%);
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .qr-dot {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: qr-dot 420ms cubic-bezier(0.34, 1.4, 0.64, 1) both;
+  .qr-reveal {
+    animation: qr-reveal 440ms cubic-bezier(0.22, 1, 0.36, 1) 60ms both;
   }
 }
 
-@keyframes qr-dot {
+@keyframes qr-reveal {
   from {
-    opacity: 0;
-    transform: scale(0.2);
+    --qr-r: 0%;
+  }
+  to {
+    --qr-r: 110%;
   }
 }
 
