@@ -13,6 +13,14 @@ directly, for Android 10 and up (64-bit phones). Every version is on
 [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases).
 It isn't on the Play Store yet, so Android asks you to allow installing from your browser.
 
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="screenshots/app/home.png" width="240" alt="The home screen: a mosaic of saved notes, links, PDFs, photos and voice notes"><br><sub>everything you've kept, newest first</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/search-meaning.png" width="240" alt="Searching a bowl of noodles: a photo of ramen comes first"><br><sub>&ldquo;a bowl of noodles&rdquo; finds a photo with no words in it</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/detail-voice.png" width="240" alt="A voice note playing, with what was said written out under it"><br><sub>voice notes, heard on the phone, found by what was said</sub></td>
+  </tr>
+</table>
+
 ---
 
 ## The problem
@@ -34,8 +42,8 @@ Breadcrumb is two flows and nothing else:
 
 > **Save → Forget about it → Search → Find**
 
-**Saving is frictionless.** Share sheet or a Quick Settings tile. No folders, no tags, no titles,
-no organizing. You are never asked to do work at save time.
+**Saving is frictionless.** Share sheet, a Quick Settings tile, or your voice. No folders, no
+tags, no titles, no organizing. You are never asked to do work at save time.
 
 **Retrieval is the product.** One search bar. You type what you remember:
 
@@ -96,12 +104,39 @@ Meaning and words together, because the queries people actually type are full of
 account. The phone goes online only to read the page of a link you saved, and once to download
 the embedding model.
 
+## More of the app
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="screenshots/app/search-filters.png" width="240" alt="Searching that internship screenshot from April: two screenshots from April"><br><sub>&ldquo;screenshot&rdquo; and &ldquo;from april&rdquo; become filters</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/detail-picture.png" width="240" alt="A saved screenshot opened, with the note kept on it and where it came from"><br><sub>the original, your note, where it came from</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/capture-sheet.png" width="240" alt="Breadcrumb's sheet over Chrome, saying Saved"><br><sub>share from any app: saved in one tap</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="screenshots/app/keep-composer.png" width="240" alt="The keep sheet with a note typed in it"><br><sub>or keep something from inside the app</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/voice-recording.png" width="240" alt="Recording a voice note"><br><sub>or just say it</sub></td>
+    <td align="center" width="33%"><img src="screenshots/app/everything-kept.png" width="240" alt="The sheet for saving and restoring a backup"><br><sub>everything out to one file, and back in on a new phone</sub></td>
+  </tr>
+</table>
+
+<sub>The memories are made up for the screenshots; the ramen photo is by
+<a href="https://commons.wikimedia.org/wiki/File:Ramen_Tamari_001.jpg">Ocdp</a>, CC0. More in
+<a href="screenshots/"><code>screenshots/</code></a>, the website's too.</sub>
+
+## The website
+
+[breadcrumb.suparno.me](https://breadcrumb.suparno.me) shows the app instead of explaining it, and
+downloads the latest release.
+
+<a href="https://breadcrumb.suparno.me"><img src="screenshots/website/desktop-hero.jpg" alt="The website: Find that link by describing it, with a download button for Android"></a>
+
 ## Stack
 
 | | |
 |---|---|
 | **Mobile** | Native Android: Kotlin, Jetpack Compose, Room (with full-text search), WorkManager |
-| **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures), ML Kit Text Recognition |
+| **On-device AI** | EmbeddingGemma 2 through LiteRT-LM (text and pictures, pictures on the GPU), ML Kit Text Recognition, the phone's own speech recognizer for voice notes |
+| **Website** | Vite + React + Tailwind, on Vercel |
 | **Backend (retired)** | Node + Express + TypeScript, MongoDB Atlas, Gemini. Kept in `server/`; the app no longer uses it |
 
 Native Android rather than a cross-platform framework: every capture surface is an Android
@@ -111,10 +146,12 @@ between saving feeling free and saving feeling like a wait.
 ## Layout
 
 ```
-android/    Android app (build it with ./gradlew from this folder)
-server/     the Express API the app used until it went mobile only; kept, unused
-docs/       the API contract, and one brief per workstream
-tools/      generate_icons.py, which draws the launcher and splash icons
+android/      Android app (build it with ./gradlew from this folder)
+web/          the website, breadcrumb.suparno.me
+server/       the Express API the app used until it went mobile only; kept, unused
+screenshots/  the app's and the website's
+docs/         the screens' design, and one brief per workstream
+tools/        generate_icons.py, which draws the launcher and splash icons
 ```
 
 ## Team
@@ -124,8 +161,9 @@ Built by [Suparno](https://suparno.me), [Ayushi](https://github.com/aeryxii), [D
 
 ## Status
 
-Won 1st place at Hackinverse 1.0. Capture, reading, search on the phone, the screens and the
-privacy switches are all in; [`CLAUDE.md`](CLAUDE.md) tracks what's next.
+Won 1st place at Hackinverse 1.0. Saving from anywhere, reading on the phone, search by meaning
+and words, voice notes and backups are all in, and v1.1 is out;
+[`CLAUDE.md`](CLAUDE.md) tracks what's next.
 
 ## Why "Breadcrumb"
 

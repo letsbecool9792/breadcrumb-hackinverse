@@ -542,6 +542,8 @@ breadcrumb-hackinverse/
   server/       Express + TypeScript, its own package.json: retired (L7), kept
   web/          the website: Vite + React + Tailwind, its own package.json
   docs/         api.md, design.md, workstreams/
+  screenshots/  the app's (the debug app, filled with the website's made-up memories) and
+                the website's, for the README
   tools/        generate_icons.py
   CLAUDE.md
   README.md
