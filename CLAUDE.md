@@ -36,10 +36,11 @@ brief says:
 - **The server (S1 to S7, L3) and sync (U1, U2) are retired** (L7): the app makes no call to a
   server. `server/` stays in the repo, never deleted, and still runs and passes its tests; it is
   simply no longer used.
-- **Released: v1.1** (2026-10-30), on
-  [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.1)
-  as `breadcrumb.apk` (22 MB, arm64): pictures on the GPU with no wait for the charger, and R8.
-  v1.0 (2026-10-29, 68 MB) was the first signed release. Suparno's own phone runs it (see
+- **Released: v1.2** (2026-10-30), on
+  [GitHub Releases](https://github.com/letsbecool9792/breadcrumb-hackinverse/releases/tag/v1.2)
+  as `breadcrumb.apk` (22 MB, arm64): the model's download goes on when the app is left. v1.1
+  (the same day) put pictures on the GPU with no wait for the charger, and R8; v1.0 (2026-10-29,
+  68 MB) was the first signed release. Suparno's own phone runs it (see
   "Android"). The website, live at https://breadcrumb.suparno.me (`web/`, on Vercel), downloads
   the latest release, so a release needs no change to it.
 

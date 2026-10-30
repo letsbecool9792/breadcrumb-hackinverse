@@ -127,6 +127,8 @@ Each release, from `android/`:
   - v1.0 on GitHub Releases as `breadcrumb.apk` (68 MB); the page's link answers 302 to it.
   - v1.1 (2026-10-30, versionCode 2): 22 MB with R8, and pictures on the GPU (local-first L9);
     the link now answers 302 to it, with no change to the page.
+  - v1.2 (2026-10-30, versionCode 3): the model's download goes on when the app is left
+    (local-first L8).
   - Later, perhaps: the version and size by the button, a line on allowing the install, and the
     Obtainium link.
 - [x] **W3. Hosting** (Suparno, 2026-10-29): live at https://breadcrumb.suparno.me.
